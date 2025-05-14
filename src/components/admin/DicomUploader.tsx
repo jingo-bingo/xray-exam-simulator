@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/sonner";
 import { Upload, X, FileImage } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { DicomViewer } from "./DicomViewer";
 
 interface DicomUploaderProps {
   currentPath: string | null;
@@ -16,9 +17,10 @@ export const DicomUploader = ({ currentPath, onUploadComplete }: DicomUploaderPr
   const [uploading, setUploading] = useState(false);
   const [filePath, setFilePath] = useState<string | null>(currentPath);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [viewerError, setViewerError] = useState<Error | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // When component mounts or when currentPath changes, fetch the file URL
+  // When component mounts or when filePath changes, fetch the file URL
   const loadPreview = async () => {
     if (filePath) {
       try {
@@ -35,6 +37,8 @@ export const DicomUploader = ({ currentPath, onUploadComplete }: DicomUploaderPr
         if (data) {
           console.log("DicomUploader: Preview URL created:", data.signedUrl);
           setPreviewUrl(data.signedUrl);
+          // Reset any previous errors when we get a new URL
+          setViewerError(null);
         }
       } catch (error) {
         console.error("DicomUploader: Error in loadPreview:", error);
@@ -129,6 +133,7 @@ export const DicomUploader = ({ currentPath, onUploadComplete }: DicomUploaderPr
       console.log("DicomUploader: File removed successfully");
       setFilePath(null);
       setPreviewUrl(null);
+      setViewerError(null);
       onUploadComplete("");
       toast.success("File removed successfully");
     } catch (error) {
@@ -141,6 +146,11 @@ export const DicomUploader = ({ currentPath, onUploadComplete }: DicomUploaderPr
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
+  };
+  
+  const handleViewerError = (error: Error) => {
+    console.error("DicomUploader: DICOM Viewer error:", error);
+    setViewerError(error);
   };
   
   return (
@@ -172,20 +182,29 @@ export const DicomUploader = ({ currentPath, onUploadComplete }: DicomUploaderPr
         <div className="relative">
           {previewUrl ? (
             <div className="relative">
-              <img 
-                src={previewUrl} 
-                alt="DICOM preview" 
-                className="w-full h-48 object-contain border rounded-md" 
-                onError={(e) => {
-                  console.error("DicomUploader: Error loading image:", e);
-                  e.currentTarget.style.display = 'none';
-                  // Show a fallback element when image fails to load
-                  const fallback = document.createElement('div');
-                  fallback.className = 'w-full h-48 flex items-center justify-center bg-gray-100 border rounded-md';
-                  fallback.innerHTML = '<p class="text-gray-500">Preview failed to load</p>';
-                  e.currentTarget.parentNode?.appendChild(fallback);
-                }}
+              {/* Replace the standard img tag with our DicomViewer component */}
+              <DicomViewer 
+                imageUrl={previewUrl}
+                alt="DICOM preview"
+                className="w-full h-48 object-contain border rounded-md"
+                onError={handleViewerError}
               />
+              
+              {/* Show fallback if viewer has an error */}
+              {viewerError && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-100 border rounded-md">
+                  <div className="text-center p-4">
+                    <FileImage className="mx-auto h-12 w-12 text-gray-400" />
+                    <p className="mt-2 text-sm text-gray-500">
+                      Unable to preview this file
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {viewerError.message || "The file may not be in a supported format"}
+                    </p>
+                  </div>
+                </div>
+              )}
+              
               <Button 
                 variant="destructive" 
                 size="icon" 

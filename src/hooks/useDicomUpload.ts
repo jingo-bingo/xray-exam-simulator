@@ -1,7 +1,37 @@
 
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/components/ui/use-toast";
+import { readFile } from "dicom-parser";
+
+/**
+ * Validates if a file is a valid DICOM file
+ * @param file The file to validate
+ * @returns Promise<boolean> True if the file is a valid DICOM file, false otherwise
+ */
+const isDicom = async (file: File): Promise<boolean> => {
+  console.log("isDicom: Starting DICOM validation for file", file.name);
+  
+  try {
+    // Read the file as an ArrayBuffer
+    const arrayBuffer = await file.arrayBuffer();
+    console.log("isDicom: File read as ArrayBuffer, size:", arrayBuffer.byteLength);
+    
+    // Convert to Uint8Array for dicom-parser
+    const byteArray = new Uint8Array(arrayBuffer);
+    
+    // Try to parse the DICOM data
+    console.log("isDicom: Attempting to parse DICOM data");
+    const dataSet = readFile(byteArray);
+    
+    const isValid = !!dataSet;
+    console.log("isDicom: DICOM validation result:", isValid);
+    return isValid;
+  } catch (error) {
+    console.error("isDicom: Error validating DICOM file:", error);
+    return false;
+  }
+};
 
 export const useDicomUpload = (
   onUploadComplete: (filePath: string) => void,
@@ -9,13 +39,33 @@ export const useDicomUpload = (
 ) => {
   const [uploading, setUploading] = useState(false);
   const [filePath, setFilePath] = useState<string | null>(initialFilePath);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const handleFileUpload = async (file: File) => {
     try {
       console.log("useDicomUpload: File selected for upload:", file.name);
+      setValidationError(null);
       
-      // Start upload
+      // Start validation
+      console.log("useDicomUpload: Beginning DICOM validation");
       setUploading(true);
+      
+      // Check if file is a valid DICOM file
+      const isValidDicom = await isDicom(file);
+      
+      if (!isValidDicom) {
+        console.warn("useDicomUpload: File is not a valid DICOM file:", file.name);
+        setUploading(false);
+        setValidationError("The selected file is not a valid DICOM file");
+        toast({
+          title: "Invalid File Format",
+          description: "The selected file is not a valid DICOM file. Please upload a proper DICOM file.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      console.log("useDicomUpload: File validation successful, proceeding with upload");
       
       // Create a unique file path
       const fileExt = file.name.split('.').pop();
@@ -30,7 +80,11 @@ export const useDicomUpload = (
         
       if (uploadError) {
         console.error("useDicomUpload: Error uploading file:", uploadError);
-        toast.error("Error uploading file: " + uploadError.message);
+        toast({
+          title: "Upload Failed",
+          description: "Error uploading file: " + uploadError.message,
+          variant: "destructive",
+        });
         return;
       }
       
@@ -40,10 +94,17 @@ export const useDicomUpload = (
       setFilePath(newFilePath);
       onUploadComplete(newFilePath);
       
-      toast.success("File uploaded successfully");
+      toast({
+        title: "Upload Successful",
+        description: "DICOM file uploaded successfully",
+      });
     } catch (error) {
       console.error("useDicomUpload: Error in handleFileUpload:", error);
-      toast.error("An unexpected error occurred during upload");
+      toast({
+        title: "Upload Error",
+        description: "An unexpected error occurred during upload",
+        variant: "destructive",
+      });
     } finally {
       setUploading(false);
     }
@@ -61,23 +122,36 @@ export const useDicomUpload = (
         
       if (error) {
         console.error("useDicomUpload: Error removing file:", error);
-        toast.error("Error removing file: " + error.message);
+        toast({
+          title: "Removal Failed",
+          description: "Error removing file: " + error.message,
+          variant: "destructive",
+        });
         return;
       }
       
       console.log("useDicomUpload: File removed successfully");
       setFilePath(null);
+      setValidationError(null);
       onUploadComplete("");
-      toast.success("File removed successfully");
+      toast({
+        title: "File Removed",
+        description: "File removed successfully",
+      });
     } catch (error) {
       console.error("useDicomUpload: Error in handleRemoveFile:", error);
-      toast.error("An unexpected error occurred");
+      toast({
+        title: "Removal Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
     }
   };
 
   return {
     filePath,
     uploading,
+    validationError,
     setFilePath,
     handleFileUpload,
     handleRemoveFile

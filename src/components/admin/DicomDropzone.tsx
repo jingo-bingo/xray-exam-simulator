@@ -13,11 +13,13 @@ export const DicomDropzone = ({ onFileSelected }: DicomDropzoneProps) => {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      console.log("DicomDropzone: File selected:", file.name, "size:", file.size, "type:", file.type);
       onFileSelected(file);
     }
   };
 
   const triggerFileInput = () => {
+    console.log("DicomDropzone: Triggering file input dialog");
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
@@ -28,7 +30,7 @@ export const DicomDropzone = ({ onFileSelected }: DicomDropzoneProps) => {
       <Input 
         ref={fileInputRef}
         type="file" 
-        accept=".dcm,.dicom,image/*" 
+        accept=".dcm,.dicom"
         onChange={handleFileChange}
         className="hidden"
       />
@@ -42,7 +44,7 @@ export const DicomDropzone = ({ onFileSelected }: DicomDropzoneProps) => {
           Click to upload a DICOM image
         </p>
         <p className="text-xs text-gray-400">
-          (or any image file for preview purposes)
+          (.dcm, .dicom file formats)
         </p>
       </div>
     </>

@@ -4,6 +4,8 @@ import { Label } from "@/components/ui/label";
 import { DicomDropzone } from "./DicomDropzone";
 import { DicomPreview } from "./DicomPreview";
 import { useDicomUpload } from "@/hooks/useDicomUpload";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 interface DicomUploaderProps {
   currentPath: string | null;
@@ -14,6 +16,7 @@ export const DicomUploader = ({ currentPath, onUploadComplete }: DicomUploaderPr
   const {
     filePath,
     uploading,
+    validationError,
     setFilePath,
     handleFileUpload,
     handleRemoveFile
@@ -31,6 +34,13 @@ export const DicomUploader = ({ currentPath, onUploadComplete }: DicomUploaderPr
   return (
     <div className="space-y-4 border p-4 rounded-md">
       <Label>DICOM Image</Label>
+      
+      {validationError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{validationError}</AlertDescription>
+        </Alert>
+      )}
       
       {!filePath ? (
         <DicomDropzone onFileSelected={handleFileUpload} />

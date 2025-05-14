@@ -2,7 +2,6 @@
 import { useEffect, useRef } from "react";
 import cornerstone from "cornerstone-core";
 import cornerstoneWebImageLoader from "cornerstone-web-image-loader";
-import dicomParser from "dicom-parser";
 
 // Initialize the cornerstone web image loader
 cornerstoneWebImageLoader.external.cornerstone = cornerstone;
@@ -25,7 +24,15 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
     
     // Enable the element for cornerstone
     const element = viewerRef.current;
-    cornerstone.enable(element);
+    
+    try {
+      cornerstone.enable(element);
+      console.log("DicomViewer: Cornerstone enabled on element");
+    } catch (error) {
+      console.error("DicomViewer: Error enabling cornerstone:", error);
+      if (onError) onError(new Error("Failed to initialize DICOM viewer"));
+      return;
+    }
     
     // Load the image
     const isDicom = imageUrl.toLowerCase().endsWith('.dcm') || imageUrl.toLowerCase().endsWith('.dicom');
@@ -34,10 +41,18 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
     
     const imageLoader = isDicom ? 'dicom' : 'webImage';
     
+    console.log("DicomViewer: Attempting to load image with loader:", imageLoader);
+    
     cornerstone.loadImage(imageUrl, { loader: imageLoader })
       .then((image) => {
-        console.log("DicomViewer: Image loaded successfully");
-        cornerstone.displayImage(element, image);
+        console.log("DicomViewer: Image loaded successfully, metadata:", image.imageId);
+        try {
+          cornerstone.displayImage(element, image);
+          console.log("DicomViewer: Image displayed successfully");
+        } catch (displayError) {
+          console.error("DicomViewer: Error displaying image:", displayError);
+          if (onError) onError(new Error("Failed to display DICOM image"));
+        }
       })
       .catch((error) => {
         console.error("DicomViewer: Failed to load image:", error);
@@ -55,7 +70,13 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
       .then((image) => {
         if (image) {
           console.log("DicomViewer: Fallback image loaded successfully");
-          cornerstone.displayImage(element, image);
+          try {
+            cornerstone.displayImage(element, image);
+            console.log("DicomViewer: Fallback image displayed successfully");
+          } catch (displayError) {
+            console.error("DicomViewer: Error displaying fallback image:", displayError);
+            if (onError) onError(new Error("Failed to display fallback image"));
+          }
         }
       })
       .catch((error) => {
@@ -69,6 +90,7 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
       if (element) {
         try {
           cornerstone.disable(element);
+          console.log("DicomViewer: Cornerstone disabled on element");
         } catch (error) {
           console.error("DicomViewer: Error during cleanup:", error);
         }

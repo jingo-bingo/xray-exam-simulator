@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
-import { readFile } from "dicom-parser";
+import * as dicomParser from "dicom-parser";
 
 /**
  * Validates if a file is a valid DICOM file
@@ -22,7 +22,7 @@ const isDicom = async (file: File): Promise<boolean> => {
     
     // Try to parse the DICOM data
     console.log("isDicom: Attempting to parse DICOM data");
-    const dataSet = readFile(byteArray);
+    const dataSet = dicomParser.parseDicom(byteArray);
     
     const isValid = !!dataSet;
     console.log("isDicom: DICOM validation result:", isValid);

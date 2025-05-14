@@ -20,21 +20,25 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
+import { Database } from "@/integrations/supabase/types"; 
+
+type RegionType = Database["public"]["Enums"]["region_type"];
+type DifficultyLevel = Database["public"]["Enums"]["difficulty_level"];
 
 type Case = {
   id: string;
   title: string;
   description: string;
-  region: string;
+  region: RegionType;
   age_group: string;
-  difficulty: string;
+  difficulty: DifficultyLevel;
   is_free_trial: boolean;
 };
 
 const CasesList = () => {
   const navigate = useNavigate();
-  const [regionFilter, setRegionFilter] = useState<string | null>(null);
-  const [difficultyFilter, setDifficultyFilter] = useState<string | null>(null);
+  const [regionFilter, setRegionFilter] = useState<RegionType | null>(null);
+  const [difficultyFilter, setDifficultyFilter] = useState<DifficultyLevel | null>(null);
 
   const { data: cases, isLoading, error } = useQuery({
     queryKey: ["cases", { regionFilter, difficultyFilter }],
@@ -82,7 +86,7 @@ const CasesList = () => {
         
         <div className="flex flex-col sm:flex-row gap-4">
           <Select 
-            onValueChange={(value) => setRegionFilter(value || null)}
+            onValueChange={(value: RegionType | "") => setRegionFilter(value || null)}
           >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Region" />
@@ -100,7 +104,7 @@ const CasesList = () => {
           </Select>
           
           <Select 
-            onValueChange={(value) => setDifficultyFilter(value || null)}
+            onValueChange={(value: DifficultyLevel | "") => setDifficultyFilter(value || null)}
           >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Difficulty" />

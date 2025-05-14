@@ -1,11 +1,20 @@
 
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { 
+  LayoutDashboard, 
+  FileText, 
+  Users, 
+  Settings 
+} from "lucide-react";
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
+  
   useEffect(() => {
     console.log("AdminDashboard: Component mounted");
   }, []);
@@ -46,11 +55,18 @@ const AdminDashboard = () => {
     }
   });
 
+  // Navigation handler with logging
+  const handleNavigation = (path: string) => {
+    console.log(`AdminDashboard: Navigating to ${path}`);
+    navigate(path);
+  };
+
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Stats cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Total Cases</CardTitle>
@@ -83,6 +99,78 @@ const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">Coming soon</div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      {/* Navigation Cards */}
+      <h2 className="text-2xl font-semibold mb-4">Admin Navigation</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card 
+          className="cursor-pointer hover:bg-gray-700 transition-colors"
+          onClick={() => handleNavigation("/admin")}
+        >
+          <CardHeader>
+            <LayoutDashboard className="h-8 w-8 mb-2" />
+            <CardTitle>Dashboard</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-300">Overview of system metrics and statistics</p>
+          </CardContent>
+        </Card>
+        
+        <Card 
+          className="cursor-pointer hover:bg-gray-700 transition-colors"
+          onClick={() => handleNavigation("/admin/cases")}
+        >
+          <CardHeader>
+            <FileText className="h-8 w-8 mb-2" />
+            <CardTitle>Cases Management</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-300">Create, edit, and manage radiology cases</p>
+          </CardContent>
+        </Card>
+        
+        <Card 
+          className="cursor-pointer hover:bg-gray-700 transition-colors"
+          onClick={() => handleNavigation("/admin/users")}
+        >
+          <CardHeader>
+            <Users className="h-8 w-8 mb-2" />
+            <CardTitle>Users</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-300">Manage user accounts and permissions</p>
+          </CardContent>
+        </Card>
+        
+        <Card 
+          className="cursor-pointer hover:bg-gray-700 transition-colors"
+          onClick={() => handleNavigation("/admin/settings")}
+        >
+          <CardHeader>
+            <Settings className="h-8 w-8 mb-2" />
+            <CardTitle>Settings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-300">Configure system settings and preferences</p>
+          </CardContent>
+        </Card>
+        
+        <Card 
+          className="cursor-pointer hover:bg-gray-700 transition-colors"
+          onClick={() => {
+            console.log("AdminDashboard: Navigating to browse cases (trainee view)");
+            navigate("/cases");
+          }}
+        >
+          <CardHeader>
+            <FileText className="h-8 w-8 mb-2" />
+            <CardTitle>Browse Cases</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-300">View cases as a trainee would see them</p>
           </CardContent>
         </Card>
       </div>

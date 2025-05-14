@@ -153,7 +153,7 @@ const UserManagement = () => {
   
   const handleRoleChange = (userId: string, newRole: UserRole) => {
     console.log("UserManagement: Handling role change", { userId, newRole });
-    updateRoleMutation.mutate({ userId, newRole });
+    updateRoleMutation.mutate({ userId, role: newRole }); // Fixed: changed newRole to role
   };
   
   if (error) {

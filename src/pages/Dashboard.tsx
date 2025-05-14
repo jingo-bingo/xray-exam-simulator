@@ -31,17 +31,26 @@ const Dashboard = () => {
             You're logged in to the RadExam platform, the advanced radiology examination simulator.
           </p>
           
+          {/* Show admin panel button only for admins */}
           {userRole === "admin" && (
-            <div className="mt-4">
+            <div className="mt-4 flex gap-4">
               <Button onClick={() => {
                 console.log("Dashboard: Admin navigating to admin panel");
                 navigate("/admin");
               }}>
                 Access Admin Panel
               </Button>
+              
+              <Button onClick={() => {
+                console.log("Dashboard: Admin navigating to cases as an admin");
+                navigate("/cases");
+              }}>
+                Browse Cases
+              </Button>
             </div>
           )}
           
+          {/* Show browse cases button for trainees */}
           {userRole === "trainee" && (
             <div className="mt-4">
               <Button onClick={() => {

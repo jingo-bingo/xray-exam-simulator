@@ -23,9 +23,15 @@ export const SidebarNav = () => {
       icon: LayoutDashboard
     },
     {
-      name: "Cases",
+      name: "Cases Management",
       href: "/admin/cases",
       icon: FileText
+    },
+    {
+      name: "Browse Cases",
+      href: "/cases",
+      icon: FileText,
+      description: "View cases as a trainee would see them"
     },
     {
       name: "Users",
@@ -49,7 +55,10 @@ export const SidebarNav = () => {
       <div className="p-4 flex justify-between items-center">
         {!collapsed && <h2 className="text-xl font-semibold text-white">RadExam</h2>}
         <button 
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={() => {
+            console.log(`SidebarNav: Toggling sidebar to ${!collapsed ? 'collapsed' : 'expanded'} state`);
+            setCollapsed(!collapsed);
+          }}
           className="p-1 rounded-full hover:bg-gray-800 text-gray-400 hover:text-white"
         >
           {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
@@ -70,6 +79,7 @@ export const SidebarNav = () => {
                   collapsed ? "justify-center" : "justify-start"
                 )}
                 onClick={() => console.log(`SidebarNav: Navigating to ${item.href}`)}
+                title={collapsed ? item.name : undefined}
               >
                 <item.icon size={20} />
                 {!collapsed && <span className="ml-3">{item.name}</span>}

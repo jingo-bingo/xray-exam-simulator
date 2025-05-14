@@ -13,6 +13,13 @@ import Cases from "./pages/Cases";
 import { AuthProvider } from "./hooks/useAuth";
 import ProtectedRoute from "./components/ProtectedRoute";
 
+// Admin pages
+import { AdminLayout } from "./components/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import CaseManagement from "./pages/admin/CaseManagement";
+import CaseEditor from "./pages/admin/CaseEditor";
+import UserManagement from "./pages/admin/UserManagement";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -35,7 +42,13 @@ const App = () => (
             
             {/* Admin routes */}
             <Route element={<ProtectedRoute requiredRole="admin" />}>
-              <Route path="/admin/*" element={<Dashboard />} />
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="cases" element={<CaseManagement />} />
+                <Route path="cases/new" element={<CaseEditor />} />
+                <Route path="cases/edit/:id" element={<CaseEditor />} />
+                <Route path="users" element={<UserManagement />} />
+              </Route>
             </Route>
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

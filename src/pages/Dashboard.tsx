@@ -2,10 +2,15 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 const Dashboard = () => {
   const { user, userRole, signOut } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    console.log("Dashboard: Component mounted with userRole:", userRole);
+  }, [userRole]);
 
   return (
     <div className="min-h-screen bg-radiology-dark text-radiology-light">
@@ -28,13 +33,23 @@ const Dashboard = () => {
           
           {userRole === "admin" && (
             <div className="mt-4">
-              <Button onClick={() => navigate("/admin/cases")}>Manage Cases</Button>
+              <Button onClick={() => {
+                console.log("Dashboard: Admin navigating to admin panel");
+                navigate("/admin");
+              }}>
+                Access Admin Panel
+              </Button>
             </div>
           )}
           
           {userRole === "trainee" && (
             <div className="mt-4">
-              <Button onClick={() => navigate("/cases")}>Browse Cases</Button>
+              <Button onClick={() => {
+                console.log("Dashboard: Trainee navigating to cases");
+                navigate("/cases");
+              }}>
+                Browse Cases
+              </Button>
             </div>
           )}
         </div>

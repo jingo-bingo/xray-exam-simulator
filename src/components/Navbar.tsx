@@ -1,28 +1,68 @@
 
-import React from 'react';
+import { useState } from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { Menu, X } from "lucide-react";
 
-const Navbar: React.FC = () => {
+const Navbar = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const { user, signOut } = useAuth();
+
   return (
-    <header className="fixed top-0 w-full bg-radiology-darker/80 backdrop-blur-sm z-50 border-b border-radiology-muted/30">
-      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <span className="text-xl font-semibold text-white">RadExam</span>
-          <span className="bg-radiology-accent text-white text-xs px-2 py-0.5 rounded">BETA</span>
-        </div>
+    <nav className="bg-gray-900 py-4">
+      <div className="container mx-auto px-4 flex items-center justify-between">
+        <Link to="/" className="text-xl font-bold text-white">RadExam</Link>
         
-        <nav className="hidden md:flex items-center space-x-8 text-sm">
-          <a href="#features" className="text-radiology-light hover:text-white transition-colors">Features</a>
-          <a href="#workflow" className="text-radiology-light hover:text-white transition-colors">Workflow</a>
-          <a href="#about" className="text-radiology-light hover:text-white transition-colors">About</a>
-        </nav>
+        {/* Mobile menu button */}
+        <button
+          className="md:hidden text-white focus:outline-none"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          {isOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
         
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" className="text-radiology-light hover:text-white hover:bg-radiology-muted">Log in</Button>
-          <Button className="bg-radiology-accent hover:bg-radiology-accent/90 text-white">Get Started</Button>
+        {/* Desktop menu */}
+        <div className="hidden md:flex items-center gap-6">
+          <Link to="/" className="text-white hover:text-gray-300 transition-colors">Home</Link>
+          <Link to="/features" className="text-white hover:text-gray-300 transition-colors">Features</Link>
+          <Link to="/about" className="text-white hover:text-gray-300 transition-colors">About</Link>
+          
+          {user ? (
+            <>
+              <Link to="/dashboard" className="text-white hover:text-gray-300 transition-colors">Dashboard</Link>
+              <Button variant="outline" size="sm" onClick={signOut}>Sign Out</Button>
+            </>
+          ) : (
+            <Link to="/auth">
+              <Button variant="default" size="sm">Sign In</Button>
+            </Link>
+          )}
         </div>
       </div>
-    </header>
+      
+      {/* Mobile menu */}
+      {isOpen && (
+        <div className="md:hidden bg-gray-800 mt-2 py-4 px-4 absolute left-0 right-0 z-50">
+          <div className="flex flex-col gap-4">
+            <Link to="/" className="text-white hover:text-gray-300 transition-colors">Home</Link>
+            <Link to="/features" className="text-white hover:text-gray-300 transition-colors">Features</Link>
+            <Link to="/about" className="text-white hover:text-gray-300 transition-colors">About</Link>
+            
+            {user ? (
+              <>
+                <Link to="/dashboard" className="text-white hover:text-gray-300 transition-colors">Dashboard</Link>
+                <Button variant="outline" size="sm" onClick={signOut}>Sign Out</Button>
+              </>
+            ) : (
+              <Link to="/auth">
+                <Button variant="default" size="sm">Sign In</Button>
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+    </nav>
   );
 };
 

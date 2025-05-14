@@ -43,6 +43,8 @@ const CasesList = () => {
   const { data: cases, isLoading, error } = useQuery({
     queryKey: ["cases", { regionFilter, difficultyFilter }],
     queryFn: async () => {
+      console.log("CasesList: Fetching cases with filters:", { regionFilter, difficultyFilter });
+      
       let query = supabase
         .from("cases")
         .select("*")
@@ -58,10 +60,25 @@ const CasesList = () => {
 
       const { data, error } = await query;
       
-      if (error) throw new Error(error.message);
+      if (error) {
+        console.error("CasesList: Error fetching cases:", error.message);
+        throw new Error(error.message);
+      }
+      
+      console.log("CasesList: Cases fetched successfully, count:", data?.length);
       return data as Case[];
     },
   });
+
+  const handleRegionChange = (value: string) => {
+    console.log("CasesList: Region filter changed to:", value);
+    setRegionFilter(value === "all" ? null : value as RegionType);
+  };
+
+  const handleDifficultyChange = (value: string) => {
+    console.log("CasesList: Difficulty filter changed to:", value);
+    setDifficultyFilter(value === "all" ? null : value as DifficultyLevel);
+  };
 
   if (isLoading) return <div className="text-center p-8">Loading cases...</div>;
   if (error) return <div className="text-center p-8 text-red-500">Error loading cases: {(error as Error).message}</div>;
@@ -86,13 +103,13 @@ const CasesList = () => {
         
         <div className="flex flex-col sm:flex-row gap-4">
           <Select 
-            onValueChange={(value: RegionType | "") => setRegionFilter(value || null)}
+            onValueChange={handleRegionChange}
           >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Region" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Regions</SelectItem>
+              <SelectItem value="all">All Regions</SelectItem>
               <SelectItem value="chest">Chest</SelectItem>
               <SelectItem value="abdomen">Abdomen</SelectItem>
               <SelectItem value="head">Head</SelectItem>
@@ -104,13 +121,13 @@ const CasesList = () => {
           </Select>
           
           <Select 
-            onValueChange={(value: DifficultyLevel | "") => setDifficultyFilter(value || null)}
+            onValueChange={handleDifficultyChange}
           >
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Difficulty" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Difficulties</SelectItem>
+              <SelectItem value="all">All Difficulties</SelectItem>
               <SelectItem value="easy">Easy</SelectItem>
               <SelectItem value="medium">Medium</SelectItem>
               <SelectItem value="hard">Hard</SelectItem>

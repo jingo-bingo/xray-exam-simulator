@@ -1,5 +1,5 @@
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,9 +42,20 @@ export const DicomUploader = ({ currentPath, onUploadComplete }: DicomUploaderPr
     }
   };
   
-  useState(() => {
+  // FIX: Replace incorrect useState with useEffect for loading preview
+  useEffect(() => {
+    console.log("DicomUploader: useEffect triggered with filePath:", filePath);
     loadPreview();
-  });
+  }, [filePath]); // Run when filePath changes
+  
+  // Separate useEffect to initialize filePath from currentPath when component mounts
+  useEffect(() => {
+    console.log("DicomUploader: Initial useEffect triggered with currentPath:", currentPath);
+    if (currentPath && currentPath !== filePath) {
+      console.log("DicomUploader: Setting filePath from currentPath:", currentPath);
+      setFilePath(currentPath);
+    }
+  }, [currentPath]);
   
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -87,7 +98,7 @@ export const DicomUploader = ({ currentPath, onUploadComplete }: DicomUploaderPr
         
       if (data) {
         setPreviewUrl(data.signedUrl);
-        console.log("DicomUploader: Preview URL created:", data.signedUrl);
+        console.log("DicomUploader: Preview URL created after upload:", data.signedUrl);
       }
       
       toast.success("File uploaded successfully");
@@ -165,6 +176,15 @@ export const DicomUploader = ({ currentPath, onUploadComplete }: DicomUploaderPr
                 src={previewUrl} 
                 alt="DICOM preview" 
                 className="w-full h-48 object-contain border rounded-md" 
+                onError={(e) => {
+                  console.error("DicomUploader: Error loading image:", e);
+                  e.currentTarget.style.display = 'none';
+                  // Show a fallback element when image fails to load
+                  const fallback = document.createElement('div');
+                  fallback.className = 'w-full h-48 flex items-center justify-center bg-gray-100 border rounded-md';
+                  fallback.innerHTML = '<p class="text-gray-500">Preview failed to load</p>';
+                  e.currentTarget.parentNode?.appendChild(fallback);
+                }}
               />
               <Button 
                 variant="destructive" 

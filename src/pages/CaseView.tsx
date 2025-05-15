@@ -1,151 +1,21 @@
 
-import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { DicomViewer } from "@/components/admin/DicomViewer";
-import { DicomMetadataDisplay, DicomMetadata } from "@/components/admin/DicomMetadataDisplay";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Image } from "lucide-react";
-import { toast } from "@/components/ui/use-toast";
+import { ArrowLeft } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getSignedUrl } from "@/utils/dicomStorage";
+import { useCaseData } from "@/hooks/useCaseData";
+import { CaseHeader } from "@/components/case/CaseHeader";
+import { CaseDetails } from "@/components/case/CaseDetails";
+import { DicomImageSection } from "@/components/case/DicomImageSection";
 
 const CaseView = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [signedDicomUrl, setSignedDicomUrl] = useState<string | null>(null);
-  const [dicomError, setDicomError] = useState<string | null>(null);
-  const [dicomMetadata, setDicomMetadata] = useState<DicomMetadata | null>(null);
-  const [isLoadingMetadata, setIsLoadingMetadata] = useState<boolean>(false);
   
-  // Use refs to prevent dependency cycles and track loading state
-  const isGeneratingUrlRef = useRef<boolean>(false);
-  const currentDicomPathRef = useRef<string | null>(null);
-  
-  // Track mounted state to prevent state updates after component unmount
-  const isMountedRef = useRef<boolean>(true);
-  
-  useEffect(() => {
-    // Set mounted state on mount
-    isMountedRef.current = true;
-    
-    // Clean up on unmount
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  // Fetch case data with proper caching
-  const { data: caseData, isLoading: isLoadingCase, error: caseError } = useQuery({
-    queryKey: ["case", id],
-    queryFn: async () => {
-      console.log("CaseView: Fetching case with id:", id);
-      const { data: caseData, error: caseError } = await supabase
-        .from("cases")
-        .select("*")
-        .eq("id", id)
-        .single();
-
-      if (caseError) {
-        console.error("CaseView: Error fetching case:", caseError);
-        throw new Error(caseError.message);
-      }
-
-      return caseData;
-    },
-    enabled: !!id && !!user,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    retry: 1, // Only retry once to avoid excessive retries on 404s
-  });
-
-  // Memoized function to generate signed URL - no state dependencies
-  const generateSignedUrl = useCallback(async (dicomPath: string) => {
-    // Prevent duplicate requests and check if component is still mounted
-    if (isGeneratingUrlRef.current || !isMountedRef.current) return null;
-    
-    // Path hasn't changed - no need to regenerate
-    if (currentDicomPathRef.current === dicomPath && signedDicomUrl) {
-      console.log("CaseView: Using existing URL for same DICOM path");
-      return signedDicomUrl;
-    }
-    
-    // Update current path ref
-    currentDicomPathRef.current = dicomPath;
-    
-    // Set loading state using ref to prevent dependency cycle
-    isGeneratingUrlRef.current = true;
-    
-    try {
-      console.log("CaseView: Generating signed URL for:", dicomPath);
-      const url = await getSignedUrl(dicomPath, 3600);
-      console.log("CaseView: Signed URL generated:", url);
-      
-      // Only update state if component is still mounted
-      if (isMountedRef.current) {
-        setSignedDicomUrl(url);
-        setDicomError(null);
-      }
-      
-      return url;
-    } catch (error) {
-      console.error("CaseView: Failed to generate signed URL:", error);
-      
-      // Only update state if component is still mounted
-      if (isMountedRef.current) {
-        setDicomError("Failed to load image URL");
-        toast({
-          title: "Error",
-          description: "Failed to load DICOM image",
-          variant: "destructive",
-        });
-      }
-      
-      return null;
-    } finally {
-      isGeneratingUrlRef.current = false;
-    }
-  }, []);
-
-  // Generate signed URL for DICOM when caseData is available
-  useEffect(() => {
-    if (!caseData) return;
-    
-    console.log("CaseView: Case data loaded, dicom_path:", caseData.dicom_path);
-    
-    if (caseData.dicom_path) {
-      // Track previous path to avoid unnecessary regeneration
-      const previousPath = currentDicomPathRef.current;
-      
-      if (previousPath !== caseData.dicom_path) {
-        console.log("CaseView: DICOM path changed, generating new URL");
-        
-        // Reset metadata when path changes
-        if (isMountedRef.current) {
-          setDicomMetadata(null);
-          setIsLoadingMetadata(true);
-        }
-        
-        generateSignedUrl(caseData.dicom_path);
-      } else {
-        console.log("CaseView: DICOM path unchanged, skipping URL generation");
-      }
-    } else {
-      // Reset states if no DICOM path
-      currentDicomPathRef.current = null;
-      
-      if (isMountedRef.current) {
-        setSignedDicomUrl(null);
-        setDicomError(null);
-        setDicomMetadata(null);
-        setIsLoadingMetadata(false);
-      }
-    }
-  }, [caseData, generateSignedUrl]);
+  // Fetch case data with custom hook
+  const { data: caseData, isLoading: isLoadingCase, error: caseError } = useCaseData(id, user?.id);
 
   // Handle errors
   if (caseError) {
@@ -166,50 +36,12 @@ const CaseView = () => {
     );
   }
 
-  // Handle metadata loading - use stable callback
-  const handleMetadataLoaded = useCallback((metadata: DicomMetadata) => {
-    console.log("CaseView: Metadata received from DicomViewer:", metadata);
-    
-    if (isMountedRef.current) {
-      setDicomMetadata(metadata);
-      setIsLoadingMetadata(false);
-    }
-  }, []);
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case "easy":
-        return "bg-green-500";
-      case "medium":
-        return "bg-yellow-500";
-      case "hard":
-        return "bg-red-500";
-      default:
-        return "bg-gray-500";
-    }
-  };
-
   return (
     <div className="min-h-screen bg-radiology-dark text-radiology-light">
-      <header className="bg-gray-800 shadow-md py-4 px-6 sticky top-0 z-10">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => navigate("/cases")}
-              className="mr-4"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Cases
-            </Button>
-            {isLoadingCase ? (
-              <Skeleton className="h-8 w-48" />
-            ) : (
-              <h1 className="text-xl font-bold">{caseData?.title}</h1>
-            )}
-          </div>
-        </div>
-      </header>
+      <CaseHeader 
+        title={caseData?.title} 
+        isLoading={isLoadingCase} 
+      />
 
       <main className="container mx-auto py-8 px-4">
         {isLoadingCase ? (
@@ -222,98 +54,14 @@ const CaseView = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left column - Case information */}
             <div className="lg:col-span-1 space-y-4">
-              <Card className="bg-gray-800 border-gray-700">
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <CardTitle className="text-radiology-light">{caseData?.title}</CardTitle>
-                    {caseData?.is_free_trial && (
-                      <Badge variant="outline" className="bg-blue-600 text-white border-blue-600">
-                        Free Trial
-                      </Badge>
-                    )}
-                  </div>
-                  <CardDescription className="text-gray-400">
-                    Case #{caseData?.case_number} - 
-                    {caseData?.region.charAt(0).toUpperCase() + caseData?.region.slice(1)} - 
-                    {caseData?.age_group.charAt(0).toUpperCase() + caseData?.age_group.slice(1)}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="mb-4">
-                    <Badge className={`${getDifficultyColor(caseData?.difficulty)} text-white`}>
-                      {caseData?.difficulty.charAt(0).toUpperCase() + caseData?.difficulty.slice(1)}
-                    </Badge>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-300 mb-1">Clinical History</h3>
-                      <p className="text-white">{caseData?.clinical_history || "No clinical history provided."}</p>
-                    </div>
-                    
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-300 mb-1">Description</h3>
-                      <p className="text-white">{caseData?.description || "No description available."}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <CaseDetails caseData={caseData} />
             </div>
             
             {/* Right column - DICOM viewer and metadata */}
             <div className="lg:col-span-2">
-              <Card className="bg-gray-800 border-gray-700">
-                <CardHeader>
-                  <CardTitle className="text-radiology-light flex items-center">
-                    <Image className="mr-2 h-5 w-5" />
-                    DICOM Image
-                  </CardTitle>
-                  {dicomError && (
-                    <CardDescription className="text-red-400">
-                      Error: {dicomError}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <div className="relative w-full aspect-square max-h-[600px] bg-black">
-                    {signedDicomUrl ? (
-                      <DicomViewer 
-                        imageUrl={signedDicomUrl}
-                        alt={`DICOM for case ${caseData?.title}`}
-                        className="w-full aspect-square max-h-[600px] bg-black"
-                        onError={(error) => {
-                          console.error("CaseView: DICOM viewer error:", error);
-                          setDicomError("Failed to load the DICOM image");
-                          toast({
-                            title: "Image Error",
-                            description: "Failed to load the DICOM image",
-                            variant: "destructive",
-                          });
-                        }}
-                        onMetadataLoaded={handleMetadataLoaded}
-                      />
-                    ) : (
-                      <div className="w-full aspect-square max-h-[600px] bg-black flex items-center justify-center text-gray-400">
-                        {isGeneratingUrlRef.current ? (
-                          <div className="flex flex-col items-center">
-                            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-400 mb-2"></div>
-                            <div>Preparing DICOM image...</div>
-                          </div>
-                        ) : (
-                          dicomError ? 
-                            "Error loading DICOM image" : 
-                            (caseData?.dicom_path ? "Loading DICOM image..." : "No DICOM image available for this case")
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-              
-              {/* DICOM Metadata Display */}
-              <DicomMetadataDisplay 
-                metadata={dicomMetadata} 
-                isLoading={isLoadingMetadata && !!signedDicomUrl}
+              <DicomImageSection 
+                dicomPath={caseData?.dicom_path} 
+                title={caseData?.title}
               />
             </div>
           </div>

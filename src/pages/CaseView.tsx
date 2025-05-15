@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,8 +19,9 @@ const CaseView = () => {
   const { user } = useAuth();
   const [signedDicomUrl, setSignedDicomUrl] = useState<string | null>(null);
   const [dicomError, setDicomError] = useState<string | null>(null);
+  const [isGeneratingUrl, setIsGeneratingUrl] = useState<boolean>(false);
 
-  // Fetch case data
+  // Fetch case data with proper caching
   const { data: caseData, isLoading: isLoadingCase, error: caseError } = useQuery({
     queryKey: ["case", id],
     queryFn: async () => {
@@ -39,32 +40,47 @@ const CaseView = () => {
       return caseData;
     },
     enabled: !!id && !!user,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1, // Only retry once to avoid excessive retries on 404s
   });
+
+  // Memoized function to generate signed URL
+  const generateSignedUrl = useCallback(async (dicomPath: string) => {
+    // Prevent duplicate requests
+    if (isGeneratingUrl) return;
+    setIsGeneratingUrl(true);
+    
+    try {
+      console.log("CaseView: Generating signed URL for:", dicomPath);
+      const url = await getSignedUrl(dicomPath, 3600);
+      console.log("CaseView: Signed URL generated:", url);
+      setSignedDicomUrl(url);
+      setDicomError(null);
+      return url;
+    } catch (error) {
+      console.error("CaseView: Failed to generate signed URL:", error);
+      setDicomError("Failed to load image URL");
+      toast({
+        title: "Error",
+        description: "Failed to load DICOM image",
+        variant: "destructive",
+      });
+      return null;
+    } finally {
+      setIsGeneratingUrl(false);
+    }
+  }, []);
 
   // Generate signed URL for DICOM when caseData is available
   useEffect(() => {
-    const generateSignedUrl = async () => {
-      if (caseData?.dicom_path) {
-        try {
-          console.log("CaseView: Generating signed URL for:", caseData.dicom_path);
-          const url = await getSignedUrl(caseData.dicom_path, 3600);
-          console.log("CaseView: Signed URL generated:", url);
-          setSignedDicomUrl(url);
-          setDicomError(null);
-        } catch (error) {
-          console.error("CaseView: Failed to generate signed URL:", error);
-          setDicomError("Failed to load image URL");
-          toast({
-            title: "Error",
-            description: "Failed to load DICOM image",
-            variant: "destructive",
-          });
-        }
-      }
-    };
-
-    generateSignedUrl();
-  }, [caseData]);
+    if (caseData?.dicom_path) {
+      generateSignedUrl(caseData.dicom_path);
+    } else {
+      // Reset states if no DICOM path
+      setSignedDicomUrl(null);
+      setDicomError(null);
+    }
+  }, [caseData, generateSignedUrl]);
 
   // Handle errors
   if (caseError) {
@@ -184,28 +200,37 @@ const CaseView = () => {
                   )}
                 </CardHeader>
                 <CardContent>
-                  {signedDicomUrl ? (
-                    <DicomViewer 
-                      imageUrl={signedDicomUrl}
-                      alt={`DICOM for case ${caseData?.title}`}
-                      className="w-full aspect-square max-h-[600px] bg-black"
-                      onError={(error) => {
-                        console.error("CaseView: DICOM viewer error:", error);
-                        setDicomError("Failed to load the DICOM image");
-                        toast({
-                          title: "Image Error",
-                          description: "Failed to load the DICOM image",
-                          variant: "destructive",
-                        });
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full aspect-square max-h-[600px] bg-black flex items-center justify-center text-gray-400">
-                      {dicomError ? 
-                        "Error loading DICOM image" : 
-                        (caseData?.dicom_path ? "Loading DICOM image..." : "No DICOM image available for this case")}
-                    </div>
-                  )}
+                  <div className="relative w-full aspect-square max-h-[600px] bg-black">
+                    {signedDicomUrl ? (
+                      <DicomViewer 
+                        imageUrl={signedDicomUrl}
+                        alt={`DICOM for case ${caseData?.title}`}
+                        className="w-full aspect-square max-h-[600px] bg-black"
+                        onError={(error) => {
+                          console.error("CaseView: DICOM viewer error:", error);
+                          setDicomError("Failed to load the DICOM image");
+                          toast({
+                            title: "Image Error",
+                            description: "Failed to load the DICOM image",
+                            variant: "destructive",
+                          });
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full aspect-square max-h-[600px] bg-black flex items-center justify-center text-gray-400">
+                        {isGeneratingUrl ? (
+                          <div className="flex flex-col items-center">
+                            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-400 mb-2"></div>
+                            <div>Preparing DICOM image...</div>
+                          </div>
+                        ) : (
+                          dicomError ? 
+                            "Error loading DICOM image" : 
+                            (caseData?.dicom_path ? "Loading DICOM image..." : "No DICOM image available for this case")
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             </div>

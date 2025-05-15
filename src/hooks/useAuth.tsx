@@ -1,5 +1,4 @@
-
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useRef, useMemo } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -25,60 +24,102 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const isMounted = useRef(true);
+
+  // Keep track of fetch in progress to prevent duplicate fetches
+  const fetchingRole = useRef(false);
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          fetchUserRole(session.user.id);
-        } else {
-          setUserRole(null);
-        }
-      }
-    );
-
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        fetchUserRole(session.user.id);
-      } else {
-        setIsLoading(false);
-      }
-    });
-
+    // Set up cleanup function
     return () => {
-      subscription.unsubscribe();
+      isMounted.current = false;
     };
   }, []);
 
   const fetchUserRole = async (userId: string) => {
+    // Prevent duplicate fetches and race conditions
+    if (fetchingRole.current) return;
+    fetchingRole.current = true;
+    
     try {
+      console.log("AuthProvider: Fetching user role for user:", userId);
       const { data, error } = await supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", userId)
         .single();
 
+      // Only update state if component is still mounted
+      if (!isMounted.current) return;
+
       if (error) {
-        console.error("Error fetching user role:", error);
+        console.error("AuthProvider: Error fetching user role:", error);
         setUserRole(null);
       } else {
+        console.log("AuthProvider: User role fetched:", data.role);
         setUserRole(data.role as UserRole);
       }
     } catch (error) {
-      console.error("Error in fetchUserRole:", error);
-      setUserRole(null);
+      console.error("AuthProvider: Error in fetchUserRole:", error);
+      if (isMounted.current) {
+        setUserRole(null);
+      }
     } finally {
-      setIsLoading(false);
+      fetchingRole.current = false;
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
     }
   };
+
+  useEffect(() => {
+    console.log("AuthProvider: Setting up auth state listener");
+    // Set up auth state listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, newSession) => {
+        console.log("AuthProvider: Auth state changed:", event);
+        
+        if (!isMounted.current) return;
+        
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+        
+        // Use setTimeout to avoid potential Supabase auth deadlocks when 
+        // onAuthStateChange calls trigger other auth operations
+        if (newSession?.user) {
+          setTimeout(() => {
+            if (isMounted.current) {
+              fetchUserRole(newSession.user.id);
+            }
+          }, 0);
+        } else {
+          setUserRole(null);
+          setIsLoading(false);
+        }
+      }
+    );
+
+    // Then check for existing session
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      console.log("AuthProvider: Got existing session:", currentSession ? "yes" : "no");
+      
+      if (!isMounted.current) return;
+      
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+      
+      if (currentSession?.user) {
+        fetchUserRole(currentSession.user.id);
+      } else {
+        setIsLoading(false);
+      }
+    });
+
+    return () => {
+      console.log("AuthProvider: Cleaning up auth listener");
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
@@ -121,18 +162,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo(() => ({
+    user,
+    session,
+    userRole,
+    signIn,
+    signUp,
+    signOut,
+    isLoading,
+  }), [user, session, userRole, isLoading]);
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        session,
-        userRole,
-        signIn,
-        signUp,
-        signOut,
-        isLoading,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

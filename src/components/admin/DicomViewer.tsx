@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+
+import { useEffect, useRef, useState } from "react";
 import cornerstone from "cornerstone-core";
 import cornerstoneWebImageLoader from "cornerstone-web-image-loader";
 import cornerstoneWADOImageLoader from "cornerstone-wado-image-loader";
@@ -36,11 +37,35 @@ interface DicomViewerProps {
 
 export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerProps) => {
   const viewerRef = useRef<HTMLDivElement>(null);
+  const isMounted = useRef(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const loadingAttemptRef = useRef<AbortController | null>(null);
+  
+  useEffect(() => {
+    // Set up cleanup function
+    return () => {
+      isMounted.current = false;
+      
+      // Abort any pending load operations
+      if (loadingAttemptRef.current) {
+        loadingAttemptRef.current.abort();
+      }
+    };
+  }, []);
   
   useEffect(() => {
     if (!viewerRef.current || !imageUrl) return;
     
     console.log("DicomViewer: Initializing viewer for image:", imageUrl);
+    
+    // Reset states when URL changes
+    setIsLoading(true);
+    setError(null);
+    
+    // Create abort controller for this loading attempt
+    loadingAttemptRef.current = new AbortController();
+    const { signal } = loadingAttemptRef.current;
     
     // Enable the element for cornerstone
     const element = viewerRef.current;
@@ -50,21 +75,20 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
       console.log("DicomViewer: Cornerstone enabled on element");
     } catch (error) {
       console.error("DicomViewer: Error enabling cornerstone:", error);
+      if (!isMounted.current) return;
+      
+      setError("Failed to initialize viewer");
+      setIsLoading(false);
       if (onError) onError(new Error("Failed to initialize DICOM viewer"));
       return;
     }
     
     // Determine image type based on URL
-    // If the URL looks like a signed URL with a query parameter, use wadouri
-    // Otherwise, try to detect from file extension or fallback
     const getImageId = (url: string) => {
-      // If this is a signed URL with https://, use wadouri directly
       if (url.startsWith('http')) {
         return `wadouri:${url}`;
       }
       
-      // Otherwise, use webImage for image formats, and wadouri for DICOM files
-      // Check for common image file extensions
       const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp'];
       const isImageFormat = imageExtensions.some(ext => url.toLowerCase().endsWith(ext));
       
@@ -78,11 +102,20 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
     
     // Function to handle loading with memory consideration
     const loadImageSafely = async (imageId: string, isDicomAttempt = true) => {
+      // Check if loading operation was aborted
+      if (signal.aborted) {
+        throw new Error("Loading aborted");
+      }
+      
       try {
         console.log(`DicomViewer: Loading with imageId: ${imageId}`);
         return await cornerstone.loadImage(imageId);
       } catch (error: any) {
         console.error(`DicomViewer: Error loading image with ${imageId}:`, error);
+        
+        if (signal.aborted) {
+          throw new Error("Loading aborted during attempt");
+        }
         
         // If we get a memory allocation error, try downsampling
         if (error instanceof RangeError || (error.message && error.message.includes("buffer allocation failed"))) {
@@ -121,18 +154,29 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
     // Load the image
     loadImageSafely(imageId)
       .then((image) => {
+        // Check if component is still mounted
+        if (!isMounted.current) return;
+        
         console.log("DicomViewer: Image loaded successfully, metadata:", image.imageId);
         try {
           cornerstone.displayImage(element, image);
           console.log("DicomViewer: Image displayed successfully");
+          setIsLoading(false);
         } catch (displayError) {
           console.error("DicomViewer: Error displaying image:", displayError);
+          setError("Failed to display image");
           if (onError) onError(new Error("Failed to display image"));
+          setIsLoading(false);
         }
       })
       .catch((error) => {
+        // Check if component is still mounted
+        if (!isMounted.current) return;
+        
         console.error("DicomViewer: All image loading attempts failed:", error);
+        setError(error.message || "Failed to load image");
         if (onError) onError(error instanceof Error ? error : new Error("Failed to load image"));
+        setIsLoading(false);
       });
     
     // Clean up
@@ -157,7 +201,27 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
       className={className || "w-full h-48 border rounded-md bg-black"}
       data-testid="dicom-viewer"
     >
-      {!imageUrl && <div className="flex items-center justify-center h-full text-white">No image available</div>}
+      {isLoading && (
+        <div className="flex items-center justify-center h-full text-white bg-opacity-70 bg-black absolute inset-0">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white mb-2"></div>
+            <div>Loading DICOM image...</div>
+          </div>
+        </div>
+      )}
+      
+      {error && (
+        <div className="flex items-center justify-center h-full text-red-400 bg-opacity-70 bg-black absolute inset-0">
+          <div className="text-center p-4">
+            <div className="font-bold mb-2">Error</div>
+            <div>{error}</div>
+          </div>
+        </div>
+      )}
+      
+      {!imageUrl && !isLoading && !error && (
+        <div className="flex items-center justify-center h-full text-white">No image available</div>
+      )}
     </div>
   );
 };

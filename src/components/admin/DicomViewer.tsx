@@ -12,11 +12,23 @@ function initializeCornerstone() {
   try {
     console.log("DicomViewer: Initializing cornerstone and related libraries");
     
+    // First check if cornerstone is available
+    if (!cornerstone) {
+      console.error("DicomViewer: Cornerstone library not available");
+      return false;
+    }
+    
     // Register the cornerstone external dependencies first
     cornerstoneTools.external.cornerstone = cornerstone;
     cornerstoneWebImageLoader.external.cornerstone = cornerstone;
     cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
     cornerstoneWADOImageLoader.external.dicomParser = dicomParser;
+    
+    // Initialize cornerstone tools (but don't initialize mouse events yet)
+    cornerstoneTools.init({
+      showSVGCursors: true, 
+      mouseEnabled: true,
+    });
     
     // Initialize the WADO image loader for DICOM files
     cornerstone.registerImageLoader("wadouri", cornerstoneWADOImageLoader.wadouri.loadImage);
@@ -38,8 +50,6 @@ function initializeCornerstone() {
       maxCacheSize: 50, // Default is 100
     });
     
-    // Initialize cornerstone tools correctly - BUT don't initialize until the element is available
-    // This is critical to fix the mouse event issues
     console.log("DicomViewer: Cornerstone libraries initialized successfully");
     
     return true;
@@ -134,11 +144,8 @@ export const DicomViewer = forwardRef<DicomViewerHandle, DicomViewerProps>(
         setElementEnabled(true);
         console.log("DicomViewer: Element enabled successfully");
         
-        // Initialize tools on this specific element
-        console.log("DicomViewer: Initializing cornerstoneTools");
-        cornerstoneTools.init();
-        
         // Add mouse tools AFTER element is enabled
+        console.log("DicomViewer: Adding tools");
         cornerstoneTools.addTool(cornerstoneTools.PanTool);
         cornerstoneTools.addTool(cornerstoneTools.ZoomTool);
         cornerstoneTools.addTool(cornerstoneTools.WwwcTool);
@@ -174,7 +181,7 @@ export const DicomViewer = forwardRef<DicomViewerHandle, DicomViewerProps>(
     
     // Effect for loading and displaying the image
     useEffect(() => {
-      if (!viewerRef.current || !imageUrl || !cornerstoneInitialized || !elementEnabled) return;
+      if (!viewerRef.current || !imageUrl || !cornerstoneInitialized) return;
       
       console.log("DicomViewer: Loading image:", imageUrl);
       const element = viewerRef.current;
@@ -287,6 +294,11 @@ export const DicomViewer = forwardRef<DicomViewerHandle, DicomViewerProps>(
           case "pan":
             console.log("DicomViewer: Activating Pan tool");
             cornerstoneTools.setToolActive('Pan', { mouseButtonMask: 1 });
+            break;
+          case "zoom":
+            console.log("DicomViewer: Activating Zoom In tool");
+            cornerstoneTools.setToolActive('Zoom', { mouseButtonMask: 1 });
+            cornerstoneTools.setToolConfiguration('Zoom', { invert: false });
             break;
           case "zoomIn":
             console.log("DicomViewer: Activating Zoom In tool");

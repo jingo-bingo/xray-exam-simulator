@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { DicomViewer, DicomViewerHandle } from "@/components/admin/DicomViewer";
-import { CaseViewerToolbar } from "@/components/case-viewer/CaseViewerToolbar";
+import { CaseViewerToolbar, CaseViewerToolbarHandle } from "@/components/case-viewer/CaseViewerToolbar";
 import { ClinicalHistoryPanel } from "@/components/case-viewer/ClinicalHistoryPanel";
 import { QuestionPanel } from "@/components/case-viewer/QuestionPanel";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,8 @@ const CaseViewer = () => {
   
   // Update ref to use the correct type
   const dicomViewerRef = useRef<DicomViewerHandle>(null);
+  // Add a ref for the toolbar
+  const toolbarRef = useRef<CaseViewerToolbarHandle>(null);
 
   console.log(`CaseViewer: Initializing for case ${caseId}`);
 
@@ -201,30 +204,98 @@ const CaseViewer = () => {
     }
   }, [user, caseId]);
 
-  const handleToolChange = (tool: string) => {
-    console.log(`CaseViewer: Tool changed to ${tool}`);
-    setActiveTool(tool);
-  };
-
-  const handleViewReset = () => {
+  // Make handleViewReset memoized with useCallback to use in effect dependencies
+  const handleViewReset = useCallback(() => {
     console.log(`CaseViewer: View reset requested`);
     
     if (dicomViewerRef.current) {
       dicomViewerRef.current.resetView();
     }
+  }, []);
+
+  // Add a keydown event handler for tool shortcuts
+  useEffect(() => {
+    console.log("CaseViewer: Setting up keyboard shortcuts");
+    
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle keyboard shortcuts when not typing in an input field
+      if (event.target instanceof HTMLInputElement || 
+          event.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+      
+      console.log(`CaseViewer: Key pressed: ${event.key}`);
+      
+      switch (event.key.toLowerCase()) {
+        case 'w':
+          console.log("CaseViewer: Shortcut - Activating Window/Contrast tool");
+          if (toolbarRef.current) {
+            toolbarRef.current.clickContrast();
+          } else {
+            console.log("CaseViewer: Toolbar ref not available for contrast button");
+            setActiveTool("contrast");
+          }
+          break;
+        case 'r':
+          console.log("CaseViewer: Shortcut - Activating Rotate tool");
+          if (toolbarRef.current) {
+            toolbarRef.current.clickRotate();
+          } else {
+            console.log("CaseViewer: Toolbar ref not available for rotate button");
+            setActiveTool("rotate");
+          }
+          break;
+        case 'z':
+          console.log("CaseViewer: Shortcut - Activating Zoom tool");
+          if (toolbarRef.current) {
+            toolbarRef.current.clickZoom();
+          } else {
+            console.log("CaseViewer: Toolbar ref not available for zoom button");
+            setActiveTool("zoom");
+          }
+          break;
+        case 'f':
+          console.log("CaseViewer: Shortcut - Reset view (F key pressed)");
+          if (toolbarRef.current) {
+            toolbarRef.current.clickReset();
+          } else {
+            console.log("CaseViewer: Toolbar ref not available for reset button");
+            handleViewReset();
+          }
+          break;
+        default:
+          // No matching shortcut
+          break;
+      }
+    };
+    
+    // Add event listener
+    window.addEventListener('keydown', handleKeyDown);
+    
+    // Cleanup
+    return () => {
+      console.log("CaseViewer: Removing keyboard shortcut listeners");
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleViewReset]); // Add handleViewReset to dependencies
+  
+  const handleToolChange = (tool: string) => {
+    console.log(`CaseViewer: Tool changed to ${tool}`);
+    setActiveTool(tool);
   };
 
+  // Add the missing callback functions
   const handleToolInitialized = () => {
     console.log("CaseViewer: DicomViewer tools initialized");
     setToolsInitialized(true);
   };
 
   const handleImageError = (error: Error) => {
-    console.error("CaseViewer: DicomViewer error:", error);
-    setViewerError(error.message);
+    console.error("CaseViewer: DicomViewer image error:", error);
+    setViewerError(error.message || "Failed to load image");
     toast({
-      title: "Image Error",
-      description: error.message || "Failed to load the image. Please try again.",
+      title: "Error",
+      description: "Failed to load image. Please try again.",
       variant: "destructive",
     });
   };
@@ -281,6 +352,7 @@ const CaseViewer = () => {
           <div className="lg:col-span-2 space-y-4">
             <div className="bg-gray-900 rounded-md overflow-hidden shadow-lg">
               <CaseViewerToolbar 
+                ref={toolbarRef}
                 onToolChange={handleToolChange} 
                 onReset={handleViewReset} 
                 activeTool={activeTool} 

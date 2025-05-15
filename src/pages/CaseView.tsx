@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,16 +18,18 @@ const CaseView = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [signedDicomUrl, setSignedDicomUrl] = useState<string | null>(null);
+  
+  // Use refs to track state without triggering re-renders
+  const signedUrlRef = useRef<string | null>(null);
+  const currentDicomPathRef = useRef<string | null>(null);
+  const isUrlGeneratingRef = useRef<boolean>(false);
+  
+  // State that should trigger re-renders
   const [dicomError, setDicomError] = useState<string | null>(null);
   const [dicomMetadata, setDicomMetadata] = useState<DicomMetadata | null>(null);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState<boolean>(false);
   
-  // Use refs to prevent dependency cycles and track loading state
-  const isGeneratingUrlRef = useRef<boolean>(false);
-  const currentDicomPathRef = useRef<string | null>(null);
-  
-  // Track mounted state to prevent state updates after component unmount
+  // Component lifecycle ref
   const isMountedRef = useRef<boolean>(true);
   
   useEffect(() => {
@@ -39,12 +41,11 @@ const CaseView = () => {
       isMountedRef.current = false;
     };
   }, []);
-
+  
   // Fetch case data with proper caching
   const { data: caseData, isLoading: isLoadingCase, error: caseError } = useQuery({
     queryKey: ["case", id],
     queryFn: async () => {
-      console.log("CaseView: Fetching case with id:", id);
       const { data: caseData, error: caseError } = await supabase
         .from("cases")
         .select("*")
@@ -52,7 +53,6 @@ const CaseView = () => {
         .single();
 
       if (caseError) {
-        console.error("CaseView: Error fetching case:", caseError);
         throw new Error(caseError.message);
       }
 
@@ -63,39 +63,29 @@ const CaseView = () => {
     retry: 1, // Only retry once to avoid excessive retries on 404s
   });
 
-  // Memoized function to generate signed URL - no state dependencies
-  const generateSignedUrl = useCallback(async (dicomPath: string) => {
-    // Prevent duplicate requests and check if component is still mounted
-    if (isGeneratingUrlRef.current || !isMountedRef.current) return null;
-    
-    // Path hasn't changed - no need to regenerate
-    if (currentDicomPathRef.current === dicomPath && signedDicomUrl) {
-      console.log("CaseView: Using existing URL for same DICOM path");
-      return signedDicomUrl;
+  // Memoize the URL generation to prevent dependency cycles
+  const generateSignedUrl = useCallback(async (dicomPath: string): Promise<string | null> => {
+    // Skip if already generating a URL for this path
+    if (isUrlGeneratingRef.current) {
+      return signedUrlRef.current;
     }
-    
-    // Update current path ref
-    currentDicomPathRef.current = dicomPath;
-    
-    // Set loading state using ref to prevent dependency cycle
-    isGeneratingUrlRef.current = true;
-    
+
     try {
-      console.log("CaseView: Generating signed URL for:", dicomPath);
-      const url = await getSignedUrl(dicomPath, 3600);
-      console.log("CaseView: Signed URL generated:", url);
+      // Set the generating flag
+      isUrlGeneratingRef.current = true;
       
-      // Only update state if component is still mounted
+      // Generate the URL
+      const url = await getSignedUrl(dicomPath, 3600);
+      
+      // Only update if still mounted
       if (isMountedRef.current) {
-        setSignedDicomUrl(url);
+        signedUrlRef.current = url;
         setDicomError(null);
       }
       
       return url;
     } catch (error) {
-      console.error("CaseView: Failed to generate signed URL:", error);
-      
-      // Only update state if component is still mounted
+      // Only update if still mounted
       if (isMountedRef.current) {
         setDicomError("Failed to load image URL");
         toast({
@@ -107,43 +97,43 @@ const CaseView = () => {
       
       return null;
     } finally {
-      isGeneratingUrlRef.current = false;
+      // Clear the generating flag
+      isUrlGeneratingRef.current = false;
     }
   }, []);
 
+  // Evaluate if we need to refresh the URL
+  const signedDicomUrl = useMemo(() => {
+    return signedUrlRef.current;
+  }, [signedUrlRef.current]);
+
   // Generate signed URL for DICOM when caseData is available
   useEffect(() => {
-    if (!caseData) return;
-    
-    console.log("CaseView: Case data loaded, dicom_path:", caseData.dicom_path);
-    
-    if (caseData.dicom_path) {
-      // Track previous path to avoid unnecessary regeneration
-      const previousPath = currentDicomPathRef.current;
-      
-      if (previousPath !== caseData.dicom_path) {
-        console.log("CaseView: DICOM path changed, generating new URL");
-        
-        // Reset metadata when path changes
-        if (isMountedRef.current) {
-          setDicomMetadata(null);
-          setIsLoadingMetadata(true);
-        }
-        
-        generateSignedUrl(caseData.dicom_path);
-      } else {
-        console.log("CaseView: DICOM path unchanged, skipping URL generation");
-      }
-    } else {
+    if (!caseData?.dicom_path) {
       // Reset states if no DICOM path
       currentDicomPathRef.current = null;
-      
+      signedUrlRef.current = null;
       if (isMountedRef.current) {
-        setSignedDicomUrl(null);
-        setDicomError(null);
         setDicomMetadata(null);
-        setIsLoadingMetadata(false);
       }
+      return;
+    }
+    
+    const dicomPath = caseData.dicom_path;
+    
+    // Check if the path has changed
+    if (currentDicomPathRef.current !== dicomPath) {
+      // Update the current path
+      currentDicomPathRef.current = dicomPath;
+      
+      // Reset metadata and start loading
+      if (isMountedRef.current) {
+        setDicomMetadata(null);
+        setIsLoadingMetadata(true);
+      }
+      
+      // Generate the URL (async)
+      generateSignedUrl(dicomPath);
     }
   }, [caseData, generateSignedUrl]);
 
@@ -166,10 +156,8 @@ const CaseView = () => {
     );
   }
 
-  // Handle metadata loading - use stable callback
+  // Memoized metadata handler to prevent recreating on every render
   const handleMetadataLoaded = useCallback((metadata: DicomMetadata) => {
-    console.log("CaseView: Metadata received from DicomViewer:", metadata);
-    
     if (isMountedRef.current) {
       setDicomMetadata(metadata);
       setIsLoadingMetadata(false);
@@ -282,19 +270,20 @@ const CaseView = () => {
                         alt={`DICOM for case ${caseData?.title}`}
                         className="w-full aspect-square max-h-[600px] bg-black"
                         onError={(error) => {
-                          console.error("CaseView: DICOM viewer error:", error);
-                          setDicomError("Failed to load the DICOM image");
-                          toast({
-                            title: "Image Error",
-                            description: "Failed to load the DICOM image",
-                            variant: "destructive",
-                          });
+                          if (isMountedRef.current) {
+                            setDicomError("Failed to load the DICOM image");
+                            toast({
+                              title: "Image Error",
+                              description: "Failed to load the DICOM image",
+                              variant: "destructive",
+                            });
+                          }
                         }}
                         onMetadataLoaded={handleMetadataLoaded}
                       />
                     ) : (
                       <div className="w-full aspect-square max-h-[600px] bg-black flex items-center justify-center text-gray-400">
-                        {isGeneratingUrlRef.current ? (
+                        {isUrlGeneratingRef.current ? (
                           <div className="flex flex-col items-center">
                             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-400 mb-2"></div>
                             <div>Preparing DICOM image...</div>

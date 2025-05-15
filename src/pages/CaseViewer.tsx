@@ -4,7 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { DicomViewer } from "@/components/admin/DicomViewer";
+import { DicomViewer, DicomViewerHandle } from "@/components/admin/DicomViewer";
 import { CaseViewerToolbar } from "@/components/case-viewer/CaseViewerToolbar";
 import { ClinicalHistoryPanel } from "@/components/case-viewer/ClinicalHistoryPanel";
 import { QuestionPanel } from "@/components/case-viewer/QuestionPanel";
@@ -28,7 +28,8 @@ const CaseViewer = () => {
   const [caseAttemptId, setCaseAttemptId] = useState<string | null>(null);
   const [toolsInitialized, setToolsInitialized] = useState(false);
   
-  const dicomViewerRef = useRef<HTMLDivElement | null>(null);
+  // Update ref to use the correct type
+  const dicomViewerRef = useRef<DicomViewerHandle>(null);
 
   console.log(`CaseViewer: Initializing for case ${caseId}`);
 
@@ -203,9 +204,8 @@ const CaseViewer = () => {
   const handleViewReset = () => {
     console.log(`CaseViewer: View reset requested`);
     
-    // Access the reset function from the DicomViewer
-    if (dicomViewerRef.current && (dicomViewerRef.current as any).resetView) {
-      (dicomViewerRef.current as any).resetView();
+    if (dicomViewerRef.current) {
+      dicomViewerRef.current.resetView();
     }
   };
 

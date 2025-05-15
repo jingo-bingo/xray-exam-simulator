@@ -1,86 +1,8 @@
 
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { isDicom } from "@/utils/dicomValidator";
+import { fileExists, uploadDicomFile, removeDicomFile } from "@/utils/dicomStorage";
 import { toast } from "@/components/ui/use-toast";
-import * as dicomParser from "dicom-parser";
-
-/**
- * Validates if a file is a valid DICOM file by examining its content
- * rather than relying on file extension
- * @param file The file to validate
- * @returns Promise<boolean> True if the file is a valid DICOM file, false otherwise
- */
-const isDicom = async (file: File): Promise<boolean> => {
-  console.log("isDicom: Starting DICOM validation for file", file.name);
-  
-  try {
-    // Read the file as an ArrayBuffer
-    const arrayBuffer = await file.arrayBuffer();
-    console.log("isDicom: File read as ArrayBuffer, size:", arrayBuffer.byteLength);
-    
-    // Convert to Uint8Array for dicom-parser
-    const byteArray = new Uint8Array(arrayBuffer);
-    
-    // Check for DICM magic number at byte offset 128
-    if (byteArray.length > 132) {
-      const magicBytes = String.fromCharCode(
-        byteArray[128], byteArray[129], byteArray[130], byteArray[131]
-      );
-      console.log("isDicom: Magic bytes at position 128:", magicBytes);
-      
-      if (magicBytes === "DICM") {
-        console.log("isDicom: DICM magic number found - definitely a DICOM file");
-        return true;
-      }
-    }
-    
-    // If no magic number, try parsing anyway (some DICOM files don't have the magic number)
-    console.log("isDicom: No DICM magic number found, attempting to parse DICOM data");
-    const dataSet = dicomParser.parseDicom(byteArray);
-    
-    // Check if the dataset contains some common DICOM tags - using !! to ensure boolean return
-    const hasDicomTags = !!dataSet && (
-      !!dataSet.elements.x00080008 || // ImageType
-      !!dataSet.elements.x00080060 || // Modality
-      !!dataSet.elements.x00080070 || // Manufacturer
-      !!dataSet.elements.x00100010 || // PatientName
-      !!dataSet.elements.x00200010    // StudyID
-    );
-    
-    console.log("isDicom: DICOM validation result:", hasDicomTags);
-    return hasDicomTags;
-  } catch (error) {
-    console.error("isDicom: Error validating DICOM file:", error);
-    return false;
-  }
-};
-
-/**
- * Checks if a file exists in the Supabase storage bucket
- * @param filePath The path of the file to check
- * @returns Promise<boolean> True if the file exists, false otherwise
- */
-const fileExists = async (filePath: string): Promise<boolean> => {
-  try {
-    console.log("fileExists: Checking if file exists:", filePath);
-    
-    // Try to create a signed URL - this will fail if the file doesn't exist
-    const { data, error } = await supabase.storage
-      .from("dicom_images")
-      .createSignedUrl(filePath, 10); // Short expiry to just check existence
-    
-    if (error) {
-      console.log("fileExists: File does not exist or error occurred:", error.message);
-      return false;
-    }
-    
-    console.log("fileExists: File exists");
-    return true;
-  } catch (error) {
-    console.error("fileExists: Error checking file existence:", error);
-    return false;
-  }
-};
 
 export interface UseDicomUploadOptions {
   /**
@@ -151,29 +73,11 @@ export const useDicomUpload = (
       
       console.log("useDicomUpload: File validation successful, proceeding with upload");
       
-      // Create a unique file path - preserve original filename when possible
-      // but ensure it has a unique identifier
-      const uniqueId = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}`;
-      const fileName = file.name.includes('.') 
-        ? `${uniqueId}_${file.name}` 
-        : `${uniqueId}_${file.name}`;
-      
-      // For temporary uploads, prepend a special prefix to make them easier to identify later
-      const uploadPath = isTemporaryUpload ? `temp_${fileName}` : fileName;
-      
-      console.log("useDicomUpload: Uploading file to path:", uploadPath);
-      
-      const { error: uploadError } = await supabase.storage
-        .from("dicom_images")
-        .upload(uploadPath, file, {
-          contentType: "application/dicom" // Try to set the proper MIME type
-        });
-        
-      if (uploadError) {
-        console.error("useDicomUpload: Error uploading file:", uploadError);
+      const uploadPath = await uploadDicomFile(file, isTemporaryUpload);
+      if (!uploadPath) {
         toast({
           title: "Upload Failed",
-          description: "Error uploading file: " + uploadError.message,
+          description: "Error uploading file. Please try again.",
           variant: "destructive",
         });
         return;
@@ -208,40 +112,25 @@ export const useDicomUpload = (
     console.log("useDicomUpload: Removing file:", filePath);
     
     try {
-      // First, check if the file exists to avoid unnecessary errors
-      const exists = await fileExists(filePath);
+      const removed = await removeDicomFile(filePath);
       
-      // Only try to delete if the file exists
-      if (exists) {
-        const { error } = await supabase.storage
-          .from("dicom_images")
-          .remove([filePath]);
-          
-        if (error) {
-          console.error("useDicomUpload: Error removing file:", error);
-          toast({
-            title: "Removal Failed",
-            description: "Error removing file: " + error.message,
-            variant: "destructive",
-          });
-          // Continue anyway to update the state
-        } else {
-          console.log("useDicomUpload: File removed successfully");
-        }
-      } else {
-        console.log("useDicomUpload: File doesn't exist, skipping storage deletion");
-      }
-      
-      // Always update the UI state
+      // Always update the UI state, even if removal failed
       setFilePath(null);
       setValidationError(null);
       setFileIsMissing(false);
       onUploadComplete("");
       
-      toast({
-        title: "File Removed",
-        description: "File reference removed successfully",
-      });
+      if (removed) {
+        toast({
+          title: "File Removed",
+          description: "File reference removed successfully",
+        });
+      } else {
+        toast({
+          title: "Removal Note",
+          description: "File reference removed, but there may have been an issue deleting the actual file.",
+        });
+      }
     } catch (error) {
       console.error("useDicomUpload: Error in handleRemoveFile:", error);
       toast({

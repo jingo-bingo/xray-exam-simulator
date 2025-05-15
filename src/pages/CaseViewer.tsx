@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -176,7 +175,7 @@ const CaseViewer = () => {
             return;
           }
           
-          console.log(`CaseViewer: Got signed URL for DICOM image`);
+          console.log(`CaseViewer: Got signed URL for DICOM image:`, data.signedUrl.substring(0, 50) + '...');
           setDicomUrl(data.signedUrl);
         } catch (error) {
           console.error("CaseViewer: Exception getting signed URL:", error);
@@ -315,7 +314,7 @@ const CaseViewer = () => {
     }
   };
 
-  if (isLoading || questionsLoading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-radiology-dark text-radiology-light flex items-center justify-center">
         <p>Loading case...</p>

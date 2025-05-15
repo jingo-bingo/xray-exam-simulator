@@ -38,10 +38,11 @@ function initializeCornerstone() {
       maxCacheSize: 50, // Default is 100
     });
     
-    // Initialize cornerstone tools correctly - BUT don't initialize until the element is available
-    // This is critical to fix the mouse event issues
-    console.log("DicomViewer: Cornerstone libraries initialized successfully");
+    // Initialize cornerstone tools after dependencies are set
+    console.log("DicomViewer: Initializing cornerstone tools");
+    cornerstoneTools.init();
     
+    console.log("DicomViewer: Cornerstone libraries initialized successfully");
     return true;
   } catch (error) {
     console.error("DicomViewer: Failed to initialize cornerstone libraries:", error);
@@ -74,6 +75,7 @@ export const DicomViewer = forwardRef<DicomViewerHandle, DicomViewerProps>(
     
     // Initialize cornerstone when component mounts
     useEffect(() => {
+      console.log("DicomViewer: Component mounted, initializing cornerstone");
       const initialized = initializeCornerstone();
       setCornerstoneInitialized(initialized);
       
@@ -83,6 +85,7 @@ export const DicomViewer = forwardRef<DicomViewerHandle, DicomViewerProps>(
           try {
             // Safely disable cornerstone on the element
             try {
+              console.log("DicomViewer: Unmounting, cleaning up cornerstone");
               cornerstone.imageCache.purgeCache();
               cornerstone.disable(viewerRef.current);
             } catch (error) {
@@ -98,7 +101,10 @@ export const DicomViewer = forwardRef<DicomViewerHandle, DicomViewerProps>(
     // Expose methods to the parent component via the ref
     useImperativeHandle(ref, () => ({
       resetView: () => {
-        if (!viewerRef.current || !imageRef.current || !elementEnabled) return;
+        if (!viewerRef.current || !imageRef.current || !elementEnabled) {
+          console.log("DicomViewer: resetView called but element not ready");
+          return;
+        }
         
         console.log("DicomViewer: resetView method called via ref");
         try {
@@ -120,7 +126,10 @@ export const DicomViewer = forwardRef<DicomViewerHandle, DicomViewerProps>(
     
     // Initialize tools once the element is available and cornerstone is initialized
     useEffect(() => {
-      if (!viewerRef.current || !cornerstoneInitialized) return;
+      if (!viewerRef.current || !cornerstoneInitialized) {
+        console.log("DicomViewer: Element not ready for enabling or cornerstone not initialized");
+        return;
+      }
       
       console.log("DicomViewer: Element available, enabling cornerstone");
       
@@ -134,24 +143,28 @@ export const DicomViewer = forwardRef<DicomViewerHandle, DicomViewerProps>(
         setElementEnabled(true);
         console.log("DicomViewer: Element enabled successfully");
         
-        // Initialize tools on this specific element
-        console.log("DicomViewer: Initializing cornerstoneTools");
-        cornerstoneTools.init();
-        
         // Add mouse tools AFTER element is enabled
-        cornerstoneTools.addTool(cornerstoneTools.PanTool);
-        cornerstoneTools.addTool(cornerstoneTools.ZoomTool);
-        cornerstoneTools.addTool(cornerstoneTools.WwwcTool);
-        cornerstoneTools.addTool(cornerstoneTools.MagnifyTool);
-        cornerstoneTools.addTool(cornerstoneTools.RotateTool);
-        
-        // Mark tools as initialized
-        setToolsInitialized(true);
-        console.log("DicomViewer: Tools initialized successfully");
-        
-        if (onToolInitialized) onToolInitialized();
+        try {
+          console.log("DicomViewer: Adding cornerstone tools to element");
+          cornerstoneTools.addTool(cornerstoneTools.PanTool);
+          cornerstoneTools.addTool(cornerstoneTools.ZoomTool);
+          cornerstoneTools.addTool(cornerstoneTools.WwwcTool);
+          cornerstoneTools.addTool(cornerstoneTools.MagnifyTool);
+          cornerstoneTools.addTool(cornerstoneTools.RotateTool);
+          
+          // Mark tools as initialized
+          setToolsInitialized(true);
+          console.log("DicomViewer: Tools initialized successfully");
+          
+          if (onToolInitialized) {
+            console.log("DicomViewer: Calling onToolInitialized callback");
+            onToolInitialized();
+          }
+        } catch (toolError) {
+          console.error("DicomViewer: Error initializing tools:", toolError);
+        }
       } catch (error) {
-        console.error("DicomViewer: Error initializing cornerstone element or tools:", error);
+        console.error("DicomViewer: Error initializing cornerstone element:", error);
         if (onError) onError(new Error("Failed to initialize DICOM viewer"));
       }
       
@@ -160,13 +173,18 @@ export const DicomViewer = forwardRef<DicomViewerHandle, DicomViewerProps>(
         if (element && enabled) {
           try {
             // Deactivate all tools first
-            cornerstoneTools.setToolDisabled('Pan', {});
-            cornerstoneTools.setToolDisabled('Zoom', {});
-            cornerstoneTools.setToolDisabled('Wwwc', {});
-            cornerstoneTools.setToolDisabled('Magnify', {});
-            cornerstoneTools.setToolDisabled('Rotate', {});
+            console.log("DicomViewer: Cleaning up tools");
+            try {
+              cornerstoneTools.setToolDisabled('Pan', {});
+              cornerstoneTools.setToolDisabled('Zoom', {});
+              cornerstoneTools.setToolDisabled('Wwwc', {});
+              cornerstoneTools.setToolDisabled('Magnify', {});
+              cornerstoneTools.setToolDisabled('Rotate', {});
+            } catch (error) {
+              console.warn("DicomViewer: Error disabling tools:", error);
+            }
           } catch (error) {
-            console.warn("DicomViewer: Error disabling tools:", error);
+            console.warn("DicomViewer: Error disabling tools (outer):", error);
           }
         }
       };
@@ -174,7 +192,15 @@ export const DicomViewer = forwardRef<DicomViewerHandle, DicomViewerProps>(
     
     // Effect for loading and displaying the image
     useEffect(() => {
-      if (!viewerRef.current || !imageUrl || !cornerstoneInitialized || !elementEnabled) return;
+      if (!viewerRef.current || !imageUrl || !cornerstoneInitialized || !elementEnabled) {
+        console.log("DicomViewer: Not ready to load image:", {
+          viewerRef: !!viewerRef.current,
+          imageUrl: !!imageUrl,
+          cornerstoneInitialized,
+          elementEnabled
+        });
+        return;
+      }
       
       console.log("DicomViewer: Loading image:", imageUrl);
       const element = viewerRef.current;
@@ -236,6 +262,7 @@ export const DicomViewer = forwardRef<DicomViewerHandle, DicomViewerProps>(
             
             // Setup default tool mode only after image is displayed
             if (toolsInitialized) {
+              console.log("DicomViewer: Setting initial tool:", activeTool);
               setActiveTool(activeTool, element);
             } else {
               console.log("DicomViewer: Tools not initialized yet, can't set default tool");
@@ -254,7 +281,14 @@ export const DicomViewer = forwardRef<DicomViewerHandle, DicomViewerProps>(
     
     // Update active tool when it changes
     useEffect(() => {
-      if (!viewerRef.current || !toolsInitialized || !elementEnabled) return;
+      if (!viewerRef.current || !toolsInitialized || !elementEnabled) {
+        console.log("DicomViewer: Can't update active tool, not ready:", {
+          viewerRef: !!viewerRef.current, 
+          toolsInitialized, 
+          elementEnabled
+        });
+        return;
+      }
       
       console.log("DicomViewer: Active tool changed to:", activeTool);
       setActiveTool(activeTool, viewerRef.current);
@@ -288,6 +322,7 @@ export const DicomViewer = forwardRef<DicomViewerHandle, DicomViewerProps>(
             console.log("DicomViewer: Activating Pan tool");
             cornerstoneTools.setToolActive('Pan', { mouseButtonMask: 1 });
             break;
+          case "zoom": // Handle generic "zoom" from the toolbar
           case "zoomIn":
             console.log("DicomViewer: Activating Zoom In tool");
             cornerstoneTools.setToolActive('Zoom', { mouseButtonMask: 1 });

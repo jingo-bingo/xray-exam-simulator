@@ -1,9 +1,10 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { X, FileImage } from "lucide-react";
+import { X, FileImage, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DicomViewer } from "./DicomViewer";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface DicomPreviewProps {
   filePath: string;
@@ -14,6 +15,7 @@ export const DicomPreview = ({ filePath, onRemove }: DicomPreviewProps) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [viewerError, setViewerError] = useState<Error | null>(null);
   const [isExpired, setIsExpired] = useState(false);
+  const [fileNotFound, setFileNotFound] = useState(false);
 
   // Load preview URL when filePath changes
   useEffect(() => {
@@ -26,6 +28,11 @@ export const DicomPreview = ({ filePath, onRemove }: DicomPreviewProps) => {
           
         if (error) {
           console.error("DicomPreview: Error getting signed URL:", error);
+          // Check if this is a "not found" error
+          if (error.message && error.message.includes("Object not found")) {
+            console.log("DicomPreview: File not found in storage");
+            setFileNotFound(true);
+          }
           return;
         }
         
@@ -33,6 +40,7 @@ export const DicomPreview = ({ filePath, onRemove }: DicomPreviewProps) => {
           console.log("DicomPreview: Preview URL created:", data.signedUrl);
           setPreviewUrl(data.signedUrl);
           setViewerError(null);
+          setFileNotFound(false);
           
           // Set a timer to check if URL is close to expiration
           const checkExpiration = setTimeout(() => {
@@ -60,12 +68,40 @@ export const DicomPreview = ({ filePath, onRemove }: DicomPreviewProps) => {
     setViewerError(error);
   };
 
+  if (fileNotFound) {
+    return (
+      <div className="space-y-4">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            The DICOM file could not be found in storage. The file may have been deleted or moved.
+          </AlertDescription>
+        </Alert>
+        
+        <div className="flex items-center justify-center border rounded-md h-48 bg-gray-50">
+          <div className="text-center">
+            <FileImage className="mx-auto h-12 w-12 text-gray-400" />
+            <p className="mt-2 text-sm">File reference exists but file is missing</p>
+            <Button 
+              variant="destructive" 
+              size="sm"
+              onClick={onRemove}
+              className="mt-2"
+            >
+              Remove Reference
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!previewUrl) {
     return (
       <div className="flex items-center justify-center border rounded-md h-48 bg-gray-50">
         <div className="text-center">
           <FileImage className="mx-auto h-12 w-12 text-gray-400" />
-          <p className="mt-2 text-sm">File uploaded but preview not available</p>
+          <p className="mt-2 text-sm">Loading preview...</p>
           <Button 
             variant="destructive" 
             size="sm"

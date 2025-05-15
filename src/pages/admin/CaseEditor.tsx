@@ -50,6 +50,7 @@ const CaseEditor = () => {
       <form onSubmit={handleSubmit} className="space-y-6">
         <CaseForm 
           caseData={caseData}
+          isNewCase={isNewCase}
           onInputChange={handleInputChange}
           onDicomUpload={handleDicomUpload}
         />

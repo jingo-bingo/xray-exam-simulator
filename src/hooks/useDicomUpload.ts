@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import * as dicomParser from "dicom-parser";
@@ -55,13 +55,75 @@ const isDicom = async (file: File): Promise<boolean> => {
   }
 };
 
+/**
+ * Checks if a file exists in the Supabase storage bucket
+ * @param filePath The path of the file to check
+ * @returns Promise<boolean> True if the file exists, false otherwise
+ */
+const fileExists = async (filePath: string): Promise<boolean> => {
+  try {
+    console.log("fileExists: Checking if file exists:", filePath);
+    
+    // Try to create a signed URL - this will fail if the file doesn't exist
+    const { data, error } = await supabase.storage
+      .from("dicom_images")
+      .createSignedUrl(filePath, 10); // Short expiry to just check existence
+    
+    if (error) {
+      console.log("fileExists: File does not exist or error occurred:", error.message);
+      return false;
+    }
+    
+    console.log("fileExists: File exists");
+    return true;
+  } catch (error) {
+    console.error("fileExists: Error checking file existence:", error);
+    return false;
+  }
+};
+
+export interface UseDicomUploadOptions {
+  /**
+   * If true, the uploaded file will be considered temporary 
+   * and may be cleaned up if not permanently attached to a case
+   */
+  isTemporaryUpload?: boolean;
+}
+
 export const useDicomUpload = (
   onUploadComplete: (filePath: string) => void,
-  initialFilePath: string | null = null
+  initialFilePath: string | null = null,
+  options: UseDicomUploadOptions = {}
 ) => {
+  const { isTemporaryUpload = false } = options;
+  
   const [uploading, setUploading] = useState(false);
   const [filePath, setFilePath] = useState<string | null>(initialFilePath);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [fileCheckComplete, setFileCheckComplete] = useState(false);
+  const [fileIsMissing, setFileIsMissing] = useState(false);
+
+  // Check if the initial file exists when component mounts
+  useEffect(() => {
+    const checkInitialFile = async () => {
+      if (!initialFilePath) {
+        setFileCheckComplete(true);
+        return;
+      }
+      
+      console.log("useDicomUpload: Checking if initial file exists:", initialFilePath);
+      
+      const exists = await fileExists(initialFilePath);
+      if (!exists) {
+        console.log("useDicomUpload: Initial file is missing");
+        setFileIsMissing(true);
+      }
+      
+      setFileCheckComplete(true);
+    };
+    
+    checkInitialFile();
+  }, [initialFilePath]);
 
   const handleFileUpload = async (file: File) => {
     try {
@@ -96,11 +158,14 @@ export const useDicomUpload = (
         ? `${uniqueId}_${file.name}` 
         : `${uniqueId}_${file.name}`;
       
-      console.log("useDicomUpload: Uploading file to path:", fileName);
+      // For temporary uploads, prepend a special prefix to make them easier to identify later
+      const uploadPath = isTemporaryUpload ? `temp_${fileName}` : fileName;
+      
+      console.log("useDicomUpload: Uploading file to path:", uploadPath);
       
       const { error: uploadError } = await supabase.storage
         .from("dicom_images")
-        .upload(fileName, file, {
+        .upload(uploadPath, file, {
           contentType: "application/dicom" // Try to set the proper MIME type
         });
         
@@ -117,8 +182,9 @@ export const useDicomUpload = (
       console.log("useDicomUpload: File uploaded successfully");
       
       // Set the file path and notify parent
-      setFilePath(fileName);
-      onUploadComplete(fileName);
+      setFilePath(uploadPath);
+      setFileIsMissing(false);
+      onUploadComplete(uploadPath);
       
       toast({
         title: "Upload Successful",
@@ -142,27 +208,39 @@ export const useDicomUpload = (
     console.log("useDicomUpload: Removing file:", filePath);
     
     try {
-      const { error } = await supabase.storage
-        .from("dicom_images")
-        .remove([filePath]);
-        
-      if (error) {
-        console.error("useDicomUpload: Error removing file:", error);
-        toast({
-          title: "Removal Failed",
-          description: "Error removing file: " + error.message,
-          variant: "destructive",
-        });
-        return;
+      // First, check if the file exists to avoid unnecessary errors
+      const exists = await fileExists(filePath);
+      
+      // Only try to delete if the file exists
+      if (exists) {
+        const { error } = await supabase.storage
+          .from("dicom_images")
+          .remove([filePath]);
+          
+        if (error) {
+          console.error("useDicomUpload: Error removing file:", error);
+          toast({
+            title: "Removal Failed",
+            description: "Error removing file: " + error.message,
+            variant: "destructive",
+          });
+          // Continue anyway to update the state
+        } else {
+          console.log("useDicomUpload: File removed successfully");
+        }
+      } else {
+        console.log("useDicomUpload: File doesn't exist, skipping storage deletion");
       }
       
-      console.log("useDicomUpload: File removed successfully");
+      // Always update the UI state
       setFilePath(null);
       setValidationError(null);
+      setFileIsMissing(false);
       onUploadComplete("");
+      
       toast({
         title: "File Removed",
-        description: "File removed successfully",
+        description: "File reference removed successfully",
       });
     } catch (error) {
       console.error("useDicomUpload: Error in handleRemoveFile:", error);
@@ -178,6 +256,8 @@ export const useDicomUpload = (
     filePath,
     uploading,
     validationError,
+    fileIsMissing,
+    fileCheckComplete,
     setFilePath,
     handleFileUpload,
     handleRemoveFile

@@ -34,11 +34,12 @@ export type Case = {
 
 interface CaseFormProps {
   caseData: Case;
+  isNewCase: boolean;
   onInputChange: (field: keyof Case, value: any) => void;
   onDicomUpload: (filePath: string) => void;
 }
 
-export const CaseForm = ({ caseData, onInputChange, onDicomUpload }: CaseFormProps) => {
+export const CaseForm = ({ caseData, isNewCase, onInputChange, onDicomUpload }: CaseFormProps) => {
   console.log("CaseForm: Rendering with data", caseData);
 
   return (
@@ -76,7 +77,8 @@ export const CaseForm = ({ caseData, onInputChange, onDicomUpload }: CaseFormPro
         
         <DicomUploader 
           currentPath={caseData.dicom_path} 
-          onUploadComplete={onDicomUpload} 
+          onUploadComplete={onDicomUpload}
+          isTemporaryUpload={isNewCase} // Only mark as temporary during new case creation
         />
       </div>
       

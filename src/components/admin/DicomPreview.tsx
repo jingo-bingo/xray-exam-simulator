@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { X, FileImage } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DicomViewer } from "./DicomViewer";
+import { toast } from "@/components/ui/use-toast";
 
 interface DicomPreviewProps {
   filePath: string;
@@ -26,6 +27,11 @@ export const DicomPreview = ({ filePath, onRemove }: DicomPreviewProps) => {
           
         if (error) {
           console.error("DicomPreview: Error getting signed URL:", error);
+          toast({
+            title: "Error loading preview",
+            description: error.message,
+            variant: "destructive"
+          });
           return;
         }
         
@@ -44,6 +50,11 @@ export const DicomPreview = ({ filePath, onRemove }: DicomPreviewProps) => {
         }
       } catch (error) {
         console.error("DicomPreview: Error in loadPreview:", error);
+        toast({
+          title: "Error loading preview",
+          description: "Failed to load DICOM preview",
+          variant: "destructive"
+        });
       }
     };
 
@@ -58,6 +69,11 @@ export const DicomPreview = ({ filePath, onRemove }: DicomPreviewProps) => {
   const handleViewerError = (error: Error) => {
     console.error("DicomPreview: DICOM Viewer error:", error);
     setViewerError(error);
+    toast({
+      title: "Preview Error",
+      description: error.message || "Failed to preview DICOM image",
+      variant: "destructive"
+    });
   };
 
   if (!previewUrl) {

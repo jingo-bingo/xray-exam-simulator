@@ -13,6 +13,7 @@ interface DicomPreviewProps {
 export const DicomPreview = ({ filePath, onRemove }: DicomPreviewProps) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [viewerError, setViewerError] = useState<Error | null>(null);
+  const [isExpired, setIsExpired] = useState(false);
 
   // Load preview URL when filePath changes
   useEffect(() => {
@@ -32,6 +33,14 @@ export const DicomPreview = ({ filePath, onRemove }: DicomPreviewProps) => {
           console.log("DicomPreview: Preview URL created:", data.signedUrl);
           setPreviewUrl(data.signedUrl);
           setViewerError(null);
+          
+          // Set a timer to check if URL is close to expiration
+          const checkExpiration = setTimeout(() => {
+            console.log("DicomPreview: Signed URL is about to expire, will regenerate");
+            setIsExpired(true);
+          }, 3000 * 1000); // Check after 50 minutes (URLs valid for 60 minutes)
+          
+          return () => clearTimeout(checkExpiration);
         }
       } catch (error) {
         console.error("DicomPreview: Error in loadPreview:", error);
@@ -41,7 +50,10 @@ export const DicomPreview = ({ filePath, onRemove }: DicomPreviewProps) => {
     if (filePath) {
       loadPreview();
     }
-  }, [filePath]);
+    
+    // Reset expired state when filePath changes
+    setIsExpired(false);
+  }, [filePath, isExpired]);
 
   const handleViewerError = (error: Error) => {
     console.error("DicomPreview: DICOM Viewer error:", error);

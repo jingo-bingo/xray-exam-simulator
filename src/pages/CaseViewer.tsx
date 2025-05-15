@@ -10,6 +10,7 @@ import { QuestionPanel } from "@/components/case-viewer/QuestionPanel";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { Database } from "@/integrations/supabase/types";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 type Case = Database["public"]["Tables"]["cases"]["Row"];
 type Question = Database["public"]["Tables"]["questions"]["Row"];
@@ -27,6 +28,7 @@ const CaseViewer = () => {
   const [caseAttemptId, setCaseAttemptId] = useState<string | null>(null);
   const [toolsInitialized, setToolsInitialized] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [viewerError, setViewerError] = useState<string | null>(null);
   
   // Update ref to use the correct type
   const dicomViewerRef = useRef<DicomViewerHandle>(null);
@@ -152,6 +154,7 @@ const CaseViewer = () => {
   useEffect(() => {
     if (caseData?.dicom_path) {
       console.log(`CaseViewer: Getting download URL for DICOM ${caseData.dicom_path}`);
+      setViewerError(null); // Reset any previous errors when loading a new image
       
       const getDownloadUrl = async () => {
         try {
@@ -161,6 +164,7 @@ const CaseViewer = () => {
           
           if (error) {
             console.error("CaseViewer: Error getting signed URL:", error);
+            setViewerError("Failed to get image URL");
             toast({
               title: "Error",
               description: "Failed to load image. Please try again.",
@@ -173,6 +177,7 @@ const CaseViewer = () => {
           setDicomUrl(data.signedUrl);
         } catch (error) {
           console.error("CaseViewer: Exception getting signed URL:", error);
+          setViewerError("Failed to get image URL");
         }
       };
       
@@ -216,9 +221,10 @@ const CaseViewer = () => {
 
   const handleImageError = (error: Error) => {
     console.error("CaseViewer: DicomViewer error:", error);
+    setViewerError(error.message);
     toast({
       title: "Image Error",
-      description: "Failed to load the image. Please try again.",
+      description: error.message || "Failed to load the image. Please try again.",
       variant: "destructive",
     });
   };
@@ -279,22 +285,27 @@ const CaseViewer = () => {
                 onReset={handleViewReset} 
                 activeTool={activeTool} 
               />
-              <div className="bg-black aspect-square lg:aspect-video w-full overflow-hidden relative">
-                {dicomUrl ? (
-                  <DicomViewer 
-                    ref={dicomViewerRef}
-                    imageUrl={dicomUrl} 
-                    alt={`Case ${caseData.case_number}`} 
-                    className="w-full h-full" 
-                    activeTool={activeTool}
-                    onToolInitialized={handleToolInitialized}
-                    onError={handleImageError}
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <p className="text-gray-500">Loading image...</p>
-                  </div>
-                )}
+              
+              <div className="bg-black w-full overflow-hidden relative">
+                <AspectRatio ratio={4/3}>
+                  {dicomUrl ? (
+                    <DicomViewer 
+                      ref={dicomViewerRef}
+                      imageUrl={dicomUrl} 
+                      alt={`Case ${caseData.case_number}`} 
+                      className="w-full h-full" 
+                      activeTool={activeTool}
+                      onToolInitialized={handleToolInitialized}
+                      onError={handleImageError}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <p className="text-gray-500">
+                        {viewerError ? `Error: ${viewerError}` : "Loading image..."}
+                      </p>
+                    </div>
+                  )}
+                </AspectRatio>
               </div>
             </div>
             

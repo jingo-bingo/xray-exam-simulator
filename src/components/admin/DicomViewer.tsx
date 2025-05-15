@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from "react";
 import cornerstone from "cornerstone-core";
 import cornerstoneWebImageLoader from "cornerstone-web-image-loader";
@@ -36,6 +37,22 @@ interface DicomViewerProps {
 
 export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerProps) => {
   const viewerRef = useRef<HTMLDivElement>(null);
+  const isMountedRef = useRef<boolean>(true);
+  const loadOperationRef = useRef<{ abort?: () => void }>({});
+  
+  // Reset mounted ref on unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    
+    return () => {
+      isMountedRef.current = false;
+      
+      // Abort any pending operations
+      if (loadOperationRef.current.abort) {
+        loadOperationRef.current.abort();
+      }
+    };
+  }, []);
   
   useEffect(() => {
     if (!viewerRef.current || !imageUrl) return;
@@ -50,7 +67,9 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
       console.log("DicomViewer: Cornerstone enabled on element");
     } catch (error) {
       console.error("DicomViewer: Error enabling cornerstone:", error);
-      if (onError) onError(new Error("Failed to initialize DICOM viewer"));
+      if (isMountedRef.current && onError) {
+        onError(new Error("Failed to initialize DICOM viewer"));
+      }
       return;
     }
     
@@ -78,10 +97,20 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
     
     // Function to handle loading with memory consideration
     const loadImageSafely = async (imageId: string, isDicomAttempt = true) => {
+      // If component is unmounted, don't proceed
+      if (!isMountedRef.current) {
+        throw new Error("Component unmounted");
+      }
+      
       try {
         console.log(`DicomViewer: Loading with imageId: ${imageId}`);
         return await cornerstone.loadImage(imageId);
       } catch (error: any) {
+        // If component unmounted during loading, don't process the error
+        if (!isMountedRef.current) {
+          throw new Error("Component unmounted");
+        }
+        
         console.error(`DicomViewer: Error loading image with ${imageId}:`, error);
         
         // If we get a memory allocation error, try downsampling
@@ -118,19 +147,39 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
       }
     };
 
+    // Create an object to hold the abort controller
+    const loadOperation = {};
+    loadOperationRef.current = loadOperation;
+
     // Load the image
     loadImageSafely(imageId)
       .then((image) => {
+        // If the component unmounted or this isn't the current operation, don't proceed
+        if (!isMountedRef.current || loadOperationRef.current !== loadOperation) {
+          return;
+        }
+        
         console.log("DicomViewer: Image loaded successfully, metadata:", image.imageId);
         try {
-          cornerstone.displayImage(element, image);
-          console.log("DicomViewer: Image displayed successfully");
+          if (element && cornerstone.getElementEnabled(element)) {
+            cornerstone.displayImage(element, image);
+            console.log("DicomViewer: Image displayed successfully");
+          } else {
+            console.warn("DicomViewer: Element not enabled or no longer valid");
+          }
         } catch (displayError) {
+          if (!isMountedRef.current) return;
+          
           console.error("DicomViewer: Error displaying image:", displayError);
           if (onError) onError(new Error("Failed to display image"));
         }
       })
       .catch((error) => {
+        // If the component unmounted or this isn't the current operation, don't proceed
+        if (!isMountedRef.current || loadOperationRef.current !== loadOperation) {
+          return;
+        }
+        
         console.error("DicomViewer: All image loading attempts failed:", error);
         if (onError) onError(error instanceof Error ? error : new Error("Failed to load image"));
       });

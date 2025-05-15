@@ -8,7 +8,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, FileText, Image } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,7 +19,6 @@ const CaseView = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [currentAttemptId, setCurrentAttemptId] = useState<string | null>(null);
-  const [currentTab, setCurrentTab] = useState<string>("image");
   const [signedDicomUrl, setSignedDicomUrl] = useState<string | null>(null);
   const [dicomError, setDicomError] = useState<string | null>(null);
 
@@ -237,58 +235,47 @@ const CaseView = () => {
               </Card>
             </div>
             
-            {/* Right column - DICOM viewer and questions */}
+            {/* Right column - Side-by-side DICOM viewer and questions */}
             <div className="lg:col-span-2">
-              <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
-                <TabsList className="grid grid-cols-2 mb-4">
-                  <TabsTrigger value="image" className="flex items-center">
-                    <Image className="mr-2 h-4 w-4" />
-                    DICOM Image
-                  </TabsTrigger>
-                  <TabsTrigger value="questions" className="flex items-center">
-                    <FileText className="mr-2 h-4 w-4" />
-                    Questions
-                  </TabsTrigger>
-                </TabsList>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* DICOM Viewer Section */}
+                <Card className="bg-gray-800 border-gray-700">
+                  <CardHeader>
+                    <CardTitle className="text-radiology-light">DICOM Image</CardTitle>
+                    {dicomError && (
+                      <CardDescription className="text-red-400">
+                        Error: {dicomError}
+                      </CardDescription>
+                    )}
+                  </CardHeader>
+                  <CardContent>
+                    {signedDicomUrl ? (
+                      <DicomViewer 
+                        imageUrl={signedDicomUrl}
+                        alt={`DICOM for case ${caseData?.title}`}
+                        className="w-full aspect-square max-h-[600px] bg-black"
+                        onError={(error) => {
+                          console.error("CaseView: DICOM viewer error:", error);
+                          setDicomError("Failed to load the DICOM image");
+                          toast({
+                            title: "Image Error",
+                            description: "Failed to load the DICOM image",
+                            variant: "destructive",
+                          });
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full aspect-square max-h-[600px] bg-black flex items-center justify-center text-gray-400">
+                        {dicomError ? 
+                          "Error loading DICOM image" : 
+                          (caseData?.dicom_path ? "Loading DICOM image..." : "No DICOM image available for this case")}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
                 
-                <TabsContent value="image" className="mt-0">
-                  <Card className="bg-gray-800 border-gray-700">
-                    <CardHeader>
-                      <CardTitle className="text-radiology-light">DICOM Image</CardTitle>
-                      {dicomError && (
-                        <CardDescription className="text-red-400">
-                          Error: {dicomError}
-                        </CardDescription>
-                      )}
-                    </CardHeader>
-                    <CardContent>
-                      {signedDicomUrl ? (
-                        <DicomViewer 
-                          imageUrl={signedDicomUrl}
-                          alt={`DICOM for case ${caseData?.title}`}
-                          className="w-full aspect-square max-h-[600px] bg-black"
-                          onError={(error) => {
-                            console.error("CaseView: DICOM viewer error:", error);
-                            setDicomError("Failed to load the DICOM image");
-                            toast({
-                              title: "Image Error",
-                              description: "Failed to load the DICOM image",
-                              variant: "destructive",
-                            });
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full aspect-square max-h-[600px] bg-black flex items-center justify-center text-gray-400">
-                          {dicomError ? 
-                            "Error loading DICOM image" : 
-                            (caseData?.dicom_path ? "Loading DICOM image..." : "No DICOM image available for this case")}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                
-                <TabsContent value="questions" className="mt-0">
+                {/* Questions Section */}
+                <div className="lg:max-h-[calc(100vh-200px)] lg:overflow-y-auto">
                   {currentAttemptId && user && (
                     <CaseQuestions
                       caseId={id || ""}
@@ -297,8 +284,8 @@ const CaseView = () => {
                       onComplete={handleCaseComplete}
                     />
                   )}
-                </TabsContent>
-              </Tabs>
+                </div>
+              </div>
             </div>
           </div>
         )}

@@ -309,9 +309,17 @@ export const DicomViewer = ({
         // Extract metadata before displaying the image
         const metadata = extractMetadata(image);
         
-        // Display the image
-        cornerstone.displayImage(element, image);
-        console.log("DicomViewer: Image displayed successfully");
+        // Display the image with fitting options
+        const viewport = cornerstone.getDefaultViewportForImage(element, image);
+        
+        // Set viewport to fit image to container
+        viewport.scale = 1;  // Start with scale 1
+        cornerstone.displayImage(element, image, viewport);
+        
+        // After displaying, fit the image to the container
+        cornerstone.resize(element);
+        cornerstone.fitToWindow(element);
+        console.log("DicomViewer: Image displayed and fit to window");
         
         // Notify parent about metadata
         if (onMetadataLoaded) {
@@ -336,10 +344,36 @@ export const DicomViewer = ({
     
   }, [imageUrl, onError, onMetadataLoaded]);
 
+  // Ensure image stays in container when window is resized
+  useEffect(() => {
+    if (!viewerRef.current || !isImageLoaded) return;
+    
+    const element = viewerRef.current;
+    
+    const handleResize = () => {
+      if (element) {
+        try {
+          cornerstone.resize(element);
+          console.log("DicomViewer: Resized viewer element to match container");
+        } catch (error) {
+          console.warn("DicomViewer: Error during resize:", error);
+        }
+      }
+    };
+    
+    // Add resize listener for responsive behavior
+    window.addEventListener('resize', handleResize);
+    
+    // Clean up
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [isImageLoaded]);
+
   const displayedError = error || toolsError;
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col w-full">
       {isImageLoaded && (
         <DicomToolbar
           isToolsEnabled={isToolsInitialized && isImageLoaded}
@@ -351,32 +385,34 @@ export const DicomViewer = ({
         />
       )}
       
-      <div 
-        ref={viewerRef} 
-        className={className || "w-full h-48 border rounded-md bg-black"}
-        data-testid="dicom-viewer"
-      >
-        {isLoading && (
-          <div className="flex items-center justify-center h-full text-white bg-opacity-70 bg-black absolute inset-0">
-            <div className="flex flex-col items-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white mb-2"></div>
-              <div>Loading DICOM image...</div>
+      <div className="relative w-full aspect-square max-h-[600px] overflow-hidden">
+        <div 
+          ref={viewerRef} 
+          className={`w-full h-full ${className || ""}`}
+          data-testid="dicom-viewer"
+        >
+          {isLoading && (
+            <div className="flex items-center justify-center h-full text-white bg-opacity-70 bg-black absolute inset-0 z-10">
+              <div className="flex flex-col items-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white mb-2"></div>
+                <div>Loading DICOM image...</div>
+              </div>
             </div>
-          </div>
-        )}
-        
-        {displayedError && (
-          <div className="flex items-center justify-center h-full text-red-400 bg-opacity-70 bg-black absolute inset-0">
-            <div className="text-center p-4">
-              <div className="font-bold mb-2">Error</div>
-              <div>{displayedError}</div>
+          )}
+          
+          {displayedError && (
+            <div className="flex items-center justify-center h-full text-red-400 bg-opacity-70 bg-black absolute inset-0 z-10">
+              <div className="text-center p-4">
+                <div className="font-bold mb-2">Error</div>
+                <div>{displayedError}</div>
+              </div>
             </div>
-          </div>
-        )}
-        
-        {!imageUrl && !isLoading && !displayedError && (
-          <div className="flex items-center justify-center h-full text-white">No image available</div>
-        )}
+          )}
+          
+          {!imageUrl && !isLoading && !displayedError && (
+            <div className="flex items-center justify-center h-full text-white">No image available</div>
+          )}
+        </div>
       </div>
     </div>
   );

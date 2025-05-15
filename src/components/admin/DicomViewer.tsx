@@ -4,6 +4,7 @@ import cornerstone from "cornerstone-core";
 import cornerstoneWebImageLoader from "cornerstone-web-image-loader";
 import cornerstoneWADOImageLoader from "cornerstone-wado-image-loader";
 import dicomParser from "dicom-parser";
+import { DicomMetadata } from "./DicomMetadataDisplay";
 
 // Initialize the web image loader
 cornerstoneWebImageLoader.external.cornerstone = cornerstone;
@@ -33,9 +34,16 @@ interface DicomViewerProps {
   alt: string;
   className?: string;
   onError?: (error: Error) => void;
+  onMetadataLoaded?: (metadata: DicomMetadata) => void;
 }
 
-export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerProps) => {
+export const DicomViewer = ({ 
+  imageUrl, 
+  alt, 
+  className, 
+  onError,
+  onMetadataLoaded 
+}: DicomViewerProps) => {
   const viewerRef = useRef<HTMLDivElement>(null);
   const isMounted = useRef(true);
   const [isLoading, setIsLoading] = useState(true);
@@ -53,6 +61,59 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
       }
     };
   }, []);
+
+  // Extract DICOM metadata from the image
+  const extractMetadata = (image: any): DicomMetadata => {
+    console.log("DicomViewer: Extracting metadata from image");
+    
+    try {
+      const metadata: DicomMetadata = {};
+      
+      // Try to get modality
+      try {
+        // Check if we have DICOM metadata
+        if (image.data && image.data.string) {
+          metadata.modality = image.data.string('x00080060');
+          console.log("DicomViewer: Extracted modality:", metadata.modality);
+        }
+      } catch (err) {
+        console.warn("DicomViewer: Failed to extract modality:", err);
+      }
+      
+      // Get image dimensions
+      try {
+        metadata.dimensions = {
+          width: image.width,
+          height: image.height
+        };
+        console.log("DicomViewer: Extracted dimensions:", metadata.dimensions);
+      } catch (err) {
+        console.warn("DicomViewer: Failed to extract dimensions:", err);
+      }
+      
+      // Try to get pixel spacing (mm per pixel)
+      try {
+        if (image.data && image.data.string) {
+          const pixelSpacingStr = image.data.string('x00280030');
+          if (pixelSpacingStr) {
+            const [rowSpacing, colSpacing] = pixelSpacingStr.split('\\').map(Number);
+            metadata.pixelSpacing = {
+              width: colSpacing,
+              height: rowSpacing
+            };
+            console.log("DicomViewer: Extracted pixel spacing:", metadata.pixelSpacing);
+          }
+        }
+      } catch (err) {
+        console.warn("DicomViewer: Failed to extract pixel spacing:", err);
+      }
+      
+      return metadata;
+    } catch (error) {
+      console.error("DicomViewer: Error extracting metadata:", error);
+      return {};
+    }
+  };
   
   useEffect(() => {
     if (!viewerRef.current || !imageUrl) return;
@@ -158,9 +219,21 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
         if (!isMounted.current) return;
         
         console.log("DicomViewer: Image loaded successfully, metadata:", image.imageId);
+        
         try {
+          // Extract metadata before displaying the image
+          const metadata = extractMetadata(image);
+          
+          // Display the image
           cornerstone.displayImage(element, image);
           console.log("DicomViewer: Image displayed successfully");
+          
+          // Notify parent about metadata
+          if (onMetadataLoaded) {
+            console.log("DicomViewer: Notifying parent about metadata");
+            onMetadataLoaded(metadata);
+          }
+          
           setIsLoading(false);
         } catch (displayError) {
           console.error("DicomViewer: Error displaying image:", displayError);
@@ -193,7 +266,7 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
         }
       }
     };
-  }, [imageUrl, onError]);
+  }, [imageUrl, onError, onMetadataLoaded]);
 
   return (
     <div 

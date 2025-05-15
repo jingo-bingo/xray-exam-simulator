@@ -17,13 +17,20 @@ The DICOM viewer implementation consists of several interconnected components:
    - Top-level page component that fetches case data
    - Manages signed URL generation for DICOM images
    - Renders both case information and the DICOM viewer
+   - Displays DICOM metadata
 
 2. **DicomViewer** (`src/components/admin/DicomViewer.tsx`)
    - Core component responsible for rendering DICOM images
    - Initializes and manages Cornerstone.js libraries
    - Handles image loading, rendering, and error states
+   - Extracts metadata from DICOM files
 
-3. **Utility Services**
+3. **DicomMetadataDisplay** (`src/components/admin/DicomMetadataDisplay.tsx`)
+   - Displays extracted DICOM metadata in a user-friendly format
+   - Handles different states (loading, error, no data available)
+   - Provides a consistent UI for metadata visualization
+
+4. **Utility Services**
    - `dicomStorage.ts`: Manages file access and signed URL generation
    - `dicomValidator.ts`: Validates DICOM file formats
    - `dicomFileHandler.ts`: Handles file upload and removal operations
@@ -78,6 +85,50 @@ The viewer relies on several key libraries:
    - Image ID format is determined based on URL and file type
    - Image is loaded with appropriate loader
    - On success, image is displayed in the viewport
+   - Metadata is extracted and passed to parent component
+
+### Metadata Extraction
+
+The DicomViewer extracts multiple types of metadata from DICOM images:
+
+1. **DICOM Tags**:
+   - Modality (0x00080060): Indicates the type of equipment used for acquisition
+   - Pixel Spacing (0x00280030): Physical distance (mm) between pixels
+
+2. **Image Properties**:
+   - Image dimensions (width x height)
+   - Bit depth and color channels
+
+3. **Extraction Process**:
+   ```javascript
+   const extractMetadata = (image) => {
+     try {
+       // Extract modality from DICOM tag 0x00080060
+       metadata.modality = image.data.string('x00080060');
+       
+       // Get pixel dimensions
+       metadata.dimensions = {
+         width: image.width,
+         height: image.height
+       };
+       
+       // Extract pixel spacing from DICOM tag 0x00280030
+       const pixelSpacingStr = image.data.string('x00280030');
+       if (pixelSpacingStr) {
+         const [rowSpacing, colSpacing] = pixelSpacingStr.split('\\').map(Number);
+         metadata.pixelSpacing = {
+           width: colSpacing,
+           height: rowSpacing
+         };
+       }
+     
+       return metadata;
+     } catch (error) {
+       console.error("Error extracting metadata:", error);
+       return {};
+     }
+   };
+   ```
 
 ### Memory Management
 
@@ -233,6 +284,39 @@ useEffect(() => {
 }, [imageUrl]);
 ```
 
+### Metadata Extraction
+
+```typescript
+const extractMetadata = (image) => {
+  const metadata = {};
+  
+  // Get modality
+  if (image.data && image.data.string) {
+    metadata.modality = image.data.string('x00080060');
+  }
+  
+  // Get dimensions
+  metadata.dimensions = {
+    width: image.width,
+    height: image.height
+  };
+  
+  // Get pixel spacing
+  if (image.data && image.data.string) {
+    const pixelSpacingStr = image.data.string('x00280030');
+    if (pixelSpacingStr) {
+      const [rowSpacing, colSpacing] = pixelSpacingStr.split('\\').map(Number);
+      metadata.pixelSpacing = {
+        width: colSpacing,
+        height: rowSpacing
+      };
+    }
+  }
+  
+  return metadata;
+};
+```
+
 ### Error Handling
 
 ```typescript
@@ -263,3 +347,8 @@ Common issues and solutions:
    - Ensure cornerstone is properly initialized
    - Check if the element has proper dimensions
    - Verify that the DICOM file has valid pixel data
+
+4. **Missing metadata**:
+   - Confirm the file is a valid DICOM file
+   - Check if the specific tags exist in the file
+   - Use a DICOM validator to inspect the file structure

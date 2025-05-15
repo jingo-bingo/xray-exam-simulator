@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { DicomViewer } from "@/components/admin/DicomViewer";
+import { DicomMetadataDisplay, DicomMetadata } from "@/components/admin/DicomMetadataDisplay";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +21,8 @@ const CaseView = () => {
   const [signedDicomUrl, setSignedDicomUrl] = useState<string | null>(null);
   const [dicomError, setDicomError] = useState<string | null>(null);
   const [isGeneratingUrl, setIsGeneratingUrl] = useState<boolean>(false);
+  const [dicomMetadata, setDicomMetadata] = useState<DicomMetadata | null>(null);
+  const [isLoadingMetadata, setIsLoadingMetadata] = useState<boolean>(false);
 
   // Fetch case data with proper caching
   const { data: caseData, isLoading: isLoadingCase, error: caseError } = useQuery({
@@ -100,6 +103,22 @@ const CaseView = () => {
       </div>
     );
   }
+
+  // Handle metadata loading
+  const handleMetadataLoaded = (metadata: DicomMetadata) => {
+    console.log("CaseView: Metadata received from DicomViewer:", metadata);
+    setDicomMetadata(metadata);
+    setIsLoadingMetadata(false);
+  };
+
+  // Reset metadata when URL changes
+  useEffect(() => {
+    if (signedDicomUrl) {
+      console.log("CaseView: Resetting metadata for new DICOM URL");
+      setDicomMetadata(null);
+      setIsLoadingMetadata(true);
+    }
+  }, [signedDicomUrl]);
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -185,7 +204,7 @@ const CaseView = () => {
               </Card>
             </div>
             
-            {/* Right column - DICOM viewer */}
+            {/* Right column - DICOM viewer and metadata */}
             <div className="lg:col-span-2">
               <Card className="bg-gray-800 border-gray-700">
                 <CardHeader>
@@ -215,6 +234,7 @@ const CaseView = () => {
                             variant: "destructive",
                           });
                         }}
+                        onMetadataLoaded={handleMetadataLoaded}
                       />
                     ) : (
                       <div className="w-full aspect-square max-h-[600px] bg-black flex items-center justify-center text-gray-400">
@@ -233,6 +253,12 @@ const CaseView = () => {
                   </div>
                 </CardContent>
               </Card>
+              
+              {/* DICOM Metadata Display */}
+              <DicomMetadataDisplay 
+                metadata={dicomMetadata} 
+                isLoading={isLoadingMetadata && !!signedDicomUrl}
+              />
             </div>
           </div>
         )}

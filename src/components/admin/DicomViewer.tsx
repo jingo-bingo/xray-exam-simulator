@@ -2,10 +2,26 @@
 import { useEffect, useRef } from "react";
 import cornerstone from "cornerstone-core";
 import cornerstoneWebImageLoader from "cornerstone-web-image-loader";
+import cornerstoneWADOImageLoader from "cornerstone-wado-image-loader";
+import dicomParser from "dicom-parser";
 
-// Initialize the cornerstone web image loader
+// Initialize the web image loader
 cornerstoneWebImageLoader.external.cornerstone = cornerstone;
 cornerstone.registerImageLoader("webImage", cornerstoneWebImageLoader.loadImage);
+
+// Initialize the WADO image loader for DICOM files
+cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
+cornerstoneWADOImageLoader.external.dicomParser = dicomParser;
+cornerstone.registerImageLoader("wadouri", cornerstoneWADOImageLoader.wadouri.loadImage);
+
+// Configure WADO image loader settings (optional but recommended)
+cornerstoneWADOImageLoader.configure({
+  useWebWorkers: false, // Set to true if you have web workers configured
+  decodeConfig: {
+    convertFloatPixelDataToInt: false,
+    use16Bits: true
+  }
+});
 
 interface DicomViewerProps {
   imageUrl: string;
@@ -34,16 +50,19 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
       return;
     }
     
-    // Load the image
-    const isDicom = imageUrl.toLowerCase().endsWith('.dcm') || imageUrl.toLowerCase().endsWith('.dicom');
+    // Determine the correct image loader based on file extension
+    const isDicom = imageUrl.toLowerCase().endsWith('.dcm') || imageUrl.toLowerCase().includes('.dicom');
     
     console.log("DicomViewer: Detected image type:", isDicom ? "DICOM" : "Standard image");
     
-    const imageLoader = isDicom ? 'dicom' : 'webImage';
+    // Use the appropriate image loader
+    const imageId = isDicom ? `wadouri:${imageUrl}` : `webImage:${imageUrl}`;
+    const loaderType = isDicom ? "WADO URI" : "Web Image";
     
-    console.log("DicomViewer: Attempting to load image with loader:", imageLoader);
+    console.log(`DicomViewer: Using ${loaderType} loader with imageId:`, imageId);
     
-    cornerstone.loadImage(imageUrl, { loader: imageLoader })
+    // Load the image with the appropriate loader
+    cornerstone.loadImage(imageId)
       .then((image) => {
         console.log("DicomViewer: Image loaded successfully, metadata:", image.imageId);
         try {
@@ -51,7 +70,7 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
           console.log("DicomViewer: Image displayed successfully");
         } catch (displayError) {
           console.error("DicomViewer: Error displaying image:", displayError);
-          if (onError) onError(new Error("Failed to display DICOM image"));
+          if (onError) onError(new Error("Failed to display image"));
         }
       })
       .catch((error) => {
@@ -60,11 +79,10 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
         // If we attempted to load a DICOM file but failed, try loading it as a regular image
         if (isDicom) {
           console.log("DicomViewer: Attempting fallback to standard image loader");
-          return cornerstone.loadImage(imageUrl, { loader: 'webImage' });
+          return cornerstone.loadImage(`webImage:${imageUrl}`);
         }
         
-        // If it's not a DICOM file or our fallback failed, throw the error
-        if (onError) onError(error);
+        if (onError) onError(new Error(`Failed to load image: ${error.message || "Unknown error"}`));
         throw error;
       })
       .then((image) => {
@@ -81,7 +99,7 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
       })
       .catch((error) => {
         console.error("DicomViewer: All image loading attempts failed:", error);
-        if (onError) onError(error);
+        if (onError) onError(error instanceof Error ? error : new Error("Failed to load image"));
       });
     
     // Clean up

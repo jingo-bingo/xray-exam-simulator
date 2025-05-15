@@ -7,10 +7,7 @@ interface CachedUrl {
   expiry: number; // Timestamp when the URL expires
 }
 
-// Global cache with improved buffer time management
 const urlCache: Record<string, CachedUrl> = {};
-// Track ongoing URL generation requests to prevent duplicates
-const pendingUrlRequests: Record<string, Promise<string | null>> = {};
 
 /**
  * Checks if a file exists in storage
@@ -161,68 +158,43 @@ export const removeDicomFile = async (filePath: string): Promise<boolean> => {
 };
 
 /**
- * Creates a signed URL for a file with improved caching and request deduplication
- * @param filePath Path to the file in storage
- * @param expirySeconds How long the URL should be valid (in seconds)
- * @param forceRefresh Force regeneration even if a cached URL exists
+ * Creates a signed URL for a file with caching to prevent unnecessary regeneration
  */
-export const getSignedUrl = async (
-  filePath: string, 
-  expirySeconds: number = 3600,
-  forceRefresh: boolean = false
-): Promise<string | null> => {
+export const getSignedUrl = async (filePath: string, expirySeconds: number = 3600): Promise<string | null> => {
   if (!filePath) return null;
   
-  // Early exit if there's an ongoing request for this URL - prevent duplicates
-  if (pendingUrlRequests[filePath] && !forceRefresh) {
-    console.log("getSignedUrl: Reusing pending request for:", filePath);
-    return pendingUrlRequests[filePath];
-  }
-  
-  const generateUrl = async (): Promise<string | null> => {
-    try {
-      // Check if we have a cached URL that's still valid
-      const cachedItem = urlCache[filePath];
-      const now = Date.now();
-      
-      // Use buffer time (2 minutes) to prevent expiry during use
-      const bufferTime = 120000; // 2 minutes in milliseconds
-      
-      // If we have a cached URL that hasn't nearly expired, use it
-      if (!forceRefresh && cachedItem && cachedItem.expiry > (now + bufferTime)) {
-        console.log("getSignedUrl: Using cached URL for:", filePath);
-        return cachedItem.url;
-      }
-      
-      console.log("getSignedUrl: Creating signed URL for:", filePath);
-      
-      const { data, error } = await supabase.storage
-        .from("dicom_images")
-        .createSignedUrl(filePath, expirySeconds);
-        
-      if (error) {
-        console.error("getSignedUrl: Error creating signed URL:", error);
-        return null;
-      }
-      
-      // Cache the URL with its expiry time (subtract buffer time as a safety margin)
-      urlCache[filePath] = {
-        url: data.signedUrl,
-        expiry: now + (expirySeconds * 1000) - bufferTime
-      };
-      
-      console.log("getSignedUrl: URL created successfully and cached with buffer time");
-      return data.signedUrl;
-    } catch (error) {
-      console.error("getSignedUrl: Error:", error);
-      return null;
-    } finally {
-      // Remove from pending requests
-      delete pendingUrlRequests[filePath];
+  try {
+    // Check if we have a cached URL that's still valid
+    const cachedItem = urlCache[filePath];
+    const now = Date.now();
+    
+    // If we have a cached URL that hasn't expired, use it
+    if (cachedItem && cachedItem.expiry > now) {
+      console.log("getSignedUrl: Using cached URL for:", filePath);
+      return cachedItem.url;
     }
-  };
-  
-  // Store the promise in pending requests to deduplicate simultaneous calls
-  pendingUrlRequests[filePath] = generateUrl();
-  return pendingUrlRequests[filePath];
+    
+    console.log("getSignedUrl: Creating signed URL for:", filePath);
+    
+    const { data, error } = await supabase.storage
+      .from("dicom_images")
+      .createSignedUrl(filePath, expirySeconds);
+      
+    if (error) {
+      console.error("getSignedUrl: Error creating signed URL:", error);
+      return null;
+    }
+    
+    // Cache the URL with its expiry time (subtract 10 seconds as a buffer)
+    urlCache[filePath] = {
+      url: data.signedUrl,
+      expiry: now + (expirySeconds * 1000) - 10000 
+    };
+    
+    console.log("getSignedUrl: URL created successfully and cached");
+    return data.signedUrl;
+  } catch (error) {
+    console.error("getSignedUrl: Error:", error);
+    return null;
+  }
 };

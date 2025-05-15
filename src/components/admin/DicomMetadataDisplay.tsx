@@ -1,5 +1,5 @@
 
-import React, { memo } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Info } from "lucide-react";
@@ -22,11 +22,12 @@ interface DicomMetadataDisplayProps {
   isLoading: boolean;
 }
 
-// Base component implementation
-const DicomMetadataDisplayBase: React.FC<DicomMetadataDisplayProps> = ({ 
+export const DicomMetadataDisplay: React.FC<DicomMetadataDisplayProps> = ({ 
   metadata, 
   isLoading 
 }) => {
+  console.log("DicomMetadataDisplay: Rendering with metadata:", metadata);
+  
   if (isLoading) {
     return (
       <Card className="bg-gray-800 border-gray-700 mt-4">
@@ -109,6 +110,3 @@ const DicomMetadataDisplayBase: React.FC<DicomMetadataDisplayProps> = ({
     </Card>
   );
 };
-
-// Export a memoized version of the component to prevent unnecessary re-renders
-export const DicomMetadataDisplay = memo(DicomMetadataDisplayBase);

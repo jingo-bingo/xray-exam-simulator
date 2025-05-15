@@ -5,36 +5,29 @@ import cornerstoneWebImageLoader from "cornerstone-web-image-loader";
 import cornerstoneWADOImageLoader from "cornerstone-wado-image-loader";
 import dicomParser from "dicom-parser";
 import { DicomMetadata } from "./DicomMetadataDisplay";
-import { useCornerStoneTools, ToolMode } from "@/hooks/useCornerStoneTools";
-import { DicomToolbar } from "./DicomToolbar";
 
-// Safe initialization of the image loaders
-try {
-  // Initialize the web image loader
-  cornerstoneWebImageLoader.external.cornerstone = cornerstone;
-  cornerstone.registerImageLoader("webImage", cornerstoneWebImageLoader.loadImage);
+// Initialize the web image loader
+cornerstoneWebImageLoader.external.cornerstone = cornerstone;
+cornerstone.registerImageLoader("webImage", cornerstoneWebImageLoader.loadImage);
 
-  // Initialize the WADO image loader for DICOM files
-  cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
-  cornerstoneWADOImageLoader.external.dicomParser = dicomParser;
-  cornerstone.registerImageLoader("wadouri", cornerstoneWADOImageLoader.wadouri.loadImage);
+// Initialize the WADO image loader for DICOM files
+cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
+cornerstoneWADOImageLoader.external.dicomParser = dicomParser;
+cornerstone.registerImageLoader("wadouri", cornerstoneWADOImageLoader.wadouri.loadImage);
 
-  // Configure WADO image loader with conservative memory settings
-  cornerstoneWADOImageLoader.configure({
-    useWebWorkers: false,
-    decodeConfig: {
-      convertFloatPixelDataToInt: false,
-      use16Bits: true,
-      maxWebWorkers: 1,
-      preservePixelData: false, // Don't keep raw pixel data in memory
-      strict: false // Less strict parsing to handle more file types
-    },
-    // Set a smaller max cache size to prevent memory issues
-    maxCacheSize: 50, // Default is 100
-  });
-} catch (error) {
-  console.error("Failed to initialize cornerstone loaders:", error);
-}
+// Configure WADO image loader with conservative memory settings
+cornerstoneWADOImageLoader.configure({
+  useWebWorkers: false,
+  decodeConfig: {
+    convertFloatPixelDataToInt: false,
+    use16Bits: true,
+    maxWebWorkers: 1,
+    preservePixelData: false, // Don't keep raw pixel data in memory
+    strict: false // Less strict parsing to handle more file types
+  },
+  // Set a smaller max cache size to prevent memory issues
+  maxCacheSize: 50, // Default is 100
+});
 
 // Cache for loaded images to prevent re-fetching
 const imageCache = new Map<string, any>();
@@ -62,16 +55,6 @@ export const DicomViewer = ({
   const [error, setError] = useState<string | null>(null);
   const loadingAttemptRef = useRef<AbortController | null>(null);
   const currentImageUrlRef = useRef<string | null>(null);
-  const [imageLoaded, setImageLoaded] = useState(false);
-  
-  // Initialize cornerstone tools with feature detection
-  const { 
-    initializeTools, 
-    setToolActive, 
-    resetView, 
-    activeTool,
-    toolsSupported
-  } = useCornerStoneTools();
   
   useEffect(() => {
     // Set up cleanup function
@@ -165,7 +148,6 @@ export const DicomViewer = ({
       // Reset states when URL changes
       setIsLoading(true);
       setError(null);
-      setImageLoaded(false);
       
       // Create abort controller for this loading attempt
       if (loadingAttemptRef.current) {
@@ -189,15 +171,11 @@ export const DicomViewer = ({
       try {
         cornerstone.enable(element);
         console.log("DicomViewer: Cornerstone enabled on element");
-        
-        // Initialize cornerstone tools after enabling the element
-        // Only try to initialize tools if the browser supports them
-        initializeTools(element);
       } catch (error) {
         console.error("DicomViewer: Error enabling cornerstone:", error);
         if (!isMounted.current) return;
         
-        setError("Failed to initialize viewer (browser compatibility issue)");
+        setError("Failed to initialize viewer");
         setIsLoading(false);
         if (onError) onError(new Error("Failed to initialize DICOM viewer"));
         return;
@@ -321,9 +299,6 @@ export const DicomViewer = ({
         cornerstone.displayImage(element, image);
         console.log("DicomViewer: Image displayed successfully");
         
-        // Mark image as loaded for toolbar display
-        setImageLoaded(true);
-        
         // Notify parent about metadata
         if (onMetadataLoaded) {
           console.log("DicomViewer: Notifying parent about metadata");
@@ -344,74 +319,34 @@ export const DicomViewer = ({
     
     loadImage();
     
-  }, [imageUrl, onError, onMetadataLoaded, initializeTools]);
-
-  // Handle tool selection
-  const handleToolSelect = (tool: ToolMode) => {
-    if (imageLoaded) {
-      setToolActive(tool);
-    }
-  };
-
-  // Handle reset view
-  const handleResetView = () => {
-    if (imageLoaded) {
-      resetView();
-    }
-  };
+  }, [imageUrl, onError, onMetadataLoaded]);
 
   return (
-    <div className="relative">
-      <div 
-        ref={viewerRef} 
-        className={className || "w-full h-48 border rounded-md bg-black"}
-        data-testid="dicom-viewer"
-      >
-        {isLoading && (
-          <div className="flex items-center justify-center h-full text-white bg-opacity-70 bg-black absolute inset-0">
-            <div className="flex flex-col items-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white mb-2"></div>
-              <div>Loading DICOM image...</div>
-            </div>
+    <div 
+      ref={viewerRef} 
+      className={className || "w-full h-48 border rounded-md bg-black"}
+      data-testid="dicom-viewer"
+    >
+      {isLoading && (
+        <div className="flex items-center justify-center h-full text-white bg-opacity-70 bg-black absolute inset-0">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white mb-2"></div>
+            <div>Loading DICOM image...</div>
           </div>
-        )}
-        
-        {error && (
-          <div className="flex items-center justify-center h-full text-red-400 bg-opacity-70 bg-black absolute inset-0">
-            <div className="text-center p-4">
-              <div className="font-bold mb-2">Error</div>
-              <div>{error}</div>
-              {!toolsSupported && (
-                <div className="mt-2 text-sm">
-                  Your browser may not support advanced DICOM features.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-        
-        {!imageUrl && !isLoading && !error && (
-          <div className="flex items-center justify-center h-full text-white">No image available</div>
-        )}
-      </div>
-
-      {/* Only show toolbar if image loaded AND tools are supported */}
-      {imageLoaded && toolsSupported && (
-        <div className="absolute top-2 left-2 z-10">
-          <DicomToolbar 
-            activeTool={activeTool}
-            onToolSelect={handleToolSelect}
-            onReset={handleResetView}
-            className="bg-gray-800/75 p-1 rounded-md"
-          />
         </div>
       )}
-
-      {/* Show simple message when tools aren't supported but image loads */}
-      {imageLoaded && !toolsSupported && !error && (
-        <div className="absolute top-2 left-2 z-10 bg-gray-800/75 p-2 rounded-md text-white text-xs">
-          Basic view only (advanced tools not supported by your browser)
+      
+      {error && (
+        <div className="flex items-center justify-center h-full text-red-400 bg-opacity-70 bg-black absolute inset-0">
+          <div className="text-center p-4">
+            <div className="font-bold mb-2">Error</div>
+            <div>{error}</div>
+          </div>
         </div>
+      )}
+      
+      {!imageUrl && !isLoading && !error && (
+        <div className="flex items-center justify-center h-full text-white">No image available</div>
       )}
     </div>
   );

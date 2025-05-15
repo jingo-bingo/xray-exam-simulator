@@ -4,30 +4,48 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Info } from "lucide-react";
 
+/**
+ * DicomMetadata interface defines the structure of metadata extracted from DICOM images
+ * This is the core data structure used for passing metadata between components
+ */
 export interface DicomMetadata {
+  // Type of imaging equipment used (CT, MRI, X-Ray, etc.)
   modality?: string;
+  
+  // Image dimensions in pixels
   dimensions?: {
     width?: number;
     height?: number;
   };
+  
+  // Physical distance between pixels in millimeters
   pixelSpacing?: {
     width?: number;
     height?: number;
   };
-  // Add more metadata fields as needed in the future
+  // The interface is designed to be extensible for future metadata needs
+  // Additional fields can be added as requirements evolve
 }
 
 interface DicomMetadataDisplayProps {
+  // The extracted metadata object to display
   metadata: DicomMetadata | null;
+  
+  // Indicates if metadata is currently being loaded/extracted
   isLoading: boolean;
 }
 
+/**
+ * Component for displaying DICOM image metadata in a structured format
+ * Handles different states: loading, no data, and successful metadata display
+ */
 export const DicomMetadataDisplay: React.FC<DicomMetadataDisplayProps> = ({ 
   metadata, 
   isLoading 
 }) => {
   console.log("DicomMetadataDisplay: Rendering with metadata:", metadata);
   
+  // Loading state - shows a spinner while metadata is being extracted
   if (isLoading) {
     return (
       <Card className="bg-gray-800 border-gray-700 mt-4">
@@ -47,6 +65,7 @@ export const DicomMetadataDisplay: React.FC<DicomMetadataDisplayProps> = ({
     );
   }
 
+  // No metadata available state - shows a message when extraction failed or no data exists
   if (!metadata) {
     return (
       <Card className="bg-gray-800 border-gray-700 mt-4">
@@ -63,6 +82,7 @@ export const DicomMetadataDisplay: React.FC<DicomMetadataDisplayProps> = ({
     );
   }
 
+  // Success state - renders structured metadata information in a card layout
   return (
     <Card className="bg-gray-800 border-gray-700 mt-4">
       <CardHeader className="pb-2">
@@ -73,6 +93,7 @@ export const DicomMetadataDisplay: React.FC<DicomMetadataDisplayProps> = ({
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-3 gap-4">
+          {/* Modality section */}
           <div>
             <p className="text-sm font-medium text-gray-300 mb-1">Modality</p>
             {metadata.modality ? (
@@ -84,6 +105,7 @@ export const DicomMetadataDisplay: React.FC<DicomMetadataDisplayProps> = ({
             )}
           </div>
           
+          {/* Image dimensions section */}
           <div>
             <p className="text-sm font-medium text-gray-300 mb-1">Dimensions</p>
             {metadata.dimensions?.width && metadata.dimensions?.height ? (
@@ -95,6 +117,7 @@ export const DicomMetadataDisplay: React.FC<DicomMetadataDisplayProps> = ({
             )}
           </div>
           
+          {/* Pixel spacing section */}
           <div>
             <p className="text-sm font-medium text-gray-300 mb-1">Pixel Spacing</p>
             {metadata.pixelSpacing?.width && metadata.pixelSpacing?.height ? (

@@ -87,32 +87,96 @@ The viewer relies on several key libraries:
    - On success, image is displayed in the viewport
    - Metadata is extracted and passed to parent component
 
-### Metadata Extraction
+### Metadata Extraction and Processing
 
-The DicomViewer extracts multiple types of metadata from DICOM images:
+The DICOM viewer's metadata system is designed to provide crucial information about medical images to users. This system follows a structured flow:
 
-1. **DICOM Tags**:
-   - Modality (0x00080060): Indicates the type of equipment used for acquisition
-   - Pixel Spacing (0x00280030): Physical distance (mm) between pixels
+1. **Extraction Process**:
+   - When an image is successfully loaded, the DicomViewer component automatically extracts metadata from the DICOM file.
+   - The extraction occurs in the same promise chain as image loading to ensure synchronization.
+   - Extracted metadata is passed to parent components through the `onMetadataLoaded` callback.
 
-2. **Image Properties**:
-   - Image dimensions (width x height)
-   - Bit depth and color channels
+2. **Metadata Types and Sources**:
+   - **DICOM Tags**: Standard metadata stored in the DICOM file header using predefined tags:
+     - **Modality (0x00080060)**: Indicates the equipment type used (CT, MRI, X-Ray, etc.)
+     - **Pixel Spacing (0x00280030)**: Physical distance between adjacent pixels in mm
+     - **Patient Information**: Optional tags for demographic data (anonymized in educational context)
+     - **Acquisition Parameters**: Technical details about how the image was captured
 
-3. **Extraction Process**:
+   - **Image Properties**: Derived from the loaded image object:
+     - **Dimensions**: Width and height in pixels
+     - **Aspect Ratio**: Used for proper scaling and display
+     - **Bit Depth**: Number of bits per pixel (typically 8-16 bit)
+
+3. **Metadata Display Component**:
+   - The DicomMetadataDisplay component specializes in visualizing the extracted metadata.
+   - Handles different states:
+     - Loading: Shows a spinner while metadata is being extracted
+     - Empty: Displays a message when no metadata is available
+     - Error: Shows error messages if metadata extraction fails
+     - Success: Renders a structured card with organized metadata sections
+
+4. **DicomMetadata Interface**:
+   ```typescript
+   export interface DicomMetadata {
+     modality?: string;           // Type of imaging equipment used
+     dimensions?: {
+       width?: number;            // Image width in pixels
+       height?: number;           // Image height in pixels
+     };
+     pixelSpacing?: {
+       width?: number;            // Horizontal spacing between pixels in mm
+       height?: number;           // Vertical spacing between pixels in mm
+     };
+     // Interface is extensible for future metadata needs
+   }
+   ```
+
+5. **Data Flow**:
+   ```
+   ┌────────────────────┐
+   │  DICOM File Load   │
+   └──────────┬─────────┘
+              ▼
+   ┌────────────────────┐
+   │ Cornerstone Parser │
+   └──────────┬─────────┘
+              ▼
+   ┌────────────────────┐
+   │ Metadata Extraction│
+   └──────────┬─────────┘
+              ▼
+   ┌────────────────────┐
+   │  DicomViewer       │──────┐
+   └────────────────────┘      │
+                               ▼
+   ┌────────────────────┐    ┌────────────────┐
+   │  Parent Component  │◄───┤ onMetadataLoaded
+   └──────────┬─────────┘    └────────────────┘
+              ▼
+   ┌────────────────────┐
+   │DicomMetadataDisplay│
+   └────────────────────┘
+   ```
+
+6. **Implementation Example**:
    ```javascript
    const extractMetadata = (image) => {
-     try {
-       // Extract modality from DICOM tag 0x00080060
+     const metadata = {};
+     
+     // Get modality from DICOM tag
+     if (image.data && image.data.string) {
        metadata.modality = image.data.string('x00080060');
-       
-       // Get pixel dimensions
-       metadata.dimensions = {
-         width: image.width,
-         height: image.height
-       };
-       
-       // Extract pixel spacing from DICOM tag 0x00280030
+     }
+     
+     // Get dimensions from image properties
+     metadata.dimensions = {
+       width: image.width,
+       height: image.height
+     };
+     
+     // Get pixel spacing from DICOM tag
+     if (image.data && image.data.string) {
        const pixelSpacingStr = image.data.string('x00280030');
        if (pixelSpacingStr) {
          const [rowSpacing, colSpacing] = pixelSpacingStr.split('\\').map(Number);
@@ -121,14 +185,22 @@ The DicomViewer extracts multiple types of metadata from DICOM images:
            height: rowSpacing
          };
        }
-     
-       return metadata;
-     } catch (error) {
-       console.error("Error extracting metadata:", error);
-       return {};
      }
+     
+     return metadata;
    };
    ```
+
+7. **Metadata Propagation**:
+   - DicomViewer extracts metadata and calls `onMetadataLoaded(metadata)`
+   - DicomImageSection receives metadata via callback and sets it in state
+   - DicomMetadataDisplay component renders the metadata in a structured format
+   - Changes in metadata trigger UI updates via React's state management
+
+8. **Error Handling**:
+   - Extraction failures are gracefully handled to prevent component crashes
+   - Missing tags result in "Not available" indicators rather than errors
+   - Tag parsing errors are logged but don't interrupt the rendering process
 
 ### Memory Management
 

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -259,6 +260,22 @@ const CaseViewer = () => {
   const handleToolChange = (tool: string) => {
     console.log(`CaseViewer: Tool changed to ${tool}`);
     setActiveTool(tool);
+  };
+
+  // Add the missing callback functions
+  const handleToolInitialized = () => {
+    console.log("CaseViewer: DicomViewer tools initialized");
+    setToolsInitialized(true);
+  };
+
+  const handleImageError = (error: Error) => {
+    console.error("CaseViewer: DicomViewer image error:", error);
+    setViewerError(error.message || "Failed to load image");
+    toast({
+      title: "Error",
+      description: "Failed to load image. Please try again.",
+      variant: "destructive",
+    });
   };
 
   const handleNextQuestion = () => {

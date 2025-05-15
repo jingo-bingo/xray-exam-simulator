@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ZoomIn, ZoomOut, Move, Maximize } from "lucide-react";
+import { ArrowLeft, ZoomIn, ZoomOut, Move, Maximize, RotateCw, Contrast } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface CaseViewerToolbarProps {
@@ -42,8 +42,33 @@ export const CaseViewerToolbar = ({ onToolChange, onReset, activeTool }: CaseVie
             onToolChange("pan");
           }}
           className="text-white hover:bg-gray-700"
+          title="Pan"
         >
           <Move className="h-4 w-4" />
+        </Button>
+        <Button
+          variant={activeTool === "contrast" ? "secondary" : "ghost"}
+          size="sm"
+          onClick={() => {
+            console.log("CaseViewerToolbar: Contrast tool selected");
+            onToolChange("contrast");
+          }}
+          className="text-white hover:bg-gray-700"
+          title="Adjust Contrast"
+        >
+          <Contrast className="h-4 w-4" />
+        </Button>
+        <Button
+          variant={activeTool === "rotate" ? "secondary" : "ghost"}
+          size="sm"
+          onClick={() => {
+            console.log("CaseViewerToolbar: Rotate tool selected");
+            onToolChange("rotate");
+          }}
+          className="text-white hover:bg-gray-700"
+          title="Rotate"
+        >
+          <RotateCw className="h-4 w-4" />
         </Button>
         <Button
           variant={activeTool === "zoomIn" ? "secondary" : "ghost"}
@@ -53,6 +78,7 @@ export const CaseViewerToolbar = ({ onToolChange, onReset, activeTool }: CaseVie
             onToolChange("zoomIn");
           }}
           className="text-white hover:bg-gray-700"
+          title="Zoom In"
         >
           <ZoomIn className="h-4 w-4" />
         </Button>
@@ -64,6 +90,7 @@ export const CaseViewerToolbar = ({ onToolChange, onReset, activeTool }: CaseVie
             onToolChange("zoomOut");
           }}
           className="text-white hover:bg-gray-700"
+          title="Zoom Out"
         >
           <ZoomOut className="h-4 w-4" />
         </Button>
@@ -75,6 +102,7 @@ export const CaseViewerToolbar = ({ onToolChange, onReset, activeTool }: CaseVie
             onReset();
           }}
           className="text-white hover:bg-gray-700"
+          title="Reset View"
         >
           <Maximize className="h-4 w-4" />
         </Button>

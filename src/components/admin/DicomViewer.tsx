@@ -1,6 +1,7 @@
 
 import { useEffect, useRef } from "react";
 import cornerstone from "cornerstone-core";
+import cornerstoneTools from "cornerstone-tools";
 import cornerstoneWebImageLoader from "cornerstone-web-image-loader";
 import cornerstoneWADOImageLoader from "cornerstone-wado-image-loader";
 import dicomParser from "dicom-parser";
@@ -13,6 +14,18 @@ cornerstone.registerImageLoader("webImage", cornerstoneWebImageLoader.loadImage)
 cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
 cornerstoneWADOImageLoader.external.dicomParser = dicomParser;
 cornerstone.registerImageLoader("wadouri", cornerstoneWADOImageLoader.wadouri.loadImage);
+
+// Initialize cornerstone tools
+cornerstoneTools.external.cornerstone = cornerstone;
+cornerstoneTools.external.cornerstoneMath = cornerstoneTools.cornerstoneMath;
+cornerstoneTools.init();
+
+// Initialize tools we'll use
+const panTool = cornerstoneTools.PanTool;
+const zoomTool = cornerstoneTools.ZoomTool;
+const wwwcTool = cornerstoneTools.WwwcTool;
+const magnifyTool = cornerstoneTools.MagnifyTool;
+const rotateTool = cornerstoneTools.RotateTool;
 
 // Configure WADO image loader with conservative memory settings
 cornerstoneWADOImageLoader.configure({
@@ -33,11 +46,34 @@ interface DicomViewerProps {
   alt: string;
   className?: string;
   onError?: (error: Error) => void;
+  activeTool?: string;
+  onToolInitialized?: () => void;
 }
 
-export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerProps) => {
+export const DicomViewer = ({ imageUrl, alt, className, onError, activeTool = "pan", onToolInitialized }: DicomViewerProps) => {
   const viewerRef = useRef<HTMLDivElement>(null);
+  const imageRef = useRef<any>(null);
   
+  // Initialize tools once
+  useEffect(() => {
+    if (!viewerRef.current) return;
+    
+    try {
+      // Add tools to cornerstone
+      cornerstoneTools.addTool(panTool);
+      cornerstoneTools.addTool(zoomTool);
+      cornerstoneTools.addTool(wwwcTool);
+      cornerstoneTools.addTool(magnifyTool);
+      cornerstoneTools.addTool(rotateTool);
+      
+      console.log("DicomViewer: Initialized cornerstone tools");
+      if (onToolInitialized) onToolInitialized();
+    } catch (error) {
+      console.error("DicomViewer: Error initializing tools:", error);
+    }
+  }, [onToolInitialized]);
+  
+  // Effect for loading and displaying the image
   useEffect(() => {
     if (!viewerRef.current || !imageUrl) return;
     
@@ -105,9 +141,14 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
     loadImageSafely(dicomImageId)
       .then((image) => {
         console.log("DicomViewer: Image loaded successfully, metadata:", image.imageId);
+        imageRef.current = image;
+        
         try {
           cornerstone.displayImage(element, image);
           console.log("DicomViewer: Image displayed successfully");
+          
+          // Setup default tool mode
+          setActiveTool(activeTool, element);
         } catch (displayError) {
           console.error("DicomViewer: Error displaying image:", displayError);
           if (onError) onError(new Error("Failed to display image"));
@@ -123,6 +164,13 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
       console.log("DicomViewer: Cleanup");
       if (element) {
         try {
+          // Deactivate all tools
+          cornerstoneTools.setToolDisabled('Pan');
+          cornerstoneTools.setToolDisabled('Zoom');
+          cornerstoneTools.setToolDisabled('Wwwc');
+          cornerstoneTools.setToolDisabled('Magnify');
+          cornerstoneTools.setToolDisabled('Rotate');
+          
           // Purge the cache to free memory before disabling
           cornerstone.imageCache.purgeCache();
           cornerstone.disable(element);
@@ -133,6 +181,78 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
       }
     };
   }, [imageUrl, onError]);
+
+  // Update active tool when it changes
+  useEffect(() => {
+    if (!viewerRef.current) return;
+    console.log("DicomViewer: Tool changed to:", activeTool);
+    setActiveTool(activeTool, viewerRef.current);
+  }, [activeTool]);
+
+  // Helper function to set active tool
+  const setActiveTool = (tool: string, element: HTMLElement) => {
+    console.log("DicomViewer: Setting active tool to:", tool);
+    
+    try {
+      // First disable all tools
+      cornerstoneTools.setToolDisabled('Pan');
+      cornerstoneTools.setToolDisabled('Zoom');
+      cornerstoneTools.setToolDisabled('Wwwc');
+      cornerstoneTools.setToolDisabled('Magnify');
+      cornerstoneTools.setToolDisabled('Rotate');
+      
+      // Then enable the selected tool
+      switch (tool) {
+        case "pan":
+          cornerstoneTools.setToolActive('Pan', { mouseButtonMask: 1 });
+          console.log("DicomViewer: Activated Pan tool");
+          break;
+        case "zoomIn":
+          cornerstoneTools.setToolActive('Zoom', { mouseButtonMask: 1, preventClickEvent: true });
+          cornerstoneTools.setToolConfiguration('Zoom', { invert: false });
+          console.log("DicomViewer: Activated Zoom In tool");
+          break;
+        case "zoomOut":
+          cornerstoneTools.setToolActive('Zoom', { mouseButtonMask: 1, preventClickEvent: true });
+          cornerstoneTools.setToolConfiguration('Zoom', { invert: true });
+          console.log("DicomViewer: Activated Zoom Out tool");
+          break;
+        case "contrast":
+          cornerstoneTools.setToolActive('Wwwc', { mouseButtonMask: 1 });
+          console.log("DicomViewer: Activated Contrast tool");
+          break;
+        case "rotate":
+          cornerstoneTools.setToolActive('Rotate', { mouseButtonMask: 1 });
+          console.log("DicomViewer: Activated Rotate tool");
+          break;
+        default:
+          console.log("DicomViewer: No valid tool selected, defaulting to Pan");
+          cornerstoneTools.setToolActive('Pan', { mouseButtonMask: 1 });
+      }
+    } catch (error) {
+      console.error("DicomViewer: Error setting active tool:", error, tool);
+    }
+  };
+
+  // Function to reset the view (can be called from parent)
+  const resetView = () => {
+    if (!viewerRef.current || !imageRef.current) return;
+    
+    console.log("DicomViewer: Resetting view");
+    try {
+      cornerstone.reset(viewerRef.current);
+      console.log("DicomViewer: View reset successful");
+    } catch (error) {
+      console.error("DicomViewer: Error resetting view:", error);
+    }
+  };
+
+  // Expose reset function to the component ref
+  useEffect(() => {
+    if (viewerRef.current) {
+      (viewerRef.current as any).resetView = resetView;
+    }
+  }, []);
 
   return (
     <div 

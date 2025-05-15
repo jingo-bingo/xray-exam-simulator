@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +26,9 @@ const CaseViewer = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [caseAttemptId, setCaseAttemptId] = useState<string | null>(null);
+  const [toolsInitialized, setToolsInitialized] = useState(false);
+  
+  const dicomViewerRef = useRef<HTMLDivElement | null>(null);
 
   console.log(`CaseViewer: Initializing for case ${caseId}`);
 
@@ -195,12 +198,20 @@ const CaseViewer = () => {
   const handleToolChange = (tool: string) => {
     console.log(`CaseViewer: Tool changed to ${tool}`);
     setActiveTool(tool);
-    // In a real implementation, this would communicate with the DicomViewer
   };
 
   const handleViewReset = () => {
     console.log(`CaseViewer: View reset requested`);
-    // In a real implementation, this would reset the DicomViewer
+    
+    // Access the reset function from the DicomViewer
+    if (dicomViewerRef.current && (dicomViewerRef.current as any).resetView) {
+      (dicomViewerRef.current as any).resetView();
+    }
+  };
+
+  const handleToolInitialized = () => {
+    console.log("CaseViewer: DicomViewer tools initialized");
+    setToolsInitialized(true);
   };
 
   const handleNextQuestion = () => {
@@ -262,9 +273,12 @@ const CaseViewer = () => {
               <div className="bg-black aspect-square lg:aspect-video w-full overflow-hidden relative">
                 {dicomUrl ? (
                   <DicomViewer 
+                    ref={dicomViewerRef}
                     imageUrl={dicomUrl} 
                     alt={`Case ${caseData.case_number}`} 
                     className="w-full h-full" 
+                    activeTool={activeTool}
+                    onToolInitialized={handleToolInitialized}
                     onError={(error) => {
                       console.error("CaseViewer: DicomViewer error:", error);
                       toast({

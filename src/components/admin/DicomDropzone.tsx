@@ -30,7 +30,6 @@ export const DicomDropzone = ({ onFileSelected }: DicomDropzoneProps) => {
       <Input 
         ref={fileInputRef}
         type="file" 
-        accept=".dcm,.dicom"
         onChange={handleFileChange}
         className="hidden"
       />
@@ -44,7 +43,7 @@ export const DicomDropzone = ({ onFileSelected }: DicomDropzoneProps) => {
           Click to upload a DICOM image
         </p>
         <p className="text-xs text-gray-400">
-          (.dcm, .dicom file formats)
+          Any DICOM format is supported, regardless of file extension
         </p>
       </div>
     </>

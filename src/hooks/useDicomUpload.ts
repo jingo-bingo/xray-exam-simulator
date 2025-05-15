@@ -5,7 +5,8 @@ import { toast } from "@/components/ui/use-toast";
 import * as dicomParser from "dicom-parser";
 
 /**
- * Validates if a file is a valid DICOM file
+ * Validates if a file is a valid DICOM file by examining its content
+ * rather than relying on file extension
  * @param file The file to validate
  * @returns Promise<boolean> True if the file is a valid DICOM file, false otherwise
  */
@@ -20,13 +21,34 @@ const isDicom = async (file: File): Promise<boolean> => {
     // Convert to Uint8Array for dicom-parser
     const byteArray = new Uint8Array(arrayBuffer);
     
-    // Try to parse the DICOM data
-    console.log("isDicom: Attempting to parse DICOM data");
+    // Check for DICM magic number at byte offset 128
+    if (byteArray.length > 132) {
+      const magicBytes = String.fromCharCode(
+        byteArray[128], byteArray[129], byteArray[130], byteArray[131]
+      );
+      console.log("isDicom: Magic bytes at position 128:", magicBytes);
+      
+      if (magicBytes === "DICM") {
+        console.log("isDicom: DICM magic number found - definitely a DICOM file");
+        return true;
+      }
+    }
+    
+    // If no magic number, try parsing anyway (some DICOM files don't have the magic number)
+    console.log("isDicom: No DICM magic number found, attempting to parse DICOM data");
     const dataSet = dicomParser.parseDicom(byteArray);
     
-    const isValid = !!dataSet;
-    console.log("isDicom: DICOM validation result:", isValid);
-    return isValid;
+    // Check if the dataset contains some common DICOM tags
+    const hasDicomTags = !!dataSet && (
+      dataSet.elements.x00080008 || // ImageType
+      dataSet.elements.x00080060 || // Modality
+      dataSet.elements.x00080070 || // Manufacturer
+      dataSet.elements.x00100010 || // PatientName
+      dataSet.elements.x00200010    // StudyID
+    );
+    
+    console.log("isDicom: DICOM validation result:", hasDicomTags);
+    return hasDicomTags;
   } catch (error) {
     console.error("isDicom: Error validating DICOM file:", error);
     return false;
@@ -50,7 +72,7 @@ export const useDicomUpload = (
       console.log("useDicomUpload: Beginning DICOM validation");
       setUploading(true);
       
-      // Check if file is a valid DICOM file
+      // Check if file is a valid DICOM file by content, not extension
       const isValidDicom = await isDicom(file);
       
       if (!isValidDicom) {
@@ -67,16 +89,20 @@ export const useDicomUpload = (
       
       console.log("useDicomUpload: File validation successful, proceeding with upload");
       
-      // Create a unique file path
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
-      const newFilePath = `${fileName}`;
+      // Create a unique file path - preserve original filename when possible
+      // but ensure it has a unique identifier
+      const uniqueId = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}`;
+      const fileName = file.name.includes('.') 
+        ? `${uniqueId}_${file.name}` 
+        : `${uniqueId}_${file.name}`;
       
-      console.log("useDicomUpload: Uploading file to path:", newFilePath);
+      console.log("useDicomUpload: Uploading file to path:", fileName);
       
       const { error: uploadError } = await supabase.storage
         .from("dicom_images")
-        .upload(newFilePath, file);
+        .upload(fileName, file, {
+          contentType: "application/dicom" // Try to set the proper MIME type
+        });
         
       if (uploadError) {
         console.error("useDicomUpload: Error uploading file:", uploadError);
@@ -91,8 +117,8 @@ export const useDicomUpload = (
       console.log("useDicomUpload: File uploaded successfully");
       
       // Set the file path and notify parent
-      setFilePath(newFilePath);
-      onUploadComplete(newFilePath);
+      setFilePath(fileName);
+      onUploadComplete(fileName);
       
       toast({
         title: "Upload Successful",

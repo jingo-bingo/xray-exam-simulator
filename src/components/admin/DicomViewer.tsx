@@ -14,7 +14,7 @@ cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
 cornerstoneWADOImageLoader.external.dicomParser = dicomParser;
 cornerstone.registerImageLoader("wadouri", cornerstoneWADOImageLoader.wadouri.loadImage);
 
-// Configure WADO image loader with more conservative memory settings
+// Configure WADO image loader with conservative memory settings
 cornerstoneWADOImageLoader.configure({
   useWebWorkers: false,
   decodeConfig: {
@@ -55,23 +55,18 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
       return;
     }
     
-    // Determine the correct image loader based on file extension
-    const isDicom = imageUrl.toLowerCase().endsWith('.dcm') || imageUrl.toLowerCase().includes('.dicom');
-    
-    console.log("DicomViewer: Detected image type:", isDicom ? "DICOM" : "Standard image");
-    
-    // Use the appropriate image loader with size limits
-    const imageId = isDicom ? `wadouri:${imageUrl}` : `webImage:${imageUrl}`;
-    const loaderType = isDicom ? "WADO URI" : "Web Image";
-    
-    console.log(`DicomViewer: Using ${loaderType} loader with imageId:`, imageId);
+    // Try to load as DICOM first, regardless of file extension
+    console.log("DicomViewer: Attempting to load as DICOM first");
+    const dicomImageId = `wadouri:${imageUrl}`;
     
     // Function to handle loading with memory consideration
-    const loadImageSafely = async () => {
+    const loadImageSafely = async (imageId: string, isDicomAttempt = true) => {
       try {
-        // First try with default settings
+        console.log(`DicomViewer: Loading with imageId: ${imageId}`);
         return await cornerstone.loadImage(imageId);
       } catch (error: any) {
+        console.error(`DicomViewer: Error loading image with ${imageId}:`, error);
+        
         // If we get a memory allocation error, try downsampling
         if (error instanceof RangeError || (error.message && error.message.includes("buffer allocation failed"))) {
           console.log("DicomViewer: Memory error detected, trying with downsampling");
@@ -88,19 +83,26 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
           });
           
           // Try loading with different options to reduce memory usage
-          if (isDicom) {
+          if (isDicomAttempt) {
             console.log("DicomViewer: Trying with image downsampling");
             // Add image processing URL parameters for downsampling
             return await cornerstone.loadImage(`${imageId}?quality=50&downsampleFactor=2`);
           }
         }
         
-        throw error; // Re-throw if it's not a memory issue or downsampling didn't help
+        // If this was a DICOM attempt and it failed, try as a web image
+        if (isDicomAttempt) {
+          console.log("DicomViewer: DICOM load failed, trying as web image");
+          return loadImageSafely(`webImage:${imageUrl}`, false);
+        }
+        
+        // Both attempts failed
+        throw error;
       }
     };
 
-    // Load the image with the appropriate loader and memory handling
-    loadImageSafely()
+    // Load the image as DICOM first, then fall back to web image if needed
+    loadImageSafely(dicomImageId)
       .then((image) => {
         console.log("DicomViewer: Image loaded successfully, metadata:", image.imageId);
         try {
@@ -109,30 +111,6 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
         } catch (displayError) {
           console.error("DicomViewer: Error displaying image:", displayError);
           if (onError) onError(new Error("Failed to display image"));
-        }
-      })
-      .catch((error) => {
-        console.error("DicomViewer: Failed to load image:", error);
-        
-        // If we attempted to load a DICOM file but failed, try loading it as a regular image
-        if (isDicom) {
-          console.log("DicomViewer: Attempting fallback to standard image loader");
-          return cornerstone.loadImage(`webImage:${imageUrl}`);
-        }
-        
-        if (onError) onError(new Error(`Failed to load image: ${error.message || "Unknown error"}`));
-        throw error;
-      })
-      .then((image) => {
-        if (image) {
-          console.log("DicomViewer: Fallback image loaded successfully");
-          try {
-            cornerstone.displayImage(element, image);
-            console.log("DicomViewer: Fallback image displayed successfully");
-          } catch (displayError) {
-            console.error("DicomViewer: Error displaying fallback image:", displayError);
-            if (onError) onError(new Error("Failed to display fallback image"));
-          }
         }
       })
       .catch((error) => {

@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,9 +20,25 @@ const CaseView = () => {
   const { user } = useAuth();
   const [signedDicomUrl, setSignedDicomUrl] = useState<string | null>(null);
   const [dicomError, setDicomError] = useState<string | null>(null);
-  const [isGeneratingUrl, setIsGeneratingUrl] = useState<boolean>(false);
   const [dicomMetadata, setDicomMetadata] = useState<DicomMetadata | null>(null);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState<boolean>(false);
+  
+  // Use refs to prevent dependency cycles and track loading state
+  const isGeneratingUrlRef = useRef<boolean>(false);
+  const currentDicomPathRef = useRef<string | null>(null);
+  
+  // Track mounted state to prevent state updates after component unmount
+  const isMountedRef = useRef<boolean>(true);
+  
+  useEffect(() => {
+    // Set mounted state on mount
+    isMountedRef.current = true;
+    
+    // Clean up on unmount
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Fetch case data with proper caching
   const { data: caseData, isLoading: isLoadingCase, error: caseError } = useQuery({
@@ -47,41 +63,87 @@ const CaseView = () => {
     retry: 1, // Only retry once to avoid excessive retries on 404s
   });
 
-  // Memoized function to generate signed URL
+  // Memoized function to generate signed URL - no state dependencies
   const generateSignedUrl = useCallback(async (dicomPath: string) => {
-    // Prevent duplicate requests
-    if (isGeneratingUrl) return;
-    setIsGeneratingUrl(true);
+    // Prevent duplicate requests and check if component is still mounted
+    if (isGeneratingUrlRef.current || !isMountedRef.current) return null;
+    
+    // Path hasn't changed - no need to regenerate
+    if (currentDicomPathRef.current === dicomPath && signedDicomUrl) {
+      console.log("CaseView: Using existing URL for same DICOM path");
+      return signedDicomUrl;
+    }
+    
+    // Update current path ref
+    currentDicomPathRef.current = dicomPath;
+    
+    // Set loading state using ref to prevent dependency cycle
+    isGeneratingUrlRef.current = true;
     
     try {
       console.log("CaseView: Generating signed URL for:", dicomPath);
       const url = await getSignedUrl(dicomPath, 3600);
       console.log("CaseView: Signed URL generated:", url);
-      setSignedDicomUrl(url);
-      setDicomError(null);
+      
+      // Only update state if component is still mounted
+      if (isMountedRef.current) {
+        setSignedDicomUrl(url);
+        setDicomError(null);
+      }
+      
       return url;
     } catch (error) {
       console.error("CaseView: Failed to generate signed URL:", error);
-      setDicomError("Failed to load image URL");
-      toast({
-        title: "Error",
-        description: "Failed to load DICOM image",
-        variant: "destructive",
-      });
+      
+      // Only update state if component is still mounted
+      if (isMountedRef.current) {
+        setDicomError("Failed to load image URL");
+        toast({
+          title: "Error",
+          description: "Failed to load DICOM image",
+          variant: "destructive",
+        });
+      }
+      
       return null;
     } finally {
-      setIsGeneratingUrl(false);
+      isGeneratingUrlRef.current = false;
     }
   }, []);
 
   // Generate signed URL for DICOM when caseData is available
   useEffect(() => {
-    if (caseData?.dicom_path) {
-      generateSignedUrl(caseData.dicom_path);
+    if (!caseData) return;
+    
+    console.log("CaseView: Case data loaded, dicom_path:", caseData.dicom_path);
+    
+    if (caseData.dicom_path) {
+      // Track previous path to avoid unnecessary regeneration
+      const previousPath = currentDicomPathRef.current;
+      
+      if (previousPath !== caseData.dicom_path) {
+        console.log("CaseView: DICOM path changed, generating new URL");
+        
+        // Reset metadata when path changes
+        if (isMountedRef.current) {
+          setDicomMetadata(null);
+          setIsLoadingMetadata(true);
+        }
+        
+        generateSignedUrl(caseData.dicom_path);
+      } else {
+        console.log("CaseView: DICOM path unchanged, skipping URL generation");
+      }
     } else {
       // Reset states if no DICOM path
-      setSignedDicomUrl(null);
-      setDicomError(null);
+      currentDicomPathRef.current = null;
+      
+      if (isMountedRef.current) {
+        setSignedDicomUrl(null);
+        setDicomError(null);
+        setDicomMetadata(null);
+        setIsLoadingMetadata(false);
+      }
     }
   }, [caseData, generateSignedUrl]);
 
@@ -104,21 +166,15 @@ const CaseView = () => {
     );
   }
 
-  // Handle metadata loading
-  const handleMetadataLoaded = (metadata: DicomMetadata) => {
+  // Handle metadata loading - use stable callback
+  const handleMetadataLoaded = useCallback((metadata: DicomMetadata) => {
     console.log("CaseView: Metadata received from DicomViewer:", metadata);
-    setDicomMetadata(metadata);
-    setIsLoadingMetadata(false);
-  };
-
-  // Reset metadata when URL changes
-  useEffect(() => {
-    if (signedDicomUrl) {
-      console.log("CaseView: Resetting metadata for new DICOM URL");
-      setDicomMetadata(null);
-      setIsLoadingMetadata(true);
+    
+    if (isMountedRef.current) {
+      setDicomMetadata(metadata);
+      setIsLoadingMetadata(false);
     }
-  }, [signedDicomUrl]);
+  }, []);
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -238,7 +294,7 @@ const CaseView = () => {
                       />
                     ) : (
                       <div className="w-full aspect-square max-h-[600px] bg-black flex items-center justify-center text-gray-400">
-                        {isGeneratingUrl ? (
+                        {isGeneratingUrlRef.current ? (
                           <div className="flex flex-col items-center">
                             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-400 mb-2"></div>
                             <div>Preparing DICOM image...</div>

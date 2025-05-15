@@ -29,6 +29,11 @@ cornerstoneWADOImageLoader.configure({
   maxCacheSize: 50, // Default is 100
 });
 
+// Cache for loaded images to prevent re-fetching
+const imageCache = new Map<string, any>();
+// Track active loading operations to prevent duplicate loads
+const activeLoads = new Map<string, Promise<any>>();
+
 interface DicomViewerProps {
   imageUrl: string;
   alt: string;
@@ -49,15 +54,27 @@ export const DicomViewer = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const loadingAttemptRef = useRef<AbortController | null>(null);
+  const currentImageUrlRef = useRef<string | null>(null);
   
   useEffect(() => {
     // Set up cleanup function
     return () => {
+      console.log("DicomViewer: Component unmounting");
       isMounted.current = false;
       
       // Abort any pending load operations
       if (loadingAttemptRef.current) {
         loadingAttemptRef.current.abort();
+        loadingAttemptRef.current = null;
+      }
+      
+      // Clean up cornerstone element if it exists
+      if (viewerRef.current) {
+        try {
+          cornerstone.disable(viewerRef.current);
+        } catch (error) {
+          console.warn("DicomViewer: Error during cleanup:", error);
+        }
       }
     };
   }, []);
@@ -116,156 +133,192 @@ export const DicomViewer = ({
   };
   
   useEffect(() => {
-    if (!viewerRef.current || !imageUrl) return;
-    
-    console.log("DicomViewer: Initializing viewer for image:", imageUrl);
-    
-    // Reset states when URL changes
-    setIsLoading(true);
-    setError(null);
-    
-    // Create abort controller for this loading attempt
-    loadingAttemptRef.current = new AbortController();
-    const { signal } = loadingAttemptRef.current;
-    
-    // Enable the element for cornerstone
-    const element = viewerRef.current;
-    
-    try {
-      cornerstone.enable(element);
-      console.log("DicomViewer: Cornerstone enabled on element");
-    } catch (error) {
-      console.error("DicomViewer: Error enabling cornerstone:", error);
-      if (!isMounted.current) return;
+    const loadImage = async () => {
+      if (!viewerRef.current || !imageUrl) return;
       
-      setError("Failed to initialize viewer");
-      setIsLoading(false);
-      if (onError) onError(new Error("Failed to initialize DICOM viewer"));
-      return;
-    }
-    
-    // Determine image type based on URL
-    const getImageId = (url: string) => {
-      if (url.startsWith('http')) {
-        return `wadouri:${url}`;
+      // Skip if URL hasn't changed to prevent unnecessary reloads
+      if (currentImageUrlRef.current === imageUrl) {
+        console.log("DicomViewer: URL unchanged, skipping reload");
+        return;
       }
       
-      const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp'];
-      const isImageFormat = imageExtensions.some(ext => url.toLowerCase().endsWith(ext));
+      console.log("DicomViewer: Initializing viewer for image:", imageUrl);
+      currentImageUrlRef.current = imageUrl;
       
-      return isImageFormat ? `webImage:${url}` : `wadouri:${url}`;
-    };
-    
-    // Try to load as DICOM first, regardless of file extension
-    console.log("DicomViewer: Attempting to load as DICOM first");
-    const imageId = getImageId(imageUrl);
-    console.log("DicomViewer: Using imageId:", imageId);
-    
-    // Function to handle loading with memory consideration
-    const loadImageSafely = async (imageId: string, isDicomAttempt = true) => {
-      // Check if loading operation was aborted
-      if (signal.aborted) {
-        throw new Error("Loading aborted");
+      // Reset states when URL changes
+      setIsLoading(true);
+      setError(null);
+      
+      // Create abort controller for this loading attempt
+      if (loadingAttemptRef.current) {
+        loadingAttemptRef.current.abort();
       }
+      loadingAttemptRef.current = new AbortController();
+      const { signal } = loadingAttemptRef.current;
+      
+      // Clean up previous instance if necessary
+      try {
+        if (viewerRef.current) {
+          cornerstone.disable(viewerRef.current);
+        }
+      } catch (error) {
+        console.warn("DicomViewer: Error during cleanup:", error);
+      }
+      
+      // Enable the element for cornerstone
+      const element = viewerRef.current;
       
       try {
-        console.log(`DicomViewer: Loading with imageId: ${imageId}`);
-        return await cornerstone.loadImage(imageId);
-      } catch (error: any) {
-        console.error(`DicomViewer: Error loading image with ${imageId}:`, error);
+        cornerstone.enable(element);
+        console.log("DicomViewer: Cornerstone enabled on element");
+      } catch (error) {
+        console.error("DicomViewer: Error enabling cornerstone:", error);
+        if (!isMounted.current) return;
         
-        if (signal.aborted) {
-          throw new Error("Loading aborted during attempt");
-        }
-        
-        // If we get a memory allocation error, try downsampling
-        if (error instanceof RangeError || (error.message && error.message.includes("buffer allocation failed"))) {
-          console.log("DicomViewer: Memory error detected, trying with downsampling");
-          
-          // Try with more aggressive settings for large files
-          cornerstoneWADOImageLoader.configure({
-            decodeConfig: {
-              convertFloatPixelDataToInt: true, // Convert to int to save memory
-              use16Bits: false, // Use 8-bit instead of 16-bit
-              maxWebWorkers: 0,
-              preservePixelData: false
-            },
-            maxCacheSize: 10 // Reduce cache size significantly
-          });
-          
-          // Try loading with different options to reduce memory usage
-          if (isDicomAttempt) {
-            console.log("DicomViewer: Trying with image downsampling");
-            // Add image processing URL parameters for downsampling
-            return await cornerstone.loadImage(`${imageId}?quality=50&downsampleFactor=2`);
-          }
-        }
-        
-        // If this was a DICOM attempt and it failed, try as a web image
-        if (isDicomAttempt && imageUrl.startsWith('http')) {
-          console.log("DicomViewer: DICOM load failed, trying as web image");
-          return loadImageSafely(`webImage:${imageUrl}`, false);
-        }
-        
-        // Both attempts failed
-        throw error;
+        setError("Failed to initialize viewer");
+        setIsLoading(false);
+        if (onError) onError(new Error("Failed to initialize DICOM viewer"));
+        return;
       }
-    };
+      
+      // Determine image type based on URL
+      const getImageId = (url: string) => {
+        if (url.startsWith('http')) {
+          return `wadouri:${url}`;
+        }
+        
+        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp'];
+        const isImageFormat = imageExtensions.some(ext => url.toLowerCase().endsWith(ext));
+        
+        return isImageFormat ? `webImage:${url}` : `wadouri:${url}`;
+      };
+      
+      // Try to load as DICOM first, regardless of file extension
+      console.log("DicomViewer: Attempting to load as DICOM first");
+      const imageId = getImageId(imageUrl);
+      console.log("DicomViewer: Using imageId:", imageId);
+      
+      // Function to handle loading with memory consideration and caching
+      const loadImageSafely = async (imageId: string, isDicomAttempt = true) => {
+        // Check if loading operation was aborted
+        if (signal.aborted) {
+          throw new Error("Loading aborted");
+        }
+        
+        // Check if we already have this image in our cache
+        if (imageCache.has(imageId)) {
+          console.log(`DicomViewer: Using cached image for ${imageId}`);
+          return imageCache.get(imageId);
+        }
+        
+        // Check if this image is already being loaded
+        if (activeLoads.has(imageId)) {
+          console.log(`DicomViewer: Reusing existing load promise for ${imageId}`);
+          return activeLoads.get(imageId);
+        }
+        
+        // Create a new load promise
+        const loadPromise = (async () => {
+          try {
+            console.log(`DicomViewer: Loading with imageId: ${imageId}`);
+            const image = await cornerstone.loadImage(imageId);
+            
+            // Cache the image for future use
+            imageCache.set(imageId, image);
+            return image;
+          } catch (error: any) {
+            console.error(`DicomViewer: Error loading image with ${imageId}:`, error);
+            
+            if (signal.aborted) {
+              throw new Error("Loading aborted during attempt");
+            }
+            
+            // If we get a memory allocation error, try downsampling
+            if (error instanceof RangeError || (error.message && error.message.includes("buffer allocation failed"))) {
+              console.log("DicomViewer: Memory error detected, trying with downsampling");
+              
+              // Try with more aggressive settings for large files
+              cornerstoneWADOImageLoader.configure({
+                decodeConfig: {
+                  convertFloatPixelDataToInt: true, // Convert to int to save memory
+                  use16Bits: false, // Use 8-bit instead of 16-bit
+                  maxWebWorkers: 0,
+                  preservePixelData: false
+                },
+                maxCacheSize: 10 // Reduce cache size significantly
+              });
+              
+              // Try loading with different options to reduce memory usage
+              if (isDicomAttempt) {
+                console.log("DicomViewer: Trying with image downsampling");
+                // Add image processing URL parameters for downsampling
+                const image = await cornerstone.loadImage(`${imageId}?quality=50&downsampleFactor=2`);
+                imageCache.set(imageId, image);
+                return image;
+              }
+            }
+            
+            // If this was a DICOM attempt and it failed, try as a web image
+            if (isDicomAttempt && imageUrl.startsWith('http')) {
+              console.log("DicomViewer: DICOM load failed, trying as web image");
+              const webImageId = `webImage:${imageUrl}`;
+              
+              // Remove this load from active loads to allow retry
+              activeLoads.delete(imageId);
+              
+              return loadImageSafely(webImageId, false);
+            }
+            
+            // Both attempts failed
+            throw error;
+          } finally {
+            // Remove from active loads when done
+            activeLoads.delete(imageId);
+          }
+        })();
+        
+        // Store the promise in activeLoads
+        activeLoads.set(imageId, loadPromise);
+        
+        return loadPromise;
+      };
 
-    // Load the image
-    loadImageSafely(imageId)
-      .then((image) => {
+      // Load the image
+      try {
+        const image = await loadImageSafely(imageId);
+        
         // Check if component is still mounted
         if (!isMounted.current) return;
         
         console.log("DicomViewer: Image loaded successfully, metadata:", image.imageId);
         
-        try {
-          // Extract metadata before displaying the image
-          const metadata = extractMetadata(image);
-          
-          // Display the image
-          cornerstone.displayImage(element, image);
-          console.log("DicomViewer: Image displayed successfully");
-          
-          // Notify parent about metadata
-          if (onMetadataLoaded) {
-            console.log("DicomViewer: Notifying parent about metadata");
-            onMetadataLoaded(metadata);
-          }
-          
-          setIsLoading(false);
-        } catch (displayError) {
-          console.error("DicomViewer: Error displaying image:", displayError);
-          setError("Failed to display image");
-          if (onError) onError(new Error("Failed to display image"));
-          setIsLoading(false);
+        // Extract metadata before displaying the image
+        const metadata = extractMetadata(image);
+        
+        // Display the image
+        cornerstone.displayImage(element, image);
+        console.log("DicomViewer: Image displayed successfully");
+        
+        // Notify parent about metadata
+        if (onMetadataLoaded) {
+          console.log("DicomViewer: Notifying parent about metadata");
+          onMetadataLoaded(metadata);
         }
-      })
-      .catch((error) => {
+        
+        setIsLoading(false);
+      } catch (error) {
         // Check if component is still mounted
         if (!isMounted.current) return;
         
         console.error("DicomViewer: All image loading attempts failed:", error);
-        setError(error.message || "Failed to load image");
+        setError(error instanceof Error ? error.message : "Failed to load image");
         if (onError) onError(error instanceof Error ? error : new Error("Failed to load image"));
         setIsLoading(false);
-      });
-    
-    // Clean up
-    return () => {
-      console.log("DicomViewer: Cleanup");
-      if (element) {
-        try {
-          // Purge the cache to free memory before disabling
-          cornerstone.imageCache.purgeCache();
-          cornerstone.disable(element);
-          console.log("DicomViewer: Cornerstone disabled on element");
-        } catch (error) {
-          console.error("DicomViewer: Error during cleanup:", error);
-        }
       }
     };
+    
+    loadImage();
+    
   }, [imageUrl, onError, onMetadataLoaded]);
 
   return (

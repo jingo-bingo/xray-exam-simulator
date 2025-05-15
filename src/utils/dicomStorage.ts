@@ -1,6 +1,14 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
+// URL cache to prevent unnecessary regeneration
+interface CachedUrl {
+  url: string;
+  expiry: number; // Timestamp when the URL expires
+}
+
+const urlCache: Record<string, CachedUrl> = {};
+
 /**
  * Checks if a file exists in storage
  */
@@ -150,12 +158,22 @@ export const removeDicomFile = async (filePath: string): Promise<boolean> => {
 };
 
 /**
- * Creates a signed URL for a file
+ * Creates a signed URL for a file with caching to prevent unnecessary regeneration
  */
 export const getSignedUrl = async (filePath: string, expirySeconds: number = 3600): Promise<string | null> => {
   if (!filePath) return null;
   
   try {
+    // Check if we have a cached URL that's still valid
+    const cachedItem = urlCache[filePath];
+    const now = Date.now();
+    
+    // If we have a cached URL that hasn't expired, use it
+    if (cachedItem && cachedItem.expiry > now) {
+      console.log("getSignedUrl: Using cached URL for:", filePath);
+      return cachedItem.url;
+    }
+    
     console.log("getSignedUrl: Creating signed URL for:", filePath);
     
     const { data, error } = await supabase.storage
@@ -167,7 +185,13 @@ export const getSignedUrl = async (filePath: string, expirySeconds: number = 360
       return null;
     }
     
-    console.log("getSignedUrl: URL created successfully");
+    // Cache the URL with its expiry time (subtract 10 seconds as a buffer)
+    urlCache[filePath] = {
+      url: data.signedUrl,
+      expiry: now + (expirySeconds * 1000) - 10000 
+    };
+    
+    console.log("getSignedUrl: URL created successfully and cached");
     return data.signedUrl;
   } catch (error) {
     console.error("getSignedUrl: Error:", error);

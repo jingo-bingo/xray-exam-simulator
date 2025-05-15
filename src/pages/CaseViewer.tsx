@@ -1,5 +1,4 @@
-
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -202,78 +201,30 @@ const CaseViewer = () => {
     }
   }, [user, caseId]);
 
-  // Make handleViewReset memoized with useCallback to use in effect dependencies
-  const handleViewReset = useCallback(() => {
-    console.log(`CaseViewer: View reset requested`);
-    
-    if (dicomViewerRef.current) {
-      dicomViewerRef.current.resetView();
-    }
-  }, []);
-
-  // Add a keydown event handler for tool shortcuts
-  useEffect(() => {
-    console.log("CaseViewer: Setting up keyboard shortcuts");
-    
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // Only handle keyboard shortcuts when not typing in an input field
-      if (event.target instanceof HTMLInputElement || 
-          event.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-      
-      console.log(`CaseViewer: Key pressed: ${event.key}`);
-      
-      switch (event.key.toLowerCase()) {
-        case 'w':
-          console.log("CaseViewer: Shortcut - Activating Window/Contrast tool");
-          setActiveTool("contrast");
-          break;
-        case 'r':
-          console.log("CaseViewer: Shortcut - Activating Rotate tool");
-          setActiveTool("rotate");
-          break;
-        case 'z':
-          console.log("CaseViewer: Shortcut - Activating Zoom tool");
-          setActiveTool("zoom");
-          break;
-        case 'escape':
-          console.log("CaseViewer: Shortcut - Reset view");
-          handleViewReset();
-          break;
-        default:
-          // No matching shortcut
-          break;
-      }
-    };
-    
-    // Add event listener
-    window.addEventListener('keydown', handleKeyDown);
-    
-    // Cleanup
-    return () => {
-      console.log("CaseViewer: Removing keyboard shortcut listeners");
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [handleViewReset]); // Add handleViewReset to dependencies
-  
   const handleToolChange = (tool: string) => {
     console.log(`CaseViewer: Tool changed to ${tool}`);
     setActiveTool(tool);
   };
 
-  // Add the missing callback functions
+  const handleViewReset = () => {
+    console.log(`CaseViewer: View reset requested`);
+    
+    if (dicomViewerRef.current) {
+      dicomViewerRef.current.resetView();
+    }
+  };
+
   const handleToolInitialized = () => {
     console.log("CaseViewer: DicomViewer tools initialized");
     setToolsInitialized(true);
   };
 
   const handleImageError = (error: Error) => {
-    console.error("CaseViewer: DicomViewer image error:", error);
-    setViewerError(error.message || "Failed to load image");
+    console.error("CaseViewer: DicomViewer error:", error);
+    setViewerError(error.message);
     toast({
-      title: "Error",
-      description: "Failed to load image. Please try again.",
+      title: "Image Error",
+      description: error.message || "Failed to load the image. Please try again.",
       variant: "destructive",
     });
   };

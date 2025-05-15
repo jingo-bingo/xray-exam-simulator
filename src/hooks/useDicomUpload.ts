@@ -2,11 +2,10 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
-import * as dicomParser from "dicom-parser";
+import { readFile } from "dicom-parser";
 
 /**
- * Validates if a file is a valid DICOM file by examining its content
- * rather than relying on file extension
+ * Validates if a file is a valid DICOM file
  * @param file The file to validate
  * @returns Promise<boolean> True if the file is a valid DICOM file, false otherwise
  */
@@ -21,34 +20,13 @@ const isDicom = async (file: File): Promise<boolean> => {
     // Convert to Uint8Array for dicom-parser
     const byteArray = new Uint8Array(arrayBuffer);
     
-    // Check for DICM magic number at byte offset 128
-    if (byteArray.length > 132) {
-      const magicBytes = String.fromCharCode(
-        byteArray[128], byteArray[129], byteArray[130], byteArray[131]
-      );
-      console.log("isDicom: Magic bytes at position 128:", magicBytes);
-      
-      if (magicBytes === "DICM") {
-        console.log("isDicom: DICM magic number found - definitely a DICOM file");
-        return true;
-      }
-    }
+    // Try to parse the DICOM data
+    console.log("isDicom: Attempting to parse DICOM data");
+    const dataSet = readFile(byteArray);
     
-    // If no magic number, try parsing anyway (some DICOM files don't have the magic number)
-    console.log("isDicom: No DICM magic number found, attempting to parse DICOM data");
-    const dataSet = dicomParser.parseDicom(byteArray);
-    
-    // Check if the dataset contains some common DICOM tags - using !! to ensure boolean return
-    const hasDicomTags = !!dataSet && (
-      !!dataSet.elements.x00080008 || // ImageType
-      !!dataSet.elements.x00080060 || // Modality
-      !!dataSet.elements.x00080070 || // Manufacturer
-      !!dataSet.elements.x00100010 || // PatientName
-      !!dataSet.elements.x00200010    // StudyID
-    );
-    
-    console.log("isDicom: DICOM validation result:", hasDicomTags);
-    return hasDicomTags;
+    const isValid = !!dataSet;
+    console.log("isDicom: DICOM validation result:", isValid);
+    return isValid;
   } catch (error) {
     console.error("isDicom: Error validating DICOM file:", error);
     return false;
@@ -72,7 +50,7 @@ export const useDicomUpload = (
       console.log("useDicomUpload: Beginning DICOM validation");
       setUploading(true);
       
-      // Check if file is a valid DICOM file by content, not extension
+      // Check if file is a valid DICOM file
       const isValidDicom = await isDicom(file);
       
       if (!isValidDicom) {
@@ -89,20 +67,16 @@ export const useDicomUpload = (
       
       console.log("useDicomUpload: File validation successful, proceeding with upload");
       
-      // Create a unique file path - preserve original filename when possible
-      // but ensure it has a unique identifier
-      const uniqueId = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}`;
-      const fileName = file.name.includes('.') 
-        ? `${uniqueId}_${file.name}` 
-        : `${uniqueId}_${file.name}`;
+      // Create a unique file path
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+      const newFilePath = `${fileName}`;
       
-      console.log("useDicomUpload: Uploading file to path:", fileName);
+      console.log("useDicomUpload: Uploading file to path:", newFilePath);
       
       const { error: uploadError } = await supabase.storage
         .from("dicom_images")
-        .upload(fileName, file, {
-          contentType: "application/dicom" // Try to set the proper MIME type
-        });
+        .upload(newFilePath, file);
         
       if (uploadError) {
         console.error("useDicomUpload: Error uploading file:", uploadError);
@@ -117,8 +91,8 @@ export const useDicomUpload = (
       console.log("useDicomUpload: File uploaded successfully");
       
       // Set the file path and notify parent
-      setFilePath(fileName);
-      onUploadComplete(fileName);
+      setFilePath(newFilePath);
+      onUploadComplete(newFilePath);
       
       toast({
         title: "Upload Successful",

@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { X, FileImage } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { DicomViewer } from "./DicomViewer";
-import { toast } from "@/components/ui/use-toast";
 
 interface DicomPreviewProps {
   filePath: string;
@@ -14,7 +13,6 @@ interface DicomPreviewProps {
 export const DicomPreview = ({ filePath, onRemove }: DicomPreviewProps) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [viewerError, setViewerError] = useState<Error | null>(null);
-  const [isExpired, setIsExpired] = useState(false);
 
   // Load preview URL when filePath changes
   useEffect(() => {
@@ -27,11 +25,6 @@ export const DicomPreview = ({ filePath, onRemove }: DicomPreviewProps) => {
           
         if (error) {
           console.error("DicomPreview: Error getting signed URL:", error);
-          toast({
-            title: "Error loading preview",
-            description: error.message,
-            variant: "destructive"
-          });
           return;
         }
         
@@ -39,41 +32,20 @@ export const DicomPreview = ({ filePath, onRemove }: DicomPreviewProps) => {
           console.log("DicomPreview: Preview URL created:", data.signedUrl);
           setPreviewUrl(data.signedUrl);
           setViewerError(null);
-          
-          // Set a timer to check if URL is close to expiration
-          const checkExpiration = setTimeout(() => {
-            console.log("DicomPreview: Signed URL is about to expire, will regenerate");
-            setIsExpired(true);
-          }, 3000 * 1000); // Check after 50 minutes (URLs valid for 60 minutes)
-          
-          return () => clearTimeout(checkExpiration);
         }
       } catch (error) {
         console.error("DicomPreview: Error in loadPreview:", error);
-        toast({
-          title: "Error loading preview",
-          description: "Failed to load DICOM preview",
-          variant: "destructive"
-        });
       }
     };
 
     if (filePath) {
       loadPreview();
     }
-    
-    // Reset expired state when filePath changes
-    setIsExpired(false);
-  }, [filePath, isExpired]);
+  }, [filePath]);
 
   const handleViewerError = (error: Error) => {
     console.error("DicomPreview: DICOM Viewer error:", error);
     setViewerError(error);
-    toast({
-      title: "Preview Error",
-      description: error.message || "Failed to preview DICOM image",
-      variant: "destructive"
-    });
   };
 
   if (!previewUrl) {

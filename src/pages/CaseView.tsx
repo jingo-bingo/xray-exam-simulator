@@ -8,6 +8,7 @@ import { ErrorDisplay } from "@/components/case-view/ErrorDisplay";
 import { LoadingSkeleton } from "@/components/case-view/LoadingSkeleton";
 import { useCase } from "@/hooks/useCase";
 import { useDicomUrl } from "@/hooks/useDicomUrl";
+import { useMemo } from "react";
 
 const CaseView = () => {
   const { id } = useParams<{ id: string }>();
@@ -20,13 +21,16 @@ const CaseView = () => {
     error: caseError 
   } = useCase(id, user?.id);
 
+  // Memoize the dicomPath to prevent unnecessary hook reruns
+  const dicomPath = useMemo(() => caseData?.dicom_path, [caseData?.dicom_path]);
+
   // Handle DICOM URL generation
   const {
     signedDicomUrl,
     dicomError,
     setDicomError,
     isGeneratingUrl
-  } = useDicomUrl(caseData?.dicom_path);
+  } = useDicomUrl(dicomPath);
 
   // Handle errors
   if (caseError) {
@@ -57,7 +61,7 @@ const CaseView = () => {
                 dicomError={dicomError}
                 isGeneratingUrl={isGeneratingUrl}
                 caseTitle={caseData?.title}
-                dicomPath={caseData?.dicom_path}
+                dicomPath={dicomPath}
                 setDicomError={setDicomError}
               />
             </div>

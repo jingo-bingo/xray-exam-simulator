@@ -3,6 +3,7 @@ import { DicomViewer } from "@/components/admin/DicomViewer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
 import { Image } from "lucide-react";
+import { memo } from "react";
 
 interface DicomSectionProps {
   signedDicomUrl: string | null;
@@ -13,7 +14,8 @@ interface DicomSectionProps {
   setDicomError: (error: string | null) => void;
 }
 
-export const DicomSection = ({ 
+// Memoize the DicomSection to prevent unnecessary re-renders
+export const DicomSection = memo(({ 
   signedDicomUrl, 
   dicomError, 
   isGeneratingUrl,
@@ -21,6 +23,8 @@ export const DicomSection = ({
   dicomPath,
   setDicomError 
 }: DicomSectionProps) => {
+  console.log("DicomSection rendering with URL:", signedDicomUrl?.substring(0, 20), "...");
+  
   return (
     <Card className="bg-gray-800 border-gray-700">
       <CardHeader>
@@ -38,6 +42,7 @@ export const DicomSection = ({
         <div className="relative w-full aspect-square max-h-[600px] bg-black">
           {signedDicomUrl ? (
             <DicomViewer 
+              key={signedDicomUrl} // Use URL as key to prevent reusing the same instance
               imageUrl={signedDicomUrl}
               alt={`DICOM for case ${caseTitle}`}
               className="w-full aspect-square max-h-[600px] bg-black"
@@ -69,4 +74,7 @@ export const DicomSection = ({
       </CardContent>
     </Card>
   );
-};
+});
+
+// Add display name for better debugging
+DicomSection.displayName = "DicomSection";

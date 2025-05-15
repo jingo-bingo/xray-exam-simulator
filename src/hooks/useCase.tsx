@@ -25,3 +25,4 @@ export const useCase = (id: string | undefined, userId: string | undefined) => {
     retry: 1, // Only retry once to avoid excessive retries on 404s
   });
 };
+

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import cornerstone from "cornerstone-core";
 import cornerstoneTools from "cornerstone-tools";
@@ -6,7 +5,12 @@ import cornerstoneTools from "cornerstone-tools";
 // Initialize the tools if not already done
 if (!cornerstoneTools.external.cornerstone) {
   cornerstoneTools.external.cornerstone = cornerstone;
-  cornerstoneTools.external.Hammer = window.Hammer;
+  
+  // Use the correctly typed window.Hammer
+  if (window.Hammer) {
+    cornerstoneTools.external.Hammer = window.Hammer;
+  }
+  
   cornerstoneTools.init({
     showSVGCursors: true,
   });

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Edit, Plus, Trash } from "lucide-react";
+import { Edit, Plus, Trash, ArrowLeft } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 import { toast } from "@/components/ui/sonner";
 
@@ -98,7 +99,20 @@ const CaseManagement = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Cases Management</h1>
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => {
+              console.log("CaseManagement: Navigating back to admin dashboard");
+              navigate("/admin");
+            }}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Dashboard
+          </Button>
+          <h1 className="text-3xl font-bold">Cases Management</h1>
+        </div>
         <Button onClick={handleCreateCase}>
           <Plus className="mr-2 h-4 w-4" />
           Create Case

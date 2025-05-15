@@ -58,6 +58,11 @@ export const DicomViewer = ({
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const loadingAttemptRef = useRef<AbortController | null>(null);
   const currentImageUrlRef = useRef<string | null>(null);
+  const [containerStyle, setContainerStyle] = useState<React.CSSProperties>({
+    width: '100%',
+    height: '100%',
+    position: 'relative'
+  });
   
   // Initialize cornerstone tools
   const {
@@ -91,6 +96,29 @@ export const DicomViewer = ({
       }
     };
   }, []);
+
+  // Update container dimensions based on image size
+  const updateContainerSize = (image: any) => {
+    if (!viewerRef.current || !image) return;
+    
+    // Get the natural dimensions of the image
+    const { width, height } = image;
+    
+    // Set container size based on image dimensions while maintaining aspect ratio
+    // We're using the actual pixel dimensions of the DICOM
+    setContainerStyle({
+      width: `${width}px`,
+      height: `${height}px`,
+      position: 'relative'
+    });
+    
+    // Force cornerstone to update the viewport
+    setTimeout(() => {
+      if (viewerRef.current) {
+        cornerstone.resize(viewerRef.current);
+      }
+    }, 10);
+  };
 
   // Extract DICOM metadata from the image
   const extractMetadata = (image: any): DicomMetadata => {
@@ -309,7 +337,10 @@ export const DicomViewer = ({
         // Extract metadata before displaying the image
         const metadata = extractMetadata(image);
         
-        // Display the image
+        // Update container size based on image dimensions
+        updateContainerSize(image);
+        
+        // Display the image in its natural size
         cornerstone.displayImage(element, image);
         console.log("DicomViewer: Image displayed successfully");
         
@@ -351,33 +382,36 @@ export const DicomViewer = ({
         />
       )}
       
-      <div 
-        ref={viewerRef} 
-        className={className || "w-full h-48 border rounded-md bg-black"}
-        data-testid="dicom-viewer"
-      >
-        {isLoading && (
-          <div className="flex items-center justify-center h-full text-white bg-opacity-70 bg-black absolute inset-0">
-            <div className="flex flex-col items-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white mb-2"></div>
-              <div>Loading DICOM image...</div>
+      <div style={containerStyle} className="dicom-container">
+        <div 
+          ref={viewerRef} 
+          className={`w-full h-full ${className || ""}`}
+          data-testid="dicom-viewer"
+        >
+          {isLoading && (
+            <div className="flex items-center justify-center h-full text-white bg-opacity-70 bg-black absolute inset-0">
+              <div className="flex flex-col items-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white mb-2"></div>
+                <div>Loading DICOM image...</div>
+              </div>
             </div>
-          </div>
-        )}
-        
-        {displayedError && (
-          <div className="flex items-center justify-center h-full text-red-400 bg-opacity-70 bg-black absolute inset-0">
-            <div className="text-center p-4">
-              <div className="font-bold mb-2">Error</div>
-              <div>{displayedError}</div>
+          )}
+          
+          {displayedError && (
+            <div className="flex items-center justify-center h-full text-red-400 bg-opacity-70 bg-black absolute inset-0">
+              <div className="text-center p-4">
+                <div className="font-bold mb-2">Error</div>
+                <div>{displayedError}</div>
+              </div>
             </div>
-          </div>
-        )}
-        
-        {!imageUrl && !isLoading && !displayedError && (
-          <div className="flex items-center justify-center h-full text-white">No image available</div>
-        )}
+          )}
+          
+          {!imageUrl && !isLoading && !displayedError && (
+            <div className="flex items-center justify-center h-full text-white">No image available</div>
+          )}
+        </div>
       </div>
     </div>
   );
 };
+

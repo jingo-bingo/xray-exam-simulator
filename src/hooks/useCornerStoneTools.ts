@@ -129,13 +129,29 @@ export function useCornerStoneTools(
     }
   }, [isToolsInitialized, viewerRef]);
 
-  // Function to reset the view
+  // Function to reset the view to natural size
   const resetView = useCallback(() => {
     if (!viewerRef.current) return;
 
     try {
       console.log("DicomTools: Resetting view");
       cornerstone.reset(viewerRef.current);
+      
+      // After resetting, get the image and apply natural size viewport
+      const enabledElement = cornerstone.getEnabledElement(viewerRef.current);
+      if (enabledElement && enabledElement.image) {
+        // Set viewport to display image at natural size (scale 1.0)
+        const viewport = cornerstone.getDefaultViewport(
+          viewerRef.current, 
+          enabledElement.image
+        );
+        
+        if (viewport) {
+          viewport.scale = 1.0; // Natural size (1:1 pixel)
+          cornerstone.setViewport(viewerRef.current, viewport);
+          console.log("DicomTools: Reset to natural size (1:1)");
+        }
+      }
     } catch (e) {
       console.error("DicomTools: Error resetting view:", e);
       setError("Failed to reset view");

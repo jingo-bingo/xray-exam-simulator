@@ -38,13 +38,13 @@ const isDicom = async (file: File): Promise<boolean> => {
     console.log("isDicom: No DICM magic number found, attempting to parse DICOM data");
     const dataSet = dicomParser.parseDicom(byteArray);
     
-    // Check if the dataset contains some common DICOM tags
+    // Check if the dataset contains some common DICOM tags - using !! to ensure boolean return
     const hasDicomTags = !!dataSet && (
-      dataSet.elements.x00080008 || // ImageType
-      dataSet.elements.x00080060 || // Modality
-      dataSet.elements.x00080070 || // Manufacturer
-      dataSet.elements.x00100010 || // PatientName
-      dataSet.elements.x00200010    // StudyID
+      !!dataSet.elements.x00080008 || // ImageType
+      !!dataSet.elements.x00080060 || // Modality
+      !!dataSet.elements.x00080070 || // Manufacturer
+      !!dataSet.elements.x00100010 || // PatientName
+      !!dataSet.elements.x00200010    // StudyID
     );
     
     console.log("isDicom: DICOM validation result:", hasDicomTags);

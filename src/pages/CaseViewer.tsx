@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { DicomViewer, DicomViewerHandle } from "@/components/admin/DicomViewer";
-import { CaseViewerToolbar, CaseViewerToolbarHandle } from "@/components/case-viewer/CaseViewerToolbar";
+import { CaseViewerToolbar } from "@/components/case-viewer/CaseViewerToolbar";
 import { ClinicalHistoryPanel } from "@/components/case-viewer/ClinicalHistoryPanel";
 import { QuestionPanel } from "@/components/case-viewer/QuestionPanel";
 import { Button } from "@/components/ui/button";
@@ -33,8 +33,6 @@ const CaseViewer = () => {
   
   // Update ref to use the correct type
   const dicomViewerRef = useRef<DicomViewerHandle>(null);
-  // Add a ref for the toolbar
-  const toolbarRef = useRef<CaseViewerToolbarHandle>(null);
 
   console.log(`CaseViewer: Initializing for case ${caseId}`);
 
@@ -229,39 +227,19 @@ const CaseViewer = () => {
       switch (event.key.toLowerCase()) {
         case 'w':
           console.log("CaseViewer: Shortcut - Activating Window/Contrast tool");
-          if (toolbarRef.current) {
-            toolbarRef.current.clickContrast();
-          } else {
-            console.log("CaseViewer: Toolbar ref not available for contrast button");
-            setActiveTool("contrast");
-          }
+          setActiveTool("contrast");
           break;
         case 'r':
           console.log("CaseViewer: Shortcut - Activating Rotate tool");
-          if (toolbarRef.current) {
-            toolbarRef.current.clickRotate();
-          } else {
-            console.log("CaseViewer: Toolbar ref not available for rotate button");
-            setActiveTool("rotate");
-          }
+          setActiveTool("rotate");
           break;
         case 'z':
           console.log("CaseViewer: Shortcut - Activating Zoom tool");
-          if (toolbarRef.current) {
-            toolbarRef.current.clickZoom();
-          } else {
-            console.log("CaseViewer: Toolbar ref not available for zoom button");
-            setActiveTool("zoom");
-          }
+          setActiveTool("zoom");
           break;
-        case 'f':
-          console.log("CaseViewer: Shortcut - Reset view (F key pressed)");
-          if (toolbarRef.current) {
-            toolbarRef.current.clickReset();
-          } else {
-            console.log("CaseViewer: Toolbar ref not available for reset button");
-            handleViewReset();
-          }
+        case 'escape':
+          console.log("CaseViewer: Shortcut - Reset view");
+          handleViewReset();
           break;
         default:
           // No matching shortcut
@@ -352,7 +330,6 @@ const CaseViewer = () => {
           <div className="lg:col-span-2 space-y-4">
             <div className="bg-gray-900 rounded-md overflow-hidden shadow-lg">
               <CaseViewerToolbar 
-                ref={toolbarRef}
                 onToolChange={handleToolChange} 
                 onReset={handleViewReset} 
                 activeTool={activeTool} 

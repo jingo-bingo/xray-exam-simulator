@@ -159,7 +159,10 @@ const CasesList = () => {
                 </Badge>
               </CardContent>
               <CardFooter>
-                <Button className="w-full" onClick={() => navigate(`/cases/${caseItem.id}`)}>
+                <Button 
+                  className="w-full" 
+                  onClick={() => navigate(`/cases/${caseItem.id}`)}
+                >
                   Start Case
                 </Button>
               </CardFooter>

@@ -13,6 +13,7 @@ The application handles DICOM files using a multi-stage process to ensure proper
    - Files are validated as actual DICOM files by examining their content, not just file extension
    - Checks for the "DICM" magic number at byte offset 128
    - Falls back to checking for common DICOM tags if the magic number isn't present
+   - Can extract metadata from DICOM files when needed
    - This ensures only valid medical images are uploaded to the system
 
 ### File Storage
@@ -22,7 +23,13 @@ The application handles DICOM files using a multi-stage process to ensure proper
    - Functions for checking file existence, uploading, making temporary files permanent, and deleting files
    - Creates unique file paths to avoid collisions
 
-2. **Temporary vs. Permanent Files**:
+2. **File Handling Utilities** (`src/utils/dicomFileHandler.ts`):
+   - Coordinates the validation and storage processes
+   - Provides unified interfaces for upload and removal operations
+   - Handles error conditions and provides structured responses
+   - Manages notifications to the user
+
+3. **Temporary vs. Permanent Files**:
    - During case creation, files are initially uploaded as temporary (prefixed with `temp_`)
    - When a case is saved, temporary files are made permanent by:
      - Downloading the temporary file
@@ -34,9 +41,10 @@ The application handles DICOM files using a multi-stage process to ensure proper
 
 1. **The `useDicomUpload` Hook** (`src/hooks/useDicomUpload.ts`):
    - Provides a clean interface for components to upload, preview, and manage DICOM files
-   - Handles validation, state management, and error handling
+   - Handles state management and error handling
    - Communicates with parent components through callbacks
    - Checks if initial files exist when component mounts
+   - Uses the utility layer for actual file operations
 
 ## UI Components
 
@@ -96,3 +104,26 @@ To prevent storage bloat:
 - Temporary files not associated with cases should eventually be cleaned up
 - When a case is deleted, its associated DICOM file should be removed
 - Regular maintenance may be needed to identify and remove orphaned files
+
+## Code Organization
+
+The DICOM handling code is organized into several specialized layers:
+
+1. **Validation Layer** (`dicomValidator.ts`):
+   - Focuses on determining if files are valid DICOM files
+   - Extracts metadata from DICOM files
+
+2. **Storage Layer** (`dicomStorage.ts`):
+   - Handles direct interactions with the storage backend
+   - Manages file paths, uploads, downloads, and deletions
+
+3. **File Handling Layer** (`dicomFileHandler.ts`):
+   - Coordinates validation and storage operations
+   - Provides higher-level operations for UI components
+   - Handles error conditions and provides structured responses
+
+4. **State Management Layer** (`useDicomUpload.ts`):
+   - Manages React state for file upload operations
+   - Coordinates UI feedback and parent component communication
+
+This layered approach improves maintainability by creating clear separation of concerns.

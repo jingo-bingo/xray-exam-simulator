@@ -51,3 +51,52 @@ export const isDicom = async (file: File): Promise<boolean> => {
     return false;
   }
 };
+
+/**
+ * Extract basic DICOM metadata from file
+ * @param file The DICOM file to analyze
+ * @returns Promise with metadata object or null if extraction fails
+ */
+export const extractDicomMetadata = async (file: File): Promise<Record<string, string> | null> => {
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const byteArray = new Uint8Array(arrayBuffer);
+    const dataSet = dicomParser.parseDicom(byteArray);
+    
+    // Extract common metadata fields
+    const metadata: Record<string, string> = {};
+    
+    // Helper function to safely extract string values
+    const getStringValue = (tag: string): string | undefined => {
+      if (!dataSet.elements[tag]) return undefined;
+      return dataSet.string(tag);
+    };
+    
+    // Common DICOM tags to extract
+    const tagsToExtract = {
+      "x00080060": "Modality",
+      "x00080070": "Manufacturer",
+      "x00080090": "ReferringPhysician",
+      "x00100010": "PatientName",
+      "x00100020": "PatientID",
+      "x00100030": "PatientBirthDate",
+      "x00100040": "PatientSex",
+      "x00200010": "StudyID",
+      "x00080020": "StudyDate",
+      "x00080030": "StudyTime",
+    };
+    
+    // Extract each tag if it exists
+    Object.entries(tagsToExtract).forEach(([tag, label]) => {
+      const value = getStringValue(tag);
+      if (value !== undefined) {
+        metadata[label] = value;
+      }
+    });
+    
+    return Object.keys(metadata).length > 0 ? metadata : null;
+  } catch (error) {
+    console.error("extractDicomMetadata: Error extracting metadata:", error);
+    return null;
+  }
+};

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -27,6 +26,7 @@ const CaseViewer = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [caseAttemptId, setCaseAttemptId] = useState<string | null>(null);
   const [toolsInitialized, setToolsInitialized] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   
   // Update ref to use the correct type
   const dicomViewerRef = useRef<DicomViewerHandle>(null);
@@ -214,6 +214,15 @@ const CaseViewer = () => {
     setToolsInitialized(true);
   };
 
+  const handleImageError = (error: Error) => {
+    console.error("CaseViewer: DicomViewer error:", error);
+    toast({
+      title: "Image Error",
+      description: "Failed to load the image. Please try again.",
+      variant: "destructive",
+    });
+  };
+
   const handleNextQuestion = () => {
     if (currentQuestionIndex < questions.length - 1) {
       console.log(`CaseViewer: Moving to next question, index ${currentQuestionIndex + 1}`);
@@ -279,14 +288,7 @@ const CaseViewer = () => {
                     className="w-full h-full" 
                     activeTool={activeTool}
                     onToolInitialized={handleToolInitialized}
-                    onError={(error) => {
-                      console.error("CaseViewer: DicomViewer error:", error);
-                      toast({
-                        title: "Image Error",
-                        description: "Failed to load the image. Please try again.",
-                        variant: "destructive",
-                      });
-                    }}
+                    onError={handleImageError}
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full">

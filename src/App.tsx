@@ -12,6 +12,7 @@ import Unauthorized from "./pages/Unauthorized";
 import Cases from "./pages/Cases";
 import { AuthProvider } from "./hooks/useAuth";
 import ProtectedRoute from "./components/ProtectedRoute";
+import CaseViewer from "./pages/CaseViewer"; // Add this import
 
 // Admin pages
 import { AdminLayout } from "./components/admin/AdminLayout";
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               {/* Both admins and trainees can access cases */}
               <Route path="/cases" element={<Cases />} />
+              <Route path="/cases/:caseId" element={<CaseViewer />} /> {/* Add this route */}
             </Route>
             
             {/* Admin routes - strictly admin only */}

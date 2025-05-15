@@ -1,4 +1,3 @@
-
 import { useEffect, useRef } from "react";
 import cornerstone from "cornerstone-core";
 import cornerstoneWebImageLoader from "cornerstone-web-image-loader";
@@ -55,9 +54,27 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
       return;
     }
     
+    // Determine image type based on URL
+    // If the URL looks like a signed URL with a query parameter, use wadouri
+    // Otherwise, try to detect from file extension or fallback
+    const getImageId = (url: string) => {
+      // If this is a signed URL with https://, use wadouri directly
+      if (url.startsWith('http')) {
+        return `wadouri:${url}`;
+      }
+      
+      // Otherwise, use webImage for image formats, and wadouri for DICOM files
+      // Check for common image file extensions
+      const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp'];
+      const isImageFormat = imageExtensions.some(ext => url.toLowerCase().endsWith(ext));
+      
+      return isImageFormat ? `webImage:${url}` : `wadouri:${url}`;
+    };
+    
     // Try to load as DICOM first, regardless of file extension
     console.log("DicomViewer: Attempting to load as DICOM first");
-    const dicomImageId = `wadouri:${imageUrl}`;
+    const imageId = getImageId(imageUrl);
+    console.log("DicomViewer: Using imageId:", imageId);
     
     // Function to handle loading with memory consideration
     const loadImageSafely = async (imageId: string, isDicomAttempt = true) => {
@@ -91,7 +108,7 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
         }
         
         // If this was a DICOM attempt and it failed, try as a web image
-        if (isDicomAttempt) {
+        if (isDicomAttempt && imageUrl.startsWith('http')) {
           console.log("DicomViewer: DICOM load failed, trying as web image");
           return loadImageSafely(`webImage:${imageUrl}`, false);
         }
@@ -101,8 +118,8 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
       }
     };
 
-    // Load the image as DICOM first, then fall back to web image if needed
-    loadImageSafely(dicomImageId)
+    // Load the image
+    loadImageSafely(imageId)
       .then((image) => {
         console.log("DicomViewer: Image loaded successfully, metadata:", image.imageId);
         try {

@@ -13,6 +13,7 @@ import { ArrowLeft, FileText, Image } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import CaseQuestions from "@/components/CaseQuestions";
+import { getSignedUrl } from "@/utils/dicomStorage";
 
 const CaseView = () => {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +21,8 @@ const CaseView = () => {
   const { user } = useAuth();
   const [currentAttemptId, setCurrentAttemptId] = useState<string | null>(null);
   const [currentTab, setCurrentTab] = useState<string>("image");
+  const [signedDicomUrl, setSignedDicomUrl] = useState<string | null>(null);
+  const [dicomError, setDicomError] = useState<string | null>(null);
 
   // Fetch case data along with questions
   const { data: caseData, isLoading: isLoadingCase, error: caseError } = useQuery({
@@ -41,6 +44,31 @@ const CaseView = () => {
     },
     enabled: !!id && !!user,
   });
+
+  // Generate signed URL for DICOM when caseData is available
+  useEffect(() => {
+    const generateSignedUrl = async () => {
+      if (caseData?.dicom_path) {
+        try {
+          console.log("CaseView: Generating signed URL for:", caseData.dicom_path);
+          const url = await getSignedUrl(caseData.dicom_path, 3600);
+          console.log("CaseView: Signed URL generated:", url);
+          setSignedDicomUrl(url);
+          setDicomError(null);
+        } catch (error) {
+          console.error("CaseView: Failed to generate signed URL:", error);
+          setDicomError("Failed to load image URL");
+          toast({
+            title: "Error",
+            description: "Failed to load DICOM image",
+            variant: "destructive",
+          });
+        }
+      }
+    };
+
+    generateSignedUrl();
+  }, [caseData]);
 
   // Create or get an existing case attempt when the component mounts
   useEffect(() => {
@@ -227,15 +255,21 @@ const CaseView = () => {
                   <Card className="bg-gray-800 border-gray-700">
                     <CardHeader>
                       <CardTitle className="text-radiology-light">DICOM Image</CardTitle>
+                      {dicomError && (
+                        <CardDescription className="text-red-400">
+                          Error: {dicomError}
+                        </CardDescription>
+                      )}
                     </CardHeader>
                     <CardContent>
-                      {caseData?.dicom_path ? (
+                      {signedDicomUrl ? (
                         <DicomViewer 
-                          imageUrl={caseData.dicom_path}
-                          alt={`DICOM for case ${caseData.title}`}
+                          imageUrl={signedDicomUrl}
+                          alt={`DICOM for case ${caseData?.title}`}
                           className="w-full aspect-square max-h-[600px] bg-black"
                           onError={(error) => {
                             console.error("CaseView: DICOM viewer error:", error);
+                            setDicomError("Failed to load the DICOM image");
                             toast({
                               title: "Image Error",
                               description: "Failed to load the DICOM image",
@@ -245,7 +279,9 @@ const CaseView = () => {
                         />
                       ) : (
                         <div className="w-full aspect-square max-h-[600px] bg-black flex items-center justify-center text-gray-400">
-                          No DICOM image available for this case
+                          {dicomError ? 
+                            "Error loading DICOM image" : 
+                            (caseData?.dicom_path ? "Loading DICOM image..." : "No DICOM image available for this case")}
                         </div>
                       )}
                     </CardContent>

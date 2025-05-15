@@ -122,6 +122,16 @@ export const DicomImageSection = ({ dicomPath, title, onMetadataLoaded }: DicomI
     }
   }, [onMetadataLoaded]);
 
+  const handleViewerError = useCallback((error: Error) => {
+    console.error("DicomImageSection: DICOM viewer error:", error);
+    setDicomError("Failed to load the DICOM image");
+    toast({
+      title: "Image Error",
+      description: "Failed to load the DICOM image",
+      variant: "destructive",
+    });
+  }, []);
+
   return (
     <>
       <Card className="bg-gray-800 border-gray-700">
@@ -143,15 +153,7 @@ export const DicomImageSection = ({ dicomPath, title, onMetadataLoaded }: DicomI
                 imageUrl={signedDicomUrl}
                 alt={`DICOM for case ${title}`}
                 className="w-full aspect-square max-h-[600px] bg-black"
-                onError={(error) => {
-                  console.error("DicomImageSection: DICOM viewer error:", error);
-                  setDicomError("Failed to load the DICOM image");
-                  toast({
-                    title: "Image Error",
-                    description: "Failed to load the DICOM image",
-                    variant: "destructive",
-                  });
-                }}
+                onError={handleViewerError}
                 onMetadataLoaded={handleMetadataLoaded}
               />
             ) : (

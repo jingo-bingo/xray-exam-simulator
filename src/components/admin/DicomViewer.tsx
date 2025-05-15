@@ -5,6 +5,8 @@ import cornerstoneWebImageLoader from "cornerstone-web-image-loader";
 import cornerstoneWADOImageLoader from "cornerstone-wado-image-loader";
 import dicomParser from "dicom-parser";
 import { DicomMetadata } from "./DicomMetadataDisplay";
+import { useCornerStoneTools } from "@/hooks/useCornerStoneTools";
+import { DicomToolbar } from "./DicomToolbar";
 
 // Initialize the web image loader
 cornerstoneWebImageLoader.external.cornerstone = cornerstone;
@@ -53,9 +55,20 @@ export const DicomViewer = ({
   const isMounted = useRef(true);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isImageLoaded, setIsImageLoaded] = useState(false);
   const loadingAttemptRef = useRef<AbortController | null>(null);
   const currentImageUrlRef = useRef<string | null>(null);
   
+  // Initialize cornerstone tools
+  const {
+    isToolsInitialized,
+    error: toolsError,
+    activeTool,
+    activateTool,
+    resetView,
+    zoomLevel
+  } = useCornerStoneTools(viewerRef, isImageLoaded);
+
   useEffect(() => {
     // Set up cleanup function
     return () => {
@@ -148,6 +161,7 @@ export const DicomViewer = ({
       // Reset states when URL changes
       setIsLoading(true);
       setError(null);
+      setIsImageLoaded(false);
       
       // Create abort controller for this loading attempt
       if (loadingAttemptRef.current) {
@@ -306,6 +320,7 @@ export const DicomViewer = ({
         }
         
         setIsLoading(false);
+        setIsImageLoaded(true);
       } catch (error) {
         // Check if component is still mounted
         if (!isMounted.current) return;
@@ -321,33 +336,48 @@ export const DicomViewer = ({
     
   }, [imageUrl, onError, onMetadataLoaded]);
 
+  const displayedError = error || toolsError;
+
   return (
-    <div 
-      ref={viewerRef} 
-      className={className || "w-full h-48 border rounded-md bg-black"}
-      data-testid="dicom-viewer"
-    >
-      {isLoading && (
-        <div className="flex items-center justify-center h-full text-white bg-opacity-70 bg-black absolute inset-0">
-          <div className="flex flex-col items-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white mb-2"></div>
-            <div>Loading DICOM image...</div>
-          </div>
-        </div>
+    <div className="flex flex-col">
+      {isImageLoaded && (
+        <DicomToolbar
+          isToolsEnabled={isToolsInitialized && isImageLoaded}
+          activeTool={activeTool}
+          zoomLevel={zoomLevel}
+          onActivateTool={activateTool}
+          onResetView={resetView}
+          error={toolsError}
+        />
       )}
       
-      {error && (
-        <div className="flex items-center justify-center h-full text-red-400 bg-opacity-70 bg-black absolute inset-0">
-          <div className="text-center p-4">
-            <div className="font-bold mb-2">Error</div>
-            <div>{error}</div>
+      <div 
+        ref={viewerRef} 
+        className={className || "w-full h-48 border rounded-md bg-black"}
+        data-testid="dicom-viewer"
+      >
+        {isLoading && (
+          <div className="flex items-center justify-center h-full text-white bg-opacity-70 bg-black absolute inset-0">
+            <div className="flex flex-col items-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white mb-2"></div>
+              <div>Loading DICOM image...</div>
+            </div>
           </div>
-        </div>
-      )}
-      
-      {!imageUrl && !isLoading && !error && (
-        <div className="flex items-center justify-center h-full text-white">No image available</div>
-      )}
+        )}
+        
+        {displayedError && (
+          <div className="flex items-center justify-center h-full text-red-400 bg-opacity-70 bg-black absolute inset-0">
+            <div className="text-center p-4">
+              <div className="font-bold mb-2">Error</div>
+              <div>{displayedError}</div>
+            </div>
+          </div>
+        )}
+        
+        {!imageUrl && !isLoading && !displayedError && (
+          <div className="flex items-center justify-center h-full text-white">No image available</div>
+        )}
+      </div>
     </div>
   );
 };

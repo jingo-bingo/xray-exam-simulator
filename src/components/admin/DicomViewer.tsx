@@ -14,13 +14,18 @@ cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
 cornerstoneWADOImageLoader.external.dicomParser = dicomParser;
 cornerstone.registerImageLoader("wadouri", cornerstoneWADOImageLoader.wadouri.loadImage);
 
-// Configure WADO image loader settings (optional but recommended)
+// Configure WADO image loader with more conservative memory settings
 cornerstoneWADOImageLoader.configure({
-  useWebWorkers: false, // Set to true if you have web workers configured
+  useWebWorkers: false,
   decodeConfig: {
     convertFloatPixelDataToInt: false,
-    use16Bits: true
-  }
+    use16Bits: true,
+    maxWebWorkers: 1,
+    preservePixelData: false, // Don't keep raw pixel data in memory
+    strict: false // Less strict parsing to handle more file types
+  },
+  // Set a smaller max cache size to prevent memory issues
+  maxCacheSize: 50, // Default is 100
 });
 
 interface DicomViewerProps {
@@ -55,14 +60,47 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
     
     console.log("DicomViewer: Detected image type:", isDicom ? "DICOM" : "Standard image");
     
-    // Use the appropriate image loader
+    // Use the appropriate image loader with size limits
     const imageId = isDicom ? `wadouri:${imageUrl}` : `webImage:${imageUrl}`;
     const loaderType = isDicom ? "WADO URI" : "Web Image";
     
     console.log(`DicomViewer: Using ${loaderType} loader with imageId:`, imageId);
     
-    // Load the image with the appropriate loader
-    cornerstone.loadImage(imageId)
+    // Function to handle loading with memory consideration
+    const loadImageSafely = async () => {
+      try {
+        // First try with default settings
+        return await cornerstone.loadImage(imageId);
+      } catch (error: any) {
+        // If we get a memory allocation error, try downsampling
+        if (error instanceof RangeError || (error.message && error.message.includes("buffer allocation failed"))) {
+          console.log("DicomViewer: Memory error detected, trying with downsampling");
+          
+          // Try with more aggressive settings for large files
+          cornerstoneWADOImageLoader.configure({
+            decodeConfig: {
+              convertFloatPixelDataToInt: true, // Convert to int to save memory
+              use16Bits: false, // Use 8-bit instead of 16-bit
+              maxWebWorkers: 0,
+              preservePixelData: false
+            },
+            maxCacheSize: 10 // Reduce cache size significantly
+          });
+          
+          // Try loading with different options to reduce memory usage
+          if (isDicom) {
+            console.log("DicomViewer: Trying with image downsampling");
+            // Add image processing URL parameters for downsampling
+            return await cornerstone.loadImage(`${imageId}?quality=50&downsampleFactor=2`);
+          }
+        }
+        
+        throw error; // Re-throw if it's not a memory issue or downsampling didn't help
+      }
+    };
+
+    // Load the image with the appropriate loader and memory handling
+    loadImageSafely()
       .then((image) => {
         console.log("DicomViewer: Image loaded successfully, metadata:", image.imageId);
         try {
@@ -107,6 +145,8 @@ export const DicomViewer = ({ imageUrl, alt, className, onError }: DicomViewerPr
       console.log("DicomViewer: Cleanup");
       if (element) {
         try {
+          // Purge the cache to free memory before disabling
+          cornerstone.imageCache.purgeCache();
           cornerstone.disable(element);
           console.log("DicomViewer: Cornerstone disabled on element");
         } catch (error) {

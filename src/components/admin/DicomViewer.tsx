@@ -5,6 +5,8 @@ import cornerstoneWebImageLoader from "cornerstone-web-image-loader";
 import cornerstoneWADOImageLoader from "cornerstone-wado-image-loader";
 import dicomParser from "dicom-parser";
 import { DicomMetadata } from "./DicomMetadataDisplay";
+import { useCornerStoneTools, ToolMode } from "@/hooks/useCornerStoneTools";
+import { DicomToolbar } from "./DicomToolbar";
 
 // Initialize the web image loader
 cornerstoneWebImageLoader.external.cornerstone = cornerstone;
@@ -55,6 +57,10 @@ export const DicomViewer = ({
   const [error, setError] = useState<string | null>(null);
   const loadingAttemptRef = useRef<AbortController | null>(null);
   const currentImageUrlRef = useRef<string | null>(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  
+  // Initialize cornerstone tools
+  const { initializeTools, setToolActive, resetView, activeTool } = useCornerStoneTools();
   
   useEffect(() => {
     // Set up cleanup function
@@ -148,6 +154,7 @@ export const DicomViewer = ({
       // Reset states when URL changes
       setIsLoading(true);
       setError(null);
+      setImageLoaded(false);
       
       // Create abort controller for this loading attempt
       if (loadingAttemptRef.current) {
@@ -171,6 +178,9 @@ export const DicomViewer = ({
       try {
         cornerstone.enable(element);
         console.log("DicomViewer: Cornerstone enabled on element");
+        
+        // Initialize cornerstone tools after enabling the element
+        initializeTools(element);
       } catch (error) {
         console.error("DicomViewer: Error enabling cornerstone:", error);
         if (!isMounted.current) return;
@@ -299,6 +309,9 @@ export const DicomViewer = ({
         cornerstone.displayImage(element, image);
         console.log("DicomViewer: Image displayed successfully");
         
+        // Mark image as loaded for toolbar display
+        setImageLoaded(true);
+        
         // Notify parent about metadata
         if (onMetadataLoaded) {
           console.log("DicomViewer: Notifying parent about metadata");
@@ -319,34 +332,62 @@ export const DicomViewer = ({
     
     loadImage();
     
-  }, [imageUrl, onError, onMetadataLoaded]);
+  }, [imageUrl, onError, onMetadataLoaded, initializeTools]);
+
+  // Handle tool selection
+  const handleToolSelect = (tool: ToolMode) => {
+    if (imageLoaded) {
+      setToolActive(tool);
+    }
+  };
+
+  // Handle reset view
+  const handleResetView = () => {
+    if (imageLoaded) {
+      resetView();
+    }
+  };
 
   return (
-    <div 
-      ref={viewerRef} 
-      className={className || "w-full h-48 border rounded-md bg-black"}
-      data-testid="dicom-viewer"
-    >
-      {isLoading && (
-        <div className="flex items-center justify-center h-full text-white bg-opacity-70 bg-black absolute inset-0">
-          <div className="flex flex-col items-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white mb-2"></div>
-            <div>Loading DICOM image...</div>
+    <div className="relative">
+      <div 
+        ref={viewerRef} 
+        className={className || "w-full h-48 border rounded-md bg-black"}
+        data-testid="dicom-viewer"
+      >
+        {isLoading && (
+          <div className="flex items-center justify-center h-full text-white bg-opacity-70 bg-black absolute inset-0">
+            <div className="flex flex-col items-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white mb-2"></div>
+              <div>Loading DICOM image...</div>
+            </div>
           </div>
-        </div>
-      )}
-      
-      {error && (
-        <div className="flex items-center justify-center h-full text-red-400 bg-opacity-70 bg-black absolute inset-0">
-          <div className="text-center p-4">
-            <div className="font-bold mb-2">Error</div>
-            <div>{error}</div>
+        )}
+        
+        {error && (
+          <div className="flex items-center justify-center h-full text-red-400 bg-opacity-70 bg-black absolute inset-0">
+            <div className="text-center p-4">
+              <div className="font-bold mb-2">Error</div>
+              <div>{error}</div>
+            </div>
           </div>
+        )}
+        
+        {!imageUrl && !isLoading && !error && (
+          <div className="flex items-center justify-center h-full text-white">No image available</div>
+        )}
+      </div>
+
+      {/* Toolbar overlay positioned at the top of the viewer */}
+      {imageLoaded && (
+        <div className="absolute top-2 left-2 z-10">
+          <DicomToolbar 
+            activeTool={activeTool}
+            onToolSelect={handleToolSelect}
+            onReset={handleResetView}
+            className="bg-gray-800/75 p-1 rounded-md"
+          />
         </div>
-      )}
-      
-      {!imageUrl && !isLoading && !error && (
-        <div className="flex items-center justify-center h-full text-white">No image available</div>
       )}
     </div>
   );

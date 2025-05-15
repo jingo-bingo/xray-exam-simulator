@@ -23,6 +23,34 @@ export interface DicomMetadata {
     width?: number;
     height?: number;
   };
+  
+  // Window level/width settings that affect brightness/contrast
+  windowLevel?: {
+    center?: number;
+    width?: number;
+  };
+  
+  // Patient information
+  patient?: {
+    id?: string;
+    name?: string;
+    birthDate?: string;
+    sex?: string;
+  };
+  
+  // Study information
+  study?: {
+    instanceUID?: string;
+    date?: string;
+    description?: string;
+  };
+  
+  // Series information
+  series?: {
+    number?: number;
+    description?: string;
+  };
+  
   // The interface is designed to be extensible for future metadata needs
   // Additional fields can be added as requirements evolve
 }
@@ -128,6 +156,32 @@ export const DicomMetadataDisplay: React.FC<DicomMetadataDisplayProps> = ({
               <span className="text-gray-400">Not available</span>
             )}
           </div>
+          
+          {/* Window level section - shown only if available */}
+          {metadata.windowLevel && (metadata.windowLevel.center !== undefined || metadata.windowLevel.width !== undefined) && (
+            <div>
+              <p className="text-sm font-medium text-gray-300 mb-1">Window Level</p>
+              <span className="text-white">
+                C: {metadata.windowLevel.center?.toFixed(0) || 'N/A'}, W: {metadata.windowLevel.width?.toFixed(0) || 'N/A'}
+              </span>
+            </div>
+          )}
+          
+          {/* Patient ID section - shown only if available */}
+          {metadata.patient?.id && (
+            <div>
+              <p className="text-sm font-medium text-gray-300 mb-1">Patient ID</p>
+              <span className="text-white">{metadata.patient.id}</span>
+            </div>
+          )}
+          
+          {/* Study date section - shown only if available */}
+          {metadata.study?.date && (
+            <div>
+              <p className="text-sm font-medium text-gray-300 mb-1">Study Date</p>
+              <span className="text-white">{metadata.study.date}</span>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

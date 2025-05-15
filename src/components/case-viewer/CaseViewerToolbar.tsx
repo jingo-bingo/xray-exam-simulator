@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ZoomIn, ZoomOut, Move, Maximize, RotateCw, Contrast } from "lucide-react";
+import { ArrowLeft, Contrast, RotateCw, ZoomIn, RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface CaseViewerToolbarProps {
@@ -35,26 +35,14 @@ export const CaseViewerToolbar = ({ onToolChange, onReset, activeTool }: CaseVie
 
       <div className="flex items-center gap-2">
         <Button
-          variant={activeTool === "pan" ? "secondary" : "ghost"}
-          size="sm"
-          onClick={() => {
-            console.log("CaseViewerToolbar: Pan tool selected");
-            onToolChange("pan");
-          }}
-          className="text-white hover:bg-gray-700"
-          title="Pan"
-        >
-          <Move className="h-4 w-4" />
-        </Button>
-        <Button
           variant={activeTool === "contrast" ? "secondary" : "ghost"}
           size="sm"
           onClick={() => {
-            console.log("CaseViewerToolbar: Contrast tool selected");
+            console.log("CaseViewerToolbar: Window/Contrast tool selected");
             onToolChange("contrast");
           }}
           className="text-white hover:bg-gray-700"
-          title="Adjust Contrast"
+          title="Window/Contrast"
         >
           <Contrast className="h-4 w-4" />
         </Button>
@@ -71,28 +59,16 @@ export const CaseViewerToolbar = ({ onToolChange, onReset, activeTool }: CaseVie
           <RotateCw className="h-4 w-4" />
         </Button>
         <Button
-          variant={activeTool === "zoomIn" ? "secondary" : "ghost"}
+          variant={activeTool === "zoom" ? "secondary" : "ghost"}
           size="sm"
           onClick={() => {
-            console.log("CaseViewerToolbar: Zoom in tool selected");
-            onToolChange("zoomIn");
+            console.log("CaseViewerToolbar: Zoom tool selected");
+            onToolChange("zoom");
           }}
           className="text-white hover:bg-gray-700"
-          title="Zoom In"
+          title="Zoom"
         >
           <ZoomIn className="h-4 w-4" />
-        </Button>
-        <Button
-          variant={activeTool === "zoomOut" ? "secondary" : "ghost"}
-          size="sm"
-          onClick={() => {
-            console.log("CaseViewerToolbar: Zoom out tool selected");
-            onToolChange("zoomOut");
-          }}
-          className="text-white hover:bg-gray-700"
-          title="Zoom Out"
-        >
-          <ZoomOut className="h-4 w-4" />
         </Button>
         <Button
           variant="ghost"
@@ -104,7 +80,7 @@ export const CaseViewerToolbar = ({ onToolChange, onReset, activeTool }: CaseVie
           className="text-white hover:bg-gray-700"
           title="Reset View"
         >
-          <Maximize className="h-4 w-4" />
+          <RefreshCw className="h-4 w-4" />
         </Button>
       </div>
     </div>

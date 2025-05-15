@@ -8,23 +8,19 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, FileText, Image } from "lucide-react";
+import { ArrowLeft, Image } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import CaseQuestions from "@/components/CaseQuestions";
 import { getSignedUrl } from "@/utils/dicomStorage";
 
 const CaseView = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [currentAttemptId, setCurrentAttemptId] = useState<string | null>(null);
-  const [currentTab, setCurrentTab] = useState<string>("image");
   const [signedDicomUrl, setSignedDicomUrl] = useState<string | null>(null);
   const [dicomError, setDicomError] = useState<string | null>(null);
 
-  // Fetch case data along with questions
+  // Fetch case data
   const { data: caseData, isLoading: isLoadingCase, error: caseError } = useQuery({
     queryKey: ["case", id],
     queryFn: async () => {
@@ -69,70 +65,6 @@ const CaseView = () => {
 
     generateSignedUrl();
   }, [caseData]);
-
-  // Create or get an existing case attempt when the component mounts
-  useEffect(() => {
-    const createOrGetCaseAttempt = async () => {
-      if (!id || !user) return;
-
-      try {
-        // Check if user already has an in-progress attempt for this case
-        const { data: existingAttempts, error: fetchError } = await supabase
-          .from("case_attempts")
-          .select("*")
-          .eq("case_id", id)
-          .eq("user_id", user.id)
-          .eq("status", "in_progress")
-          .order("started_at", { ascending: false })
-          .limit(1);
-
-        if (fetchError) {
-          throw new Error(fetchError.message);
-        }
-
-        if (existingAttempts && existingAttempts.length > 0) {
-          // Use existing attempt
-          console.log("CaseView: Found existing attempt:", existingAttempts[0].id);
-          setCurrentAttemptId(existingAttempts[0].id);
-        } else {
-          // Create new attempt
-          const { data: newAttempt, error: insertError } = await supabase
-            .from("case_attempts")
-            .insert({
-              case_id: id,
-              user_id: user.id,
-              status: "in_progress",
-            })
-            .select()
-            .single();
-
-          if (insertError) {
-            throw new Error(insertError.message);
-          }
-
-          console.log("CaseView: Created new attempt:", newAttempt.id);
-          setCurrentAttemptId(newAttempt.id);
-        }
-      } catch (error) {
-        console.error("CaseView: Error with case attempt:", error);
-        toast({
-          title: "Error",
-          description: "Failed to start case attempt",
-          variant: "destructive",
-        });
-      }
-    };
-
-    createOrGetCaseAttempt();
-  }, [id, user]);
-
-  // Handle case completion
-  const handleCaseComplete = () => {
-    toast({
-      title: "Case completed!",
-      description: "You have completed this case successfully.",
-    });
-  };
 
   // Handle errors
   if (caseError) {
@@ -237,68 +169,45 @@ const CaseView = () => {
               </Card>
             </div>
             
-            {/* Right column - DICOM viewer and questions */}
+            {/* Right column - DICOM viewer */}
             <div className="lg:col-span-2">
-              <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
-                <TabsList className="grid grid-cols-2 mb-4">
-                  <TabsTrigger value="image" className="flex items-center">
-                    <Image className="mr-2 h-4 w-4" />
+              <Card className="bg-gray-800 border-gray-700">
+                <CardHeader>
+                  <CardTitle className="text-radiology-light flex items-center">
+                    <Image className="mr-2 h-5 w-5" />
                     DICOM Image
-                  </TabsTrigger>
-                  <TabsTrigger value="questions" className="flex items-center">
-                    <FileText className="mr-2 h-4 w-4" />
-                    Questions
-                  </TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="image" className="mt-0">
-                  <Card className="bg-gray-800 border-gray-700">
-                    <CardHeader>
-                      <CardTitle className="text-radiology-light">DICOM Image</CardTitle>
-                      {dicomError && (
-                        <CardDescription className="text-red-400">
-                          Error: {dicomError}
-                        </CardDescription>
-                      )}
-                    </CardHeader>
-                    <CardContent>
-                      {signedDicomUrl ? (
-                        <DicomViewer 
-                          imageUrl={signedDicomUrl}
-                          alt={`DICOM for case ${caseData?.title}`}
-                          className="w-full aspect-square max-h-[600px] bg-black"
-                          onError={(error) => {
-                            console.error("CaseView: DICOM viewer error:", error);
-                            setDicomError("Failed to load the DICOM image");
-                            toast({
-                              title: "Image Error",
-                              description: "Failed to load the DICOM image",
-                              variant: "destructive",
-                            });
-                          }}
-                        />
-                      ) : (
-                        <div className="w-full aspect-square max-h-[600px] bg-black flex items-center justify-center text-gray-400">
-                          {dicomError ? 
-                            "Error loading DICOM image" : 
-                            (caseData?.dicom_path ? "Loading DICOM image..." : "No DICOM image available for this case")}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-                
-                <TabsContent value="questions" className="mt-0">
-                  {currentAttemptId && user && (
-                    <CaseQuestions
-                      caseId={id || ""}
-                      attemptId={currentAttemptId}
-                      userId={user.id}
-                      onComplete={handleCaseComplete}
-                    />
+                  </CardTitle>
+                  {dicomError && (
+                    <CardDescription className="text-red-400">
+                      Error: {dicomError}
+                    </CardDescription>
                   )}
-                </TabsContent>
-              </Tabs>
+                </CardHeader>
+                <CardContent>
+                  {signedDicomUrl ? (
+                    <DicomViewer 
+                      imageUrl={signedDicomUrl}
+                      alt={`DICOM for case ${caseData?.title}`}
+                      className="w-full aspect-square max-h-[600px] bg-black"
+                      onError={(error) => {
+                        console.error("CaseView: DICOM viewer error:", error);
+                        setDicomError("Failed to load the DICOM image");
+                        toast({
+                          title: "Image Error",
+                          description: "Failed to load the DICOM image",
+                          variant: "destructive",
+                        });
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full aspect-square max-h-[600px] bg-black flex items-center justify-center text-gray-400">
+                      {dicomError ? 
+                        "Error loading DICOM image" : 
+                        (caseData?.dicom_path ? "Loading DICOM image..." : "No DICOM image available for this case")}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </div>
         )}

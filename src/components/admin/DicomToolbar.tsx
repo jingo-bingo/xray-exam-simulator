@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ZoomIn, ZoomOut, Move, ArrowLeft, RefreshCw } from 'lucide-react';
+import { ZoomIn, ZoomOut, Move, ArrowLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface DicomToolbarProps {
@@ -60,7 +60,7 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
             className="text-xs"
             title="Window Level Tool"
           >
-            <ZoomOut className="h-4 w-4 mr-1" />
+            <ArrowLeft className="h-4 w-4 mr-1" />
             Window
           </Button>
           
@@ -71,7 +71,7 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
             className="text-xs"
             title="Reset View"
           >
-            <RefreshCw className="h-4 w-4 mr-1" />
+            <ArrowLeft className="h-4 w-4 mr-1" />
             Reset
           </Button>
           

@@ -147,12 +147,12 @@ export const DicomImageSection = ({ dicomPath, title, onMetadataLoaded }: DicomI
           )}
         </CardHeader>
         <CardContent>
-          <div className="relative w-full max-h-[600px] bg-black rounded-md overflow-hidden">
+          <div className="relative w-full aspect-square max-h-[600px] bg-black">
             {signedDicomUrl ? (
               <DicomViewer 
                 imageUrl={signedDicomUrl}
                 alt={`DICOM for case ${title}`}
-                className="w-full h-full bg-black"
+                className="w-full aspect-square max-h-[600px] bg-black"
                 onError={handleViewerError}
                 onMetadataLoaded={handleMetadataLoaded}
               />

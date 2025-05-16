@@ -46,6 +46,20 @@ function initializeCornerstone() {
     cornerstone.registerImageLoader("webImage", cornerstoneWebImageLoader.loadImage);
     cornerstone.registerImageLoader("wadouri", cornerstoneWADOImageLoader.wadouri.loadImage);
     
+    // CRITICAL: Initialize cornerstone tools
+    console.log("DicomViewer: Initializing cornerstone tools");
+    cornerstoneTools.init({
+      mouseEnabled: true,
+      touchEnabled: true,
+      globalToolSyncEnabled: false, 
+      showSVGCursors: true
+    });
+    
+    // Register the tools we need
+    cornerstoneTools.addTool(cornerstoneTools.PanTool);
+    cornerstoneTools.addTool(cornerstoneTools.ZoomTool);
+    cornerstoneTools.addTool(cornerstoneTools.WwwcTool);
+    
     // Configure WADO image loader with conservative memory settings
     cornerstoneWADOImageLoader.configure({
       useWebWorkers: false,
@@ -276,6 +290,17 @@ export const DicomViewer = ({
         return;
       }
       
+      // Ensure element is properly configured for interactions
+      element.style.touchAction = 'none';
+      element.style.pointerEvents = 'all';
+      element.tabIndex = 0;
+      element.dataset.cornerstoneEnabled = 'true';
+      
+      // Prevent context menu on right-click if using right mouse button for tools
+      element.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+      });
+      
       // Determine image type based on URL
       const getImageId = (url: string) => {
         if (url.startsWith('http')) {
@@ -397,6 +422,27 @@ export const DicomViewer = ({
         console.log("DicomViewer: Displaying image on element");
         cornerstone.displayImage(element, image);
         console.log("DicomViewer: Image displayed successfully");
+
+        // Set up the tools directly on the element
+        try {
+          console.log("DicomViewer: Setting up tools on element after image display");
+          
+          // Set Pan as the default active tool with left mouse button
+          cornerstoneTools.setToolActive('Pan', { mouseButtonMask: 1 });
+          
+          // Middle mouse button (button 1) for Zoom
+          cornerstoneTools.setToolActive('Zoom', { mouseButtonMask: 2 });
+          
+          // Right mouse button (button 2) for Window Level
+          cornerstoneTools.setToolActive('Wwwc', { mouseButtonMask: 4 });
+          
+          console.log("DicomViewer: Direct tool setup complete");
+          
+          // Force cornerstone to update the image
+          cornerstone.updateImage(element);
+        } catch (toolError) {
+          console.error("DicomViewer: Error setting up tools:", toolError);
+        }
         
         // Notify parent about metadata
         if (onMetadataLoaded) {
@@ -408,12 +454,22 @@ export const DicomViewer = ({
         setIsImageLoaded(true);
         console.log("DicomViewer: Image loading process complete, isImageLoaded set to true");
         
-        // Add event capture to ensure Cornerstone gets mouse events
-        element.style.pointerEvents = 'all';
-        element.style.touchAction = 'none'; // Prevent default touch actions
+        // Add diagnostic logging for mouse events
+        element.addEventListener('mousedown', (e) => {
+          console.log("DicomViewer: Native mousedown event:", {
+            button: e.button,
+            buttons: e.buttons,
+            clientX: e.clientX,
+            clientY: e.clientY
+          });
+        });
         
-        // Force Cornerstone to be ready for mouse events
-        cornerstone.resize(element);
+        element.addEventListener('cornerstonetoolsmousedown', (e) => {
+          console.log("DicomViewer: Cornerstone tool mousedown event:", e.detail);
+        });
+        
+        // Focus the element to make sure it gets keyboard events
+        element.focus();
       } catch (error) {
         // Check if component is still mounted
         if (!isMounted.current) return;

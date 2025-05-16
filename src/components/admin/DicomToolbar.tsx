@@ -61,6 +61,7 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
             onClick={() => handleToolClick('Pan')}
             className="text-xs"
             title="Pan Tool"
+            data-testid="pan-tool-button"
           >
             <Move className="h-4 w-4 mr-1" />
             Pan

@@ -17,3 +17,11 @@ export interface DicomViewerProps {
   onError?: (error: Error) => void;
   onMetadataLoaded?: (metadata: any) => void;
 }
+
+export interface DicomViewportProps {
+  isLoading: boolean;
+  error: string | null;
+  imageUrl: string | null;
+  onElementEnabled?: (element: HTMLDivElement) => void;
+  className?: string;
+}

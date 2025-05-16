@@ -1,14 +1,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import cornerstone from "cornerstone-core";
-import { DicomMetadata } from "./DicomMetadataDisplay";
 import { useCornerStoneTools } from "@/hooks/useCornerStoneTools";
 import { DicomToolbar } from "./DicomToolbar";
 import { initializeCornerstone } from "@/utils/cornerstoneInit";
 import { extractMetadata } from "@/utils/dicomMetadataExtractor";
 import { DicomDebugOverlay } from "./DicomDebugOverlay";
 import { getImageId, loadImageSafely } from "@/utils/dicomImageLoader";
-import { setupTrackpadSupport, setupEventLogging } from "@/utils/dicomEventHandlers";
+import { DicomViewport } from "./DicomViewport";
 import { DicomViewerProps } from "./types/CornerstoneTypes";
 
 export const DicomViewer = ({ 
@@ -86,17 +85,13 @@ export const DicomViewer = ({
         loadingAttemptRef.current.abort();
         loadingAttemptRef.current = null;
       }
-      
-      // Clean up cornerstone element if it exists
-      if (viewerRef.current) {
-        try {
-          cornerstone.disable(viewerRef.current);
-        } catch (error) {
-          console.warn("DicomViewer: Error during cleanup:", error);
-        }
-      }
     };
   }, [onError]);
+  
+  // Handle viewport element enabling
+  const handleViewportEnabled = (element: HTMLDivElement) => {
+    console.log("DicomViewer: Viewport element enabled");
+  };
   
   // Load DICOM image when URL changes
   useEffect(() => {
@@ -124,39 +119,6 @@ export const DicomViewer = ({
       loadingAttemptRef.current = new AbortController();
       const { signal } = loadingAttemptRef.current;
       
-      // Clean up previous instance if necessary
-      try {
-        if (viewerRef.current) {
-          cornerstone.disable(viewerRef.current);
-          console.log("DicomViewer: Disabled previous cornerstone element");
-        }
-      } catch (error) {
-        console.warn("DicomViewer: Error during cleanup:", error);
-      }
-      
-      // Enable the element for cornerstone
-      const element = viewerRef.current;
-      
-      try {
-        console.log("DicomViewer: Enabling cornerstone on element");
-        cornerstone.enable(element);
-        console.log("DicomViewer: Cornerstone enabled on element");
-        
-        // Configure the element for better trackpad support
-        setupTrackpadSupport(element);
-        
-        // Set up event logging
-        setupEventLogging(element);
-      } catch (error) {
-        console.error("DicomViewer: Error enabling cornerstone:", error);
-        if (!isMounted.current) return;
-        
-        setError("Failed to initialize viewer");
-        setIsLoading(false);
-        if (onError) onError(error instanceof Error ? error : new Error("Failed to initialize DICOM viewer"));
-        return;
-      }
-      
       // Try to load as DICOM first
       console.log("DicomViewer: Attempting to load as DICOM first");
       const imageId = getImageId(imageUrl);
@@ -179,7 +141,7 @@ export const DicomViewer = ({
         
         // Display the image in its natural size
         console.log("DicomViewer: Displaying image on element");
-        cornerstone.displayImage(element, image);
+        cornerstone.displayImage(viewerRef.current, image);
         console.log("DicomViewer: Image displayed successfully");
         
         // Notify parent about metadata
@@ -193,11 +155,11 @@ export const DicomViewer = ({
         console.log("DicomViewer: Image loading process complete, isImageLoaded set to true");
         
         // Add event capture to ensure Cornerstone gets mouse events
-        element.style.pointerEvents = 'all';
-        element.style.touchAction = 'none'; // Prevent default touch actions
+        viewerRef.current.style.pointerEvents = 'all';
+        viewerRef.current.style.touchAction = 'none'; // Prevent default touch actions
         
         // Force Cornerstone to be ready for mouse events
-        cornerstone.resize(element);
+        cornerstone.resize(viewerRef.current);
       } catch (error) {
         // Check if component is still mounted
         if (!isMounted.current) return;
@@ -210,7 +172,6 @@ export const DicomViewer = ({
     };
     
     loadImage();
-    
   }, [imageUrl, onError, onMetadataLoaded]);
 
   const displayedError = error || toolsError;
@@ -235,34 +196,14 @@ export const DicomViewer = ({
       )}
       
       <div style={containerStyle} className="dicom-container relative">
-        <div 
-          ref={viewerRef} 
-          className={`w-full h-full ${className || ""} focus:outline-none`}
-          data-testid="dicom-viewer"
-          tabIndex={0}
-        >
-          {isLoading && (
-            <div className="flex items-center justify-center h-full text-white bg-opacity-70 bg-black absolute inset-0">
-              <div className="flex flex-col items-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white mb-2"></div>
-                <div>Loading DICOM image...</div>
-              </div>
-            </div>
-          )}
-          
-          {displayedError && (
-            <div className="flex items-center justify-center h-full text-red-400 bg-opacity-70 bg-black absolute inset-0">
-              <div className="text-center p-4">
-                <div className="font-bold mb-2">Error</div>
-                <div>{displayedError}</div>
-              </div>
-            </div>
-          )}
-          
-          {!imageUrl && !isLoading && !displayedError && (
-            <div className="flex items-center justify-center h-full text-white">No image available</div>
-          )}
-        </div>
+        <DicomViewport
+          ref={viewerRef}
+          isLoading={isLoading}
+          error={displayedError}
+          imageUrl={imageUrl}
+          onElementEnabled={handleViewportEnabled}
+          className={className || ""}
+        />
         
         {viewerRef.current && isImageLoaded && (
           <DicomDebugOverlay 

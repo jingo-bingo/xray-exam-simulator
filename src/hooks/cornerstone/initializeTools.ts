@@ -1,6 +1,7 @@
 
 import cornerstone from 'cornerstone-core';
 import cornerstoneTools from 'cornerstone-tools';
+import { CornerstoneTool } from './types';
 
 // Initialize cornerstone tools once when the component mounts
 export function initializeCornerStoneTools(): {
@@ -55,7 +56,7 @@ export function initializeCornerStoneTools(): {
 }
 
 // Set up tools on a specific element
-export function setupElementTools(element: HTMLDivElement, activeTool: string | null): {
+export function setupElementTools(element: HTMLDivElement, activeTool: CornerstoneTool | null): {
   success: boolean;
   error: string | null;
 } {

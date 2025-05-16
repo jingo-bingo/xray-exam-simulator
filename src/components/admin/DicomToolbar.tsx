@@ -3,12 +3,13 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ZoomIn, ZoomOut, Move, RefreshCw, RotateCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { CornerstoneTool } from '@/hooks/cornerstone/types';
 
 interface DicomToolbarProps {
   isToolsEnabled: boolean;
-  activeTool: string | null;
+  activeTool: CornerstoneTool | null;
   zoomLevel: number;
-  onActivateTool: (toolName: string) => void;
+  onActivateTool: (toolName: CornerstoneTool) => void;
   onResetView: () => void;
   error: string | null;
 }
@@ -37,7 +38,7 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
     return null;
   }
 
-  const handleToolClick = (toolName: string) => {
+  const handleToolClick = (toolName: CornerstoneTool) => {
     console.log(`DicomToolbar: Tool button clicked: ${toolName}`);
     
     // Provide visual feedback before calling the handler
@@ -55,19 +56,9 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
     onResetView();
   };
 
-  // Convert tool names to match what's expected in the cornerstone-tools API
-  const getButtonVariant = (buttonTool: string) => {
-    if (!activeTool) return "outline";
-    
-    // Map button tools to cornerstone tool names for comparison
-    const toolMapping: Record<string, string> = {
-      'Zoom': 'Zoom',
-      'Pan': 'Pan',
-      'Wwwc': 'Wwwc',
-      'Rotate': 'Rotate'
-    };
-    
-    return activeTool === toolMapping[buttonTool] ? "default" : "outline";
+  // Simple function to determine button variant based on active tool
+  const getButtonVariant = (buttonTool: CornerstoneTool) => {
+    return activeTool === buttonTool ? "default" : "outline";
   };
 
   return (

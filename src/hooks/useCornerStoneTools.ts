@@ -1,6 +1,6 @@
 
 import { useEffect, useState, RefObject, useCallback, useRef } from 'react';
-import { UseCornerStoneToolsReturn } from './cornerstone/types';
+import { UseCornerStoneToolsReturn, CornerstoneTool } from './cornerstone/types';
 import { initializeCornerStoneTools, setupElementTools } from './cornerstone/initializeTools';
 import { createEventHandlers, removeEventHandlers } from './cornerstone/eventHandlers';
 import { activateToolForElement, resetViewToNatural } from './cornerstone/toolOperations';
@@ -12,7 +12,7 @@ export function useCornerStoneTools(
   // State for tracking tool initialization status
   const [isToolsInitialized, setIsToolsInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTool, setActiveTool] = useState<string | null>(null);
+  const [activeTool, setActiveTool] = useState<CornerstoneTool | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(1.0); // Default zoom level is 1.0 (100%)
   const eventHandlersRef = useRef<{ [key: string]: EventListener }>({});
   const toolsRegisteredRef = useRef(false);
@@ -74,7 +74,7 @@ export function useCornerStoneTools(
   }, [viewerRef, isToolsInitialized, activeTool, enabled]);
 
   // Function to activate a specific tool with proper mouse button configuration
-  const activateTool = useCallback((toolName: string) => {
+  const activateTool = useCallback((toolName: CornerstoneTool) => {
     if (!isToolsInitialized || !viewerRef.current || !toolsRegisteredRef.current) {
       console.warn("DicomTools: Cannot activate tool - tools not initialized or viewer not ready");
       return;

@@ -1,11 +1,12 @@
 
 import cornerstone from 'cornerstone-core';
 import cornerstoneTools from 'cornerstone-tools';
+import { CornerstoneTool } from './types';
 
 // Function to activate a specific tool with proper mouse button configuration
 export function activateToolForElement(
   element: HTMLDivElement, 
-  toolName: string
+  toolName: CornerstoneTool
 ): { success: boolean; error: string | null } {
   try {
     console.log(`DicomTools: Activating ${toolName} tool`);
@@ -22,6 +23,7 @@ export function activateToolForElement(
       cornerstoneTools.setToolDisabledForElement(element, 'Zoom');
       cornerstoneTools.setToolDisabledForElement(element, 'Pan');
       cornerstoneTools.setToolDisabledForElement(element, 'Wwwc');
+      cornerstoneTools.setToolDisabledForElement(element, 'Rotate');
       console.log("DicomTools: All tools disabled for this element");
     } catch (e) {
       console.warn("DicomTools: Error disabling tools (may be expected if not active):", e);

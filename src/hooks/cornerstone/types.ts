@@ -12,14 +12,14 @@ export interface CornerstoneToolsMouseEvent extends Event {
   };
 }
 
-// Tool types
+// Tool types - explicit type for cornerstone tool names
 export type CornerstoneTool = 'Zoom' | 'Pan' | 'Wwwc' | 'Rotate';
 
 // Tool state
 export interface CornerstoneToolState {
   isToolsInitialized: boolean;
   error: string | null;
-  activeTool: string | null;
+  activeTool: CornerstoneTool | null;
   zoomLevel: number;
 }
 
@@ -27,8 +27,8 @@ export interface CornerstoneToolState {
 export interface UseCornerStoneToolsReturn {
   isToolsInitialized: boolean;
   error: string | null;
-  activeTool: string | null;
-  activateTool: (toolName: string) => void;
+  activeTool: CornerstoneTool | null;
+  activateTool: (toolName: CornerstoneTool) => void;
   resetView: () => void;
   zoomLevel: number;
 }

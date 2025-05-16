@@ -135,7 +135,7 @@ export function useCornerStoneTools(
       // Ensure element can capture all events
       element.tabIndex = 0; // Make element focusable
       element.style.outline = 'none';
-      element.style.WebkitUserSelect = 'none';
+      element.style.webkitUserSelect = 'none'; // Fixed: lowercase 'w' in webkitUserSelect
       element.style.userSelect = 'none';
       element.style.touchAction = 'none'; // Critical for proper trackpad/touch handling
 

@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import cornerstone from "cornerstone-core";
 import cornerstoneWebImageLoader from "cornerstone-web-image-loader";
@@ -396,7 +395,7 @@ export const DicomViewer = ({
     element.style.height = '100%';
     element.style.position = 'relative';
     element.style.outline = 'none';
-    element.style.WebkitUserSelect = 'none';
+    element.style.webkitUserSelect = 'none'; // Fixed property name
     element.style.userSelect = 'none';
     element.style.touchAction = 'none'; // Critical for proper trackpad/touch handling
     element.tabIndex = 0; // Make element focusable

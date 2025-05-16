@@ -24,11 +24,10 @@ cornerstoneWADOImageLoader.configure({
     convertFloatPixelDataToInt: false,
     use16Bits: true,
     maxWebWorkers: 1,
-    preservePixelData: false, // Don't keep raw pixel data in memory
-    strict: false // Less strict parsing to handle more file types
+    preservePixelData: false // Don't keep raw pixel data in memory
   },
   // Set a smaller max cache size to prevent memory issues
-  maxCacheSize: 50, // Default is 100
+  maxCacheSize: 50 // Default is 100
 });
 
 // Cache for loaded images to prevent re-fetching
@@ -77,17 +76,9 @@ export const DicomViewer = ({
   useEffect(() => {
     console.log("DicomViewer: Component mounting with ref:", viewerRef.current ? "available" : "not available");
     
-    // Add event listener to check for mouse events at the document level
-    const documentMouseDownHandler = (e: MouseEvent) => {
-      console.log("DicomViewer: Document mousedown event detected at:", { x: e.clientX, y: e.clientY });
-    };
-    
-    document.addEventListener('mousedown', documentMouseDownHandler);
-    
     // Set up cleanup function
     return () => {
       console.log("DicomViewer: Component unmounting");
-      document.removeEventListener('mousedown', documentMouseDownHandler);
       isMounted.current = false;
       
       // Abort any pending load operations
@@ -108,38 +99,6 @@ export const DicomViewer = ({
     };
   }, []);
 
-  // Add a specific effect to log and monitor mouse events on the viewer element
-  useEffect(() => {
-    if (!viewerRef.current || !isImageLoaded) return;
-    
-    const element = viewerRef.current;
-    
-    console.log("DicomViewer: Setting up mouse event monitoring on viewer element");
-    
-    const mouseEnterHandler = () => console.log("DicomViewer: Mouse entered viewer element");
-    const mouseLeaveHandler = () => console.log("DicomViewer: Mouse left viewer element");
-    const mouseDownHandler = (e: MouseEvent) => {
-      console.log("DicomViewer: Mouse down on viewer element", {
-        button: e.button,
-        clientX: e.clientX,
-        clientY: e.clientY,
-        activeTool
-      });
-    };
-    
-    // Add event listeners for debugging
-    element.addEventListener('mouseenter', mouseEnterHandler);
-    element.addEventListener('mouseleave', mouseLeaveHandler);
-    element.addEventListener('mousedown', mouseDownHandler);
-    
-    return () => {
-      // Clean up event listeners
-      element.removeEventListener('mouseenter', mouseEnterHandler);
-      element.removeEventListener('mouseleave', mouseLeaveHandler);
-      element.removeEventListener('mousedown', mouseDownHandler);
-    };
-  }, [viewerRef, isImageLoaded, activeTool]);
-
   // Update container dimensions based on image size
   const updateContainerSize = (image: any) => {
     if (!viewerRef.current || !image) return;
@@ -150,7 +109,6 @@ export const DicomViewer = ({
     console.log("DicomViewer: Updating container size to match image dimensions:", { width, height });
     
     // Set container size based on image dimensions while maintaining aspect ratio
-    // We're using the actual pixel dimensions of the DICOM
     setContainerStyle({
       width: `${width}px`,
       height: `${height}px`,
@@ -260,11 +218,6 @@ export const DicomViewer = ({
         console.log("DicomViewer: Enabling cornerstone on element");
         cornerstone.enable(element);
         console.log("DicomViewer: Cornerstone enabled on element");
-        
-        // Debug event to monitor if the element is capturing events after cornerstone enabling
-        element.addEventListener('mousedown', () => {
-          console.log("DicomViewer: Mouse down on cornerstone element");
-        }, { once: true });
       } catch (error) {
         console.error("DicomViewer: Error enabling cornerstone:", error);
         if (!isMounted.current) return;
@@ -384,7 +337,7 @@ export const DicomViewer = ({
         // Check if component is still mounted
         if (!isMounted.current) return;
         
-        console.log("DicomViewer: Image loaded successfully, metadata:", image.imageId);
+        console.log("DicomViewer: Image loaded successfully, imageId:", image.imageId);
         
         // Extract metadata before displaying the image
         const metadata = extractMetadata(image);
@@ -406,6 +359,27 @@ export const DicomViewer = ({
         setIsLoading(false);
         setIsImageLoaded(true);
         console.log("DicomViewer: Image loading process complete, isImageLoaded set to true");
+        
+        // Now that image is loaded, activate the default tool (zoom with left click)
+        if (isToolsInitialized) {
+          console.log("DicomViewer: Activating default Zoom tool after image load");
+          try {
+            cornerstoneTools.addToolForElement(element, cornerstoneTools.ZoomTool);
+            cornerstoneTools.setToolActiveForElement(element, 'Zoom', { mouseButtonMask: 1 });
+            
+            // Also add Pan tool with right mouse button
+            cornerstoneTools.addToolForElement(element, cornerstoneTools.PanTool);
+            cornerstoneTools.setToolActiveForElement(element, 'Pan', { mouseButtonMask: 4 });
+            
+            // Add Window Level tool with middle mouse button
+            cornerstoneTools.addToolForElement(element, cornerstoneTools.WwwcTool);
+            cornerstoneTools.setToolActiveForElement(element, 'Wwwc', { mouseButtonMask: 2 });
+            
+            console.log("DicomViewer: Default tools activated with proper mouse button masks");
+          } catch (toolError) {
+            console.error("DicomViewer: Error setting up default tools:", toolError);
+          }
+        }
       } catch (error) {
         // Check if component is still mounted
         if (!isMounted.current) return;
@@ -419,7 +393,7 @@ export const DicomViewer = ({
     
     loadImage();
     
-  }, [imageUrl, onError, onMetadataLoaded]);
+  }, [imageUrl, onError, onMetadataLoaded, isToolsInitialized]);
 
   const displayedError = error || toolsError;
 

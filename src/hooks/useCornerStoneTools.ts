@@ -48,7 +48,7 @@ export function useCornerStoneTools(
         return;
       }
 
-      // Set external dependencies for cornerstone tools
+      // Set external dependencies for cornerstone tools - CRUCIAL for proper functioning
       cornerstoneTools.external.cornerstone = cornerstone;
       console.log("DicomTools: External cornerstone set");
 
@@ -59,15 +59,10 @@ export function useCornerStoneTools(
       });
       console.log("DicomTools: Tools initialized successfully");
 
-      // Register all built-in tools
-      const ZoomTool = cornerstoneTools.ZoomTool;
-      const PanTool = cornerstoneTools.PanTool;
-      const WwwcTool = cornerstoneTools.WwwcTool;
-
-      // Add tools to the toolbox
-      cornerstoneTools.addTool(ZoomTool);
-      cornerstoneTools.addTool(PanTool);
-      cornerstoneTools.addTool(WwwcTool);
+      // Register all tools we need with proper configuration
+      cornerstoneTools.addTool(cornerstoneTools.ZoomTool);
+      cornerstoneTools.addTool(cornerstoneTools.PanTool);
+      cornerstoneTools.addTool(cornerstoneTools.WwwcTool);
       console.log("DicomTools: Tools added to toolbox");
       
       // Mark tools as initialized
@@ -80,136 +75,6 @@ export function useCornerStoneTools(
       setIsToolsInitialized(false);
     }
   }, [enabled, isToolsInitialized]);
-
-  // Enhanced cornerstone event binding
-  const setupMouseTools = useCallback((element: HTMLDivElement) => {
-    if (!element) return false;
-
-    try {
-      console.log("DicomTools: Setting up enhanced mouse event handlers");
-      
-      // Try the official API first
-      if (typeof cornerstoneTools.addEventListeners === 'function') {
-        console.log("DicomTools: Using cornerstoneTools.addEventListeners API");
-        cornerstoneTools.addEventListeners(element);
-        console.log("DicomTools: Official event listeners added successfully");
-        return true;
-      }
-      
-      console.log("DicomTools: Falling back to manual event binding");
-      
-      // These are the essential mouse events needed for cornerstone tools
-      const eventTypes = ['mousedown', 'mouseup', 'mousemove', 'mousedrag', 'mousewheel', 'DOMMouseScroll', 'touchstart', 'touchend'];
-      
-      // Maps DOM event types to cornerstone event types
-      const cornerstoneEventMap: Record<string, string> = {
-        'mousedown': 'cornerstonetoolsmousedown',
-        'mousemove': 'cornerstonetoolsmousemove',
-        'mouseup': 'cornerstonetoolsmouseup',
-        'mousewheel': 'cornerstonetoolsmousewheel',
-        'DOMMouseScroll': 'cornerstonetoolsmousewheel',
-        'touchstart': 'cornerstonetoolstouchstart',
-        'touchend': 'cornerstonetoolstouchend'
-      };
-      
-      // Create and keep track of event handlers for cleanup
-      const handlers: { [key: string]: (event: Event) => void } = {};
-      
-      // Convert DOM events to cornerstone events
-      eventTypes.forEach(eventType => {
-        const cornerstoneEventType = cornerstoneEventMap[eventType] || `cornerstonetools${eventType}`;
-        
-        handlers[eventType] = (event: Event) => {
-          // Prevent default behavior for events like mousewheel that might cause page scrolling
-          event.preventDefault();
-          event.stopPropagation();
-          
-          console.log(`DicomTools: DOM ${eventType} event captured, converting to ${cornerstoneEventType}`);
-          
-          // Create event detail with position information
-          let eventDetail: any = {};
-          
-          if (event instanceof MouseEvent) {
-            // Get coordinates relative to the cornerstone element
-            const rect = element.getBoundingClientRect();
-            const x = event.clientX - rect.left;
-            const y = event.clientY - rect.top;
-            
-            eventDetail = {
-              event,
-              element,
-              currentPoints: {
-                canvas: { x, y },
-                image: cornerstone.pixelToCanvas(element, { x, y })
-              },
-              lastPoints: {
-                canvas: { x, y },
-                image: cornerstone.pixelToCanvas(element, { x, y })
-              },
-              deltaPoints: { x: 0, y: 0 },
-              buttonsDown: event.buttons
-            };
-            
-            console.log(`DicomTools: Mouse position converted - canvas: (${x}, ${y})`);
-          }
-          
-          // Dispatch the cornerstone event
-          cornerstone.triggerEvent(element, cornerstoneEventType, eventDetail);
-        };
-        
-        // Add the event listener to the element
-        console.log(`DicomTools: Adding ${eventType} event listener`);
-        element.addEventListener(eventType, handlers[eventType]);
-      });
-      
-      // Special handling for drag events which cornerstone-tools relies on
-      let isMouseDown = false;
-      
-      element.addEventListener('mousedown', () => {
-        console.log("DicomTools: Mouse down detected, enabling drag tracking");
-        isMouseDown = true;
-      });
-      
-      element.addEventListener('mouseup', () => {
-        console.log("DicomTools: Mouse up detected, disabling drag tracking");
-        isMouseDown = false;
-      });
-      
-      element.addEventListener('mousemove', (event) => {
-        if (isMouseDown) {
-          console.log("DicomTools: Mouse drag detected while button is down");
-          // Trigger a mousedrag event which some tools use
-          const dragEvent = new MouseEvent('mousedrag', {
-            bubbles: true,
-            cancelable: true,
-            clientX: event.clientX,
-            clientY: event.clientY,
-            buttons: event.buttons
-          });
-          element.dispatchEvent(dragEvent);
-        }
-      });
-      
-      // Store cleanup function for future use
-      element.cornerstoneToolsRemoveHandlers = () => {
-        console.log("DicomTools: Cleaning up manual event handlers");
-        
-        Object.entries(handlers).forEach(([eventType, handler]) => {
-          element.removeEventListener(eventType, handler);
-        });
-        
-        element.removeEventListener('mousedown', () => { isMouseDown = true; });
-        element.removeEventListener('mouseup', () => { isMouseDown = false; });
-        // Remove the mousemove+drag handler
-      };
-      
-      console.log("DicomTools: Manual event handlers successfully added");
-      return true;
-    } catch (error) {
-      console.error("DicomTools: Error setting up mouse tools:", error);
-      return false;
-    }
-  }, []);
 
   // Set up tools on the element when both element and tools are ready
   useEffect(() => {
@@ -233,28 +98,28 @@ export function useCornerStoneTools(
 
       console.log("DicomTools: Setting up tools on element");
 
-      // Enhanced mouse input setup
+      // Use cornerstone's built-in event handling system instead of manual events
       if (!mouseInputEnabled) {
-        const setupSuccessful = setupMouseTools(element);
-        
-        if (setupSuccessful) {
+        try {
+          // Add standard mouse tools to element
+          cornerstoneTools.addEnabledElement(element);
           setMouseInputEnabled(true);
-          console.log("DicomTools: Mouse input successfully enabled");
+          console.log("DicomTools: Mouse input successfully enabled using cornerstone's events system");
           
           // Force a redraw to ensure the element recognizes the new tools
           cornerstone.updateImage(element);
-        } else {
-          console.error("DicomTools: Failed to set up mouse input for tools");
-          setError("Failed to initialize tool controls");
+        } catch (error) {
+          console.error("DicomTools: Failed to set up mouse input for tools:", error);
+          setError(`Failed to initialize tool controls: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       }
 
       // Set tool modes based on active tool or set zoom as default
       if (!activeTool) {
-        // Default to zoom tool
+        // Default to zoom tool with left mouse button (button 1)
         cornerstoneTools.setToolActive('Zoom', { mouseButtonMask: 1 });
         setActiveTool('Zoom');
-        console.log("DicomTools: Set Zoom as default active tool");
+        console.log("DicomTools: Set Zoom as default active tool with left mouse button");
       }
 
       // Listen for cornerstone events to update zoom level
@@ -281,13 +146,11 @@ export function useCornerStoneTools(
     return () => {
       if (viewerRef.current) {
         try {
+          // Proper cleanup of cornerstone tools for this element
+          cornerstoneTools.removeEnabledElement(viewerRef.current);
+          
           // Remove the zoom level update listener
           viewerRef.current.removeEventListener('cornerstoneimagerendered', () => {});
-          
-          // Clean up manual event handlers if they exist
-          if (viewerRef.current.cornerstoneToolsRemoveHandlers) {
-            viewerRef.current.cornerstoneToolsRemoveHandlers();
-          }
           
           console.log("DicomTools: Event listeners cleaned up");
         } catch (error) {
@@ -295,9 +158,9 @@ export function useCornerStoneTools(
         }
       }
     };
-  }, [viewerRef, isToolsInitialized, activeTool, enabled, mouseInputEnabled, setupMouseTools]);
+  }, [viewerRef, isToolsInitialized, activeTool, enabled, mouseInputEnabled]);
 
-  // Function to activate a specific tool
+  // Function to activate a specific tool with proper mouse button configuration
   const activateTool = useCallback((toolName: string) => {
     if (!isToolsInitialized || !viewerRef.current) {
       console.warn("DicomTools: Cannot activate tool - tools not initialized or viewer not ready");
@@ -318,30 +181,39 @@ export function useCornerStoneTools(
       // First deactivate all tools to avoid conflicts
       console.log("DicomTools: Deactivating all tools before activating new tool");
       ['Zoom', 'Pan', 'Wwwc'].forEach(tool => {
-        cornerstoneTools.setToolDisabled(tool);
+        try {
+          cornerstoneTools.setToolDisabled(tool);
+        } catch (e) {
+          console.warn(`DicomTools: Error disabling ${tool} tool:`, e);
+        }
       });
       
-      // Set new tool active with left mouse button
-      cornerstoneTools.setToolActive(toolName, { mouseButtonMask: 1 });
-      setActiveTool(toolName);
-      console.log(`DicomTools: ${toolName} tool activated successfully`);
+      // Set up mouse button masks based on tool type
+      let mouseButtonMask = 1; // Default to left mouse button (1)
       
-      // Log the current state of the tool using a safe approach for v6.0.8
-      // In v6.0.8, we need to check tool state in a different way since isToolActive might not exist directly
+      if (toolName === 'Pan') {
+        mouseButtonMask = 4; // Right mouse button (4)
+      } else if (toolName === 'Wwwc') {
+        mouseButtonMask = 2; // Middle mouse button (2)
+      }
+      
+      // Set new tool active with appropriate mouse button
+      cornerstoneTools.setToolActive(toolName, { mouseButtonMask });
+      setActiveTool(toolName);
+      console.log(`DicomTools: ${toolName} tool activated successfully with mouseButtonMask: ${mouseButtonMask}`);
+      
+      // Log the current state of the tool without relying on isToolActive
       try {
-        // Try to check tool state via toolState if available
-        const toolData = cornerstoneTools.getElementToolStateManager(element);
-        const toolState = toolData ? "available" : "unavailable";
-        
-        console.log(`DicomTools: Current tool state:`, {
-          toolName,
-          toolStateManager: toolState,
+        // Use a more compatible approach to check tool state
+        const toolState = cornerstoneTools.getToolState(element, toolName);
+        console.log(`DicomTools: Current tool state for ${toolName}:`, {
+          hasToolState: !!toolState,
           mouseEnabled: mouseInputEnabled
         });
       } catch (toolError) {
-        // Fallback if tool state checking fails
         console.log(`DicomTools: Unable to check detailed tool state, but activation was attempted:`, {
           toolName,
+          mouseButtonMask,
           mouseEnabled: mouseInputEnabled
         });
       }

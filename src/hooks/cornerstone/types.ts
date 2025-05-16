@@ -13,7 +13,7 @@ export interface CornerstoneToolsMouseEvent extends Event {
 }
 
 // Tool types
-export type CornerstoneTool = 'Zoom' | 'Pan' | 'Wwwc';
+export type CornerstoneTool = 'Zoom' | 'Pan' | 'Wwwc' | 'Rotate';
 
 // Tool state
 export interface CornerstoneToolState {

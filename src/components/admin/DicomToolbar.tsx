@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ZoomIn, ZoomOut, Move, RefreshCw } from 'lucide-react';
+import { ZoomIn, ZoomOut, Move, RefreshCw, RotateCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface DicomToolbarProps {
@@ -63,7 +63,8 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
     const toolMapping: Record<string, string> = {
       'Zoom': 'Zoom',
       'Pan': 'Pan',
-      'Wwwc': 'Wwwc'
+      'Wwwc': 'Wwwc',
+      'Rotate': 'Rotate'
     };
     
     return activeTool === toolMapping[buttonTool] ? "default" : "outline";
@@ -114,6 +115,18 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
             >
               <ZoomOut className="h-4 w-4 mr-1" />
               Window
+            </Button>
+            
+            <Button
+              variant={getButtonVariant('Rotate')}
+              size="sm"
+              onClick={() => handleToolClick('Rotate')}
+              className="text-xs relative"
+              title="Rotation Tool (Hold and drag to rotate image)"
+              data-tool="Rotate"
+            >
+              <RotateCw className="h-4 w-4 mr-1" />
+              Rotate
             </Button>
             
             <Button

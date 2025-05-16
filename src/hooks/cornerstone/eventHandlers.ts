@@ -70,6 +70,21 @@ export function createEventHandlers(element: HTMLDivElement, setZoomLevel: (leve
       } else {
         console.log(`DicomTools: Ignoring Ctrl+wheel because active tool is ${activeTool}, not Zoom`);
       }
+    } else if (event.altKey) {
+      // Alt+scroll can be used for rotation when Rotate tool is active
+      if (activeTool === 'Rotate') {
+        event.preventDefault();
+        const viewport = cornerstone.getViewport(element);
+        if (viewport) {
+          // Rotate based on wheel delta - 5 degrees per wheel tick
+          const rotationDelta = event.deltaY < 0 ? 5 : -5;
+          viewport.rotation += rotationDelta;
+          cornerstone.setViewport(element, viewport);
+          console.log("DicomTools: Manual wheel rotation applied with Rotate tool", viewport.rotation);
+        }
+      } else {
+        console.log(`DicomTools: Ignoring Alt+wheel because active tool is ${activeTool}, not Rotate`);
+      }
     } else if (Math.abs(event.deltaX) > 0 || Math.abs(event.deltaY) > 0) {
       // Regular scroll for panning (two-finger swipe on trackpad) - only for Pan tool
       if (activeTool === 'Pan') {

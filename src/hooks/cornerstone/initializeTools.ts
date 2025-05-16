@@ -41,6 +41,7 @@ export function initializeCornerStoneTools(): {
     });
     cornerstoneTools.addTool(cornerstoneTools.PanTool);
     cornerstoneTools.addTool(cornerstoneTools.WwwcTool);
+    cornerstoneTools.addTool(cornerstoneTools.RotateTool); // Add the rotate tool
     console.log("DicomTools: Tools added to registry successfully");
     
     return { success: true, error: null };
@@ -73,6 +74,7 @@ export function setupElementTools(element: HTMLDivElement, activeTool: string | 
       cornerstoneTools.clearToolState(element, 'Zoom');
       cornerstoneTools.clearToolState(element, 'Pan');
       cornerstoneTools.clearToolState(element, 'Wwwc');
+      cornerstoneTools.clearToolState(element, 'Rotate');
     } catch (cleanupError) {
       console.warn("DicomTools: Error cleaning up existing tool state:", cleanupError);
     }
@@ -81,6 +83,7 @@ export function setupElementTools(element: HTMLDivElement, activeTool: string | 
     cornerstoneTools.addToolForElement(element, cornerstoneTools.ZoomTool);
     cornerstoneTools.addToolForElement(element, cornerstoneTools.PanTool);
     cornerstoneTools.addToolForElement(element, cornerstoneTools.WwwcTool);
+    cornerstoneTools.addToolForElement(element, cornerstoneTools.RotateTool);
     console.log("DicomTools: Added tools to specific element");
 
     // Ensure element can capture all events

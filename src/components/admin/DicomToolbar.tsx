@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ZoomIn, ZoomOut, Move, RefreshCw, Maximize } from 'lucide-react';
+import { ZoomIn, ZoomOut, Move, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface DicomToolbarProps {

@@ -19,192 +19,15 @@ export function createEventHandlers(element: HTMLDivElement, setZoomLevel: (leve
     }
   };
   
-  // Enhanced mouse event handling with proper event chain and direct viewport manipulation
-  let isMouseDown = false;
-  let previousMouseX = 0;
-  let previousMouseY = 0;
-  let dragStartX = 0;
-  let dragStartY = 0;
-  
-  // Get initial viewport state for reference during operations
-  const getInitialViewport = () => {
-    try {
-      return cornerstone.getViewport(element);
-    } catch (e) {
-      console.warn("DicomTools: Error getting viewport:", e);
-      return null;
-    }
-  };
-  
-  // Store initial viewport state at start of drag
-  let initialViewport: any = null;
-  
-  // Mouse down handler - starting point for drag operations
+  // Listen for mouse events on the element for debugging
   const mouseDownHandler = (event: MouseEvent) => {
-    if (event.button !== 0) return; // Only handle left mouse button (0)
-    
-    // Prevent default behaviors
-    event.preventDefault();
-    event.stopPropagation();
-    
-    isMouseDown = true;
-    previousMouseX = event.clientX;
-    previousMouseY = event.clientY;
-    dragStartX = event.clientX;
-    dragStartY = event.clientY;
-    
-    // Store initial viewport state for reference during the drag operation
-    initialViewport = getInitialViewport();
-    
-    console.log("DicomTools: Mouse down captured", {
+    console.log("DicomTools: Mouse down on element", {
       button: event.button,
       buttons: event.buttons,
       clientX: event.clientX,
       clientY: event.clientY,
       currentTool: activeTool
     });
-    
-    // Add temporary global event listeners for move and up
-    document.addEventListener('mousemove', mouseMoveHandler);
-    document.addEventListener('mouseup', mouseUpHandler);
-    
-    // Mark element as active for styling
-    element.classList.add('cornerstone-active-tool');
-    
-    // Set cursor based on active tool
-    switch (activeTool) {
-      case 'Zoom':
-        element.style.cursor = 'zoom-in';
-        break;
-      case 'Pan':
-        element.style.cursor = 'grab';
-        break;
-      case 'Wwwc':
-        element.style.cursor = 'contrast';
-        break;
-      case 'Rotate':
-        element.style.cursor = 'alias';
-        break;
-      default:
-        element.style.cursor = 'default';
-    }
-  };
-  
-  // Mouse move handler - called during drag operations
-  const mouseMoveHandler = (event: MouseEvent) => {
-    if (!isMouseDown || !activeTool) return;
-    
-    // Prevent default behaviors
-    event.preventDefault();
-    event.stopPropagation();
-    
-    const deltaX = event.clientX - previousMouseX;
-    const deltaY = event.clientY - previousMouseY;
-    previousMouseX = event.clientX;
-    previousMouseY = event.clientY;
-    
-    // Get total displacement from start of drag
-    const totalDeltaX = event.clientX - dragStartX;
-    const totalDeltaY = event.clientY - dragStartY;
-    
-    console.log("DicomTools: Mouse move during drag", {
-      deltaX, 
-      deltaY,
-      totalDeltaX,
-      totalDeltaY,
-      currentTool: activeTool
-    });
-    
-    // Get current viewport for manipulation
-    try {
-      const viewport = cornerstone.getViewport(element);
-      
-      // Implement direct viewport manipulation based on active tool
-      switch (activeTool) {
-        case 'Zoom':
-          // Convert vertical movement to zoom factor
-          // Moving up = zoom in, moving down = zoom out
-          const zoomFactor = 1.0 + (deltaY * -0.01);
-          viewport.scale *= zoomFactor;
-          
-          // Update UI with new zoom level
-          setZoomLevel(viewport.scale);
-          console.log("DicomTools: Manual mouse zoom applied", viewport.scale);
-          break;
-          
-        case 'Pan':
-          // Apply panning based on mouse movement
-          viewport.translation.x += deltaX / 5;
-          viewport.translation.y += deltaY / 5;
-          console.log("DicomTools: Manual mouse pan applied", viewport.translation);
-          break;
-          
-        case 'Rotate':
-          // Convert horizontal movement to rotation
-          // 100px movement = 45 degrees
-          const angleDelta = deltaX * 0.45;
-          viewport.rotation += angleDelta;
-          console.log("DicomTools: Manual mouse rotation applied", viewport.rotation);
-          break;
-          
-        case 'Wwwc':
-          if (!initialViewport) break;
-          
-          // Window width/level (contrast/brightness) adjustment
-          // Horizontal = window width (contrast)
-          // Vertical = window level (brightness)
-          const widthDelta = totalDeltaX;
-          const levelDelta = totalDeltaY;
-          
-          // Scale factors - adjust these to control sensitivity
-          const wwScale = 4;
-          const wlScale = 4;
-          
-          // Start from the initial values to prevent compounding changes
-          viewport.voi.windowWidth = initialViewport.voi.windowWidth + (widthDelta * wwScale);
-          viewport.voi.windowCenter = initialViewport.voi.windowCenter - (levelDelta * wlScale);
-          
-          // Ensure positive window width
-          if (viewport.voi.windowWidth < 1) viewport.voi.windowWidth = 1;
-          
-          console.log("DicomTools: Manual mouse window level applied", {
-            windowWidth: viewport.voi.windowWidth,
-            windowCenter: viewport.voi.windowCenter
-          });
-          break;
-      }
-      
-      // Apply the modified viewport
-      cornerstone.setViewport(element, viewport);
-    } catch (e) {
-      console.warn("DicomTools: Error updating viewport during mouse move:", e);
-    }
-  };
-  
-  // Mouse up handler - complete the interaction
-  const mouseUpHandler = (event: MouseEvent) => {
-    if (event.button !== 0) return; // Only handle left mouse button (0)
-    
-    // Prevent default behaviors
-    event.preventDefault();
-    event.stopPropagation();
-    
-    console.log("DicomTools: Mouse up, completing interaction", {
-      clientX: event.clientX,
-      clientY: event.clientY,
-      currentTool: activeTool
-    });
-    
-    isMouseDown = false;
-    initialViewport = null; // Clear the initial viewport reference
-    
-    // Remove the temporary global listeners
-    document.removeEventListener('mousemove', mouseMoveHandler);
-    document.removeEventListener('mouseup', mouseUpHandler);
-    
-    // Reset cursor and remove active styling
-    element.style.cursor = 'default';
-    element.classList.remove('cornerstone-active-tool');
   };
   
   // Listen for cornerstone tools mouse events to debug tool usage
@@ -284,89 +107,47 @@ export function createEventHandlers(element: HTMLDivElement, setZoomLevel: (leve
     // would require a more complex implementation.
   };
   
-  // Store references to ALL handlers to ensure proper cleanup
+  // Store references to handlers
   eventHandlers.zoomHandler = updateZoomLevel;
   eventHandlers.mouseDownHandler = mouseDownHandler;
-  eventHandlers.mouseMoveHandler = mouseMoveHandler;
-  eventHandlers.mouseUpHandler = mouseUpHandler;
   eventHandlers.toolsMouseDownHandler = toolsMouseDownHandler as EventListener;
   eventHandlers.wheelHandler = wheelHandler;
   
   // Remove previous listeners to avoid duplicates
   element.removeEventListener('cornerstoneimagerendered', updateZoomLevel);
   element.removeEventListener('mousedown', mouseDownHandler);
-  document.removeEventListener('mousemove', mouseMoveHandler);
-  document.removeEventListener('mouseup', mouseUpHandler);
   element.removeEventListener('cornerstonetoolsmousedown', toolsMouseDownHandler as EventListener);
   element.removeEventListener('wheel', wheelHandler);
   
   // Add event listeners to the element
   element.addEventListener('cornerstoneimagerendered', updateZoomLevel);
-  element.addEventListener('mousedown', mouseDownHandler, { passive: false });
+  element.addEventListener('mousedown', mouseDownHandler);
   element.addEventListener('cornerstonetoolsmousedown', toolsMouseDownHandler as EventListener);
   element.addEventListener('wheel', wheelHandler, { passive: false });
   
-  // Add CSS for visual feedback when tools are active
-  const styleEl = document.createElement('style');
-  styleEl.textContent = `
-    .cornerstone-active-tool {
-      cursor: grabbing !important;
-    }
-  `;
-  document.head.appendChild(styleEl);
-  
-  // Store the style element reference for cleanup
-  eventHandlers.styleElement = styleEl as unknown as EventListener;
-  
-  console.log("DicomTools: Enhanced event handlers set up with direct viewport manipulation");
+  console.log("DicomTools: Event handlers set up with tool-aware trackpad support");
   
   return eventHandlers;
 }
 
-// Improved cleanup function to remove all event handlers
+// Remove all event handlers
 export function removeEventHandlers(element: HTMLDivElement, handlers: { [key: string]: EventListener }): void {
   try {
     // Remove all event listeners using stored references
-    if (handlers.zoomHandler) {
-      element.removeEventListener('cornerstoneimagerendered', handlers.zoomHandler);
-      console.log("DicomTools: Removed zoom event handler");
-    }
-    
-    if (handlers.mouseDownHandler) {
-      element.removeEventListener('mousedown', handlers.mouseDownHandler);
-      console.log("DicomTools: Removed mousedown handler");
-    }
-    
-    if (handlers.mouseMoveHandler) {
-      document.removeEventListener('mousemove', handlers.mouseMoveHandler);
-      console.log("DicomTools: Removed document mousemove handler");
-    }
-    
-    if (handlers.mouseUpHandler) {
-      document.removeEventListener('mouseup', handlers.mouseUpHandler);
-      console.log("DicomTools: Removed document mouseup handler");
-    }
-    
-    if (handlers.toolsMouseDownHandler) {
-      element.removeEventListener('cornerstonetoolsmousedown', handlers.toolsMouseDownHandler);
-      console.log("DicomTools: Removed cornerstone tools mousedown handler");
-    }
-    
-    if (handlers.wheelHandler) {
-      element.removeEventListener('wheel', handlers.wheelHandler);
-      console.log("DicomTools: Removed wheel handler");
-    }
-    
-    // Remove the style element if it exists
-    if (handlers.styleElement) {
-      const styleElement = handlers.styleElement as unknown as HTMLStyleElement;
-      if (styleElement.parentNode) {
-        styleElement.parentNode.removeChild(styleElement);
-        console.log("DicomTools: Removed style element for cursor feedback");
+    Object.entries(handlers).forEach(([name, handler]) => {
+      console.log(`DicomTools: Removing event listener ${name}`);
+      if (name === 'zoomHandler') {
+        element.removeEventListener('cornerstoneimagerendered', handler);
+      } else if (name === 'toolsMouseDownHandler') {
+        element.removeEventListener('cornerstonetoolsmousedown', handler);
+      } else if (name === 'wheelHandler') {
+        element.removeEventListener('wheel', handler);
+      } else {
+        element.removeEventListener('mousedown', handler);
       }
-    }
+    });
     
-    console.log("DicomTools: All event listeners cleaned up");
+    console.log("DicomTools: Event listeners cleaned up");
   } catch (error) {
     console.warn("DicomTools: Error during cleanup:", error);
   }

@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import cornerstone from "cornerstone-core";
 import cornerstoneWebImageLoader from "cornerstone-web-image-loader";
@@ -8,6 +7,27 @@ import dicomParser from "dicom-parser";
 import { DicomMetadata } from "./DicomMetadataDisplay";
 import { useCornerStoneTools } from "@/hooks/useCornerStoneTools";
 import { DicomToolbar } from "./DicomToolbar";
+
+// Define types for cornerstone custom events
+interface CornerstoneToolsMouseEvent extends Event {
+  detail: {
+    element: HTMLElement;
+    currentPoints: {
+      canvas: { x: number; y: number };
+      image: { x: number; y: number };
+    };
+    lastPoints: {
+      canvas: { x: number; y: number };
+      image: { x: number; y: number };
+    };
+    deltaPoints?: {
+      canvas: { x: number; y: number };
+      image: { x: number; y: number };
+    };
+    buttons?: number;
+    which?: number;
+  };
+}
 
 // Track global initialization state
 let cornerstoneInitialized = false;
@@ -464,8 +484,10 @@ export const DicomViewer = ({
           });
         });
         
-        element.addEventListener('cornerstonetoolsmousedown', (e) => {
-          console.log("DicomViewer: Cornerstone tool mousedown event:", e.detail);
+        element.addEventListener('cornerstonetoolsmousedown', (e: Event) => {
+          // Cast the event to our custom event interface
+          const csEvent = e as CornerstoneToolsMouseEvent;
+          console.log("DicomViewer: Cornerstone tool mousedown event:", csEvent.detail);
         });
         
         // Focus the element to make sure it gets keyboard events

@@ -1,5 +1,4 @@
-
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, RefObject } from 'react';
 import cornerstone from 'cornerstone-core';
 import cornerstoneTools from 'cornerstone-tools';
 

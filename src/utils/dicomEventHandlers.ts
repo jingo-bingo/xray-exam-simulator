@@ -13,7 +13,13 @@ export function setupTrackpadSupport(element: HTMLDivElement) {
   element.style.touchAction = 'none'; // Critical for proper trackpad/touch handling
   element.tabIndex = 0; // Make element focusable
   
-  console.log("DicomViewer: Trackpad support configured");
+  // Add specific CSS to optimize for trackpad click-and-drag interaction
+  element.style.cursor = 'crosshair'; // Change cursor to indicate interactivity
+  
+  // Add click handlers to ensure focus is captured
+  element.addEventListener('mousedown', () => element.focus(), { passive: true });
+  
+  console.log("DicomViewer: Enhanced trackpad support configured");
 }
 
 // Add additional event logging for better debugging
@@ -55,5 +61,5 @@ export function setupEventLogging(element: HTMLDivElement) {
   element.addEventListener('cornerstonetoolsmouseup', 
     (e: Event) => console.log('cornerstonetoolsmouseup event:', (e as CornerstoneToolsEvent).detail), true);
     
-  console.log("DicomViewer: Event logging configured");
+  console.log("DicomViewer: Enhanced event logging configured");
 }

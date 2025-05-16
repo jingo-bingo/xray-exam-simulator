@@ -28,6 +28,30 @@ export function createEventHandlers(element: HTMLDivElement, setZoomLevel: (leve
       clientY: event.clientY,
       currentTool: activeTool
     });
+    
+    // Set focus on the element to ensure it captures keyboard events
+    element.focus();
+  };
+  
+  // Add mousemove handler for better trackpad support
+  const mouseMoveHandler = (event: MouseEvent) => {
+    if (event.buttons === 1) {  // Check if mouse button is pressed
+      console.log("DicomTools: Mouse move with button pressed", {
+        clientX: event.clientX,
+        clientY: event.clientY,
+        currentTool: activeTool
+      });
+    }
+  };
+  
+  // Add mouseup handler to complete the gesture
+  const mouseUpHandler = (event: MouseEvent) => {
+    console.log("DicomTools: Mouse up on element", {
+      button: event.button,
+      clientX: event.clientX, 
+      clientY: event.clientY,
+      currentTool: activeTool
+    });
   };
   
   // Listen for cornerstone tools mouse events to debug tool usage
@@ -45,6 +69,8 @@ export function createEventHandlers(element: HTMLDivElement, setZoomLevel: (leve
       deltaX: event.deltaX,
       deltaY: event.deltaY,
       ctrlKey: event.ctrlKey,
+      shiftKey: event.shiftKey,
+      altKey: event.altKey,
       currentTool: activeTool
     });
 
@@ -85,6 +111,29 @@ export function createEventHandlers(element: HTMLDivElement, setZoomLevel: (leve
       } else {
         console.log(`DicomTools: Ignoring Alt+wheel because active tool is ${activeTool}, not Rotate`);
       }
+    } else if (event.shiftKey) {
+      // Shift+scroll for window level when Wwwc tool is active
+      if (activeTool === 'Wwwc') {
+        event.preventDefault();
+        const viewport = cornerstone.getViewport(element);
+        if (viewport) {
+          // Adjust window width based on horizontal movement
+          viewport.voi.windowWidth += event.deltaX / 5;
+          // Adjust window level based on vertical movement
+          viewport.voi.windowCenter -= event.deltaY / 5;
+          
+          // Ensure positive window width
+          if (viewport.voi.windowWidth < 1) viewport.voi.windowWidth = 1;
+          
+          cornerstone.setViewport(element, viewport);
+          console.log("DicomTools: Manual window level adjustment with Wwwc tool", {
+            windowWidth: viewport.voi.windowWidth,
+            windowCenter: viewport.voi.windowCenter
+          });
+        }
+      } else {
+        console.log(`DicomTools: Ignoring Shift+wheel because active tool is ${activeTool}, not Wwwc`);
+      }
     } else if (Math.abs(event.deltaX) > 0 || Math.abs(event.deltaY) > 0) {
       // Regular scroll for panning (two-finger swipe on trackpad) - only for Pan tool
       if (activeTool === 'Pan') {
@@ -110,22 +159,28 @@ export function createEventHandlers(element: HTMLDivElement, setZoomLevel: (leve
   // Store references to handlers
   eventHandlers.zoomHandler = updateZoomLevel;
   eventHandlers.mouseDownHandler = mouseDownHandler;
+  eventHandlers.mouseMoveHandler = mouseMoveHandler;
+  eventHandlers.mouseUpHandler = mouseUpHandler;
   eventHandlers.toolsMouseDownHandler = toolsMouseDownHandler as EventListener;
   eventHandlers.wheelHandler = wheelHandler;
   
   // Remove previous listeners to avoid duplicates
   element.removeEventListener('cornerstoneimagerendered', updateZoomLevel);
   element.removeEventListener('mousedown', mouseDownHandler);
+  element.removeEventListener('mousemove', mouseMoveHandler);
+  element.removeEventListener('mouseup', mouseUpHandler);
   element.removeEventListener('cornerstonetoolsmousedown', toolsMouseDownHandler as EventListener);
   element.removeEventListener('wheel', wheelHandler);
   
   // Add event listeners to the element
   element.addEventListener('cornerstoneimagerendered', updateZoomLevel);
   element.addEventListener('mousedown', mouseDownHandler);
+  element.addEventListener('mousemove', mouseMoveHandler);
+  element.addEventListener('mouseup', mouseUpHandler);
   element.addEventListener('cornerstonetoolsmousedown', toolsMouseDownHandler as EventListener);
   element.addEventListener('wheel', wheelHandler, { passive: false });
   
-  console.log("DicomTools: Event handlers set up with tool-aware trackpad support");
+  console.log("DicomTools: Enhanced event handlers set up with improved trackpad support");
   
   return eventHandlers;
 }
@@ -142,6 +197,10 @@ export function removeEventHandlers(element: HTMLDivElement, handlers: { [key: s
         element.removeEventListener('cornerstonetoolsmousedown', handler);
       } else if (name === 'wheelHandler') {
         element.removeEventListener('wheel', handler);
+      } else if (name === 'mouseMoveHandler') {
+        element.removeEventListener('mousemove', handler);
+      } else if (name === 'mouseUpHandler') {
+        element.removeEventListener('mouseup', handler);
       } else {
         element.removeEventListener('mousedown', handler);
       }

@@ -13,7 +13,31 @@ export function setupTrackpadSupport(element: HTMLDivElement) {
   element.style.touchAction = 'none'; // Critical for proper trackpad/touch handling
   element.tabIndex = 0; // Make element focusable
   
-  console.log("DicomViewer: Trackpad support configured");
+  // Add event capturing for all mouse events to prevent default browser behavior
+  element.addEventListener('mousedown', (e) => {
+    // Prevent default actions like text selection
+    e.preventDefault();
+    e.stopPropagation();
+    console.log("DicomViewer: Captured mousedown event, preventing defaults");
+  }, true); // Use capture phase
+  
+  element.addEventListener('mousemove', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, true);
+  
+  element.addEventListener('mouseup', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, true);
+  
+  // Prevent context menu on right-click
+  element.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    return false;
+  }, true);
+  
+  console.log("DicomViewer: Trackpad support configured with enhanced event capturing");
 }
 
 // Add additional event logging for better debugging
@@ -54,6 +78,10 @@ export function setupEventLogging(element: HTMLDivElement) {
     (e: Event) => console.log('cornerstonetoolsmousemove event:', (e as CornerstoneToolsEvent).detail), true);
   element.addEventListener('cornerstonetoolsmouseup', 
     (e: Event) => console.log('cornerstonetoolsmouseup event:', (e as CornerstoneToolsEvent).detail), true);
+  element.addEventListener('cornerstonetoolsmouseclick',
+    (e: Event) => console.log('cornerstonetoolsmouseclick event:', (e as CornerstoneToolsEvent).detail), true);
+  element.addEventListener('cornerstonetoolsmousedrag',
+    (e: Event) => console.log('cornerstonetoolsmousedrag event:', (e as CornerstoneToolsEvent).detail), true);
     
   console.log("DicomViewer: Event logging configured");
 }

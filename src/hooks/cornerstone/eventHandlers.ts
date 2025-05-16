@@ -1,4 +1,3 @@
-
 import cornerstone from 'cornerstone-core';
 import { CornerstoneToolsMouseEvent } from './types';
 
@@ -19,15 +18,71 @@ export function createEventHandlers(element: HTMLDivElement, setZoomLevel: (leve
     }
   };
   
-  // Listen for mouse events on the element for debugging
+  // Enhanced mouse event handling with proper event chain
+  let isMouseDown = false;
+  let previousMouseX = 0;
+  let previousMouseY = 0;
+  
+  // Mouse down handler - starting point for drag operations
   const mouseDownHandler = (event: MouseEvent) => {
-    console.log("DicomTools: Mouse down on element", {
+    if (event.button !== 0) return; // Only handle left mouse button (0)
+    
+    isMouseDown = true;
+    previousMouseX = event.clientX;
+    previousMouseY = event.clientY;
+    
+    console.log("DicomTools: Mouse down captured", {
       button: event.button,
       buttons: event.buttons,
       clientX: event.clientX,
       clientY: event.clientY,
       currentTool: activeTool
     });
+    
+    // Add temporary global event listeners for move and up
+    document.addEventListener('mousemove', mouseMoveHandler);
+    document.addEventListener('mouseup', mouseUpHandler);
+    
+    // Mark element as active for styling
+    element.classList.add('cornerstone-active-tool');
+  };
+  
+  // Mouse move handler - called during drag operations
+  const mouseMoveHandler = (event: MouseEvent) => {
+    if (!isMouseDown) return;
+    
+    const deltaX = event.clientX - previousMouseX;
+    const deltaY = event.clientY - previousMouseY;
+    previousMouseX = event.clientX;
+    previousMouseY = event.clientY;
+    
+    console.log("DicomTools: Mouse move during drag", {
+      deltaX, 
+      deltaY,
+      currentTool: activeTool
+    });
+    
+    // Cornerstone tools will automatically handle the tool-specific behavior
+  };
+  
+  // Mouse up handler - complete the interaction
+  const mouseUpHandler = (event: MouseEvent) => {
+    if (event.button !== 0) return; // Only handle left mouse button (0)
+    
+    console.log("DicomTools: Mouse up, completing interaction", {
+      clientX: event.clientX,
+      clientY: event.clientY,
+      currentTool: activeTool
+    });
+    
+    isMouseDown = false;
+    
+    // Remove the temporary global listeners
+    document.removeEventListener('mousemove', mouseMoveHandler);
+    document.removeEventListener('mouseup', mouseUpHandler);
+    
+    // Remove active styling
+    element.classList.remove('cornerstone-active-tool');
   };
   
   // Listen for cornerstone tools mouse events to debug tool usage
@@ -107,47 +162,89 @@ export function createEventHandlers(element: HTMLDivElement, setZoomLevel: (leve
     // would require a more complex implementation.
   };
   
-  // Store references to handlers
+  // Store references to ALL handlers to ensure proper cleanup
   eventHandlers.zoomHandler = updateZoomLevel;
   eventHandlers.mouseDownHandler = mouseDownHandler;
+  eventHandlers.mouseMoveHandler = mouseMoveHandler;
+  eventHandlers.mouseUpHandler = mouseUpHandler;
   eventHandlers.toolsMouseDownHandler = toolsMouseDownHandler as EventListener;
   eventHandlers.wheelHandler = wheelHandler;
   
   // Remove previous listeners to avoid duplicates
   element.removeEventListener('cornerstoneimagerendered', updateZoomLevel);
   element.removeEventListener('mousedown', mouseDownHandler);
+  document.removeEventListener('mousemove', mouseMoveHandler);
+  document.removeEventListener('mouseup', mouseUpHandler);
   element.removeEventListener('cornerstonetoolsmousedown', toolsMouseDownHandler as EventListener);
   element.removeEventListener('wheel', wheelHandler);
   
   // Add event listeners to the element
   element.addEventListener('cornerstoneimagerendered', updateZoomLevel);
-  element.addEventListener('mousedown', mouseDownHandler);
+  element.addEventListener('mousedown', mouseDownHandler, { passive: false });
   element.addEventListener('cornerstonetoolsmousedown', toolsMouseDownHandler as EventListener);
   element.addEventListener('wheel', wheelHandler, { passive: false });
   
-  console.log("DicomTools: Event handlers set up with tool-aware trackpad support");
+  // Add CSS for visual feedback when tools are active
+  const styleEl = document.createElement('style');
+  styleEl.textContent = `
+    .cornerstone-active-tool {
+      cursor: grabbing !important;
+    }
+  `;
+  document.head.appendChild(styleEl);
+  
+  // Store the style element reference for cleanup
+  eventHandlers.styleElement = styleEl as unknown as EventListener;
+  
+  console.log("DicomTools: Enhanced event handlers set up with complete event chain");
   
   return eventHandlers;
 }
 
-// Remove all event handlers
+// Improved cleanup function to remove all event handlers
 export function removeEventHandlers(element: HTMLDivElement, handlers: { [key: string]: EventListener }): void {
   try {
     // Remove all event listeners using stored references
-    Object.entries(handlers).forEach(([name, handler]) => {
-      console.log(`DicomTools: Removing event listener ${name}`);
-      if (name === 'zoomHandler') {
-        element.removeEventListener('cornerstoneimagerendered', handler);
-      } else if (name === 'toolsMouseDownHandler') {
-        element.removeEventListener('cornerstonetoolsmousedown', handler);
-      } else if (name === 'wheelHandler') {
-        element.removeEventListener('wheel', handler);
-      } else {
-        element.removeEventListener('mousedown', handler);
-      }
-    });
+    if (handlers.zoomHandler) {
+      element.removeEventListener('cornerstoneimagerendered', handlers.zoomHandler);
+      console.log("DicomTools: Removed zoom event handler");
+    }
     
-    console.log("DicomTools: Event listeners cleaned up");
+    if (handlers.mouseDownHandler) {
+      element.removeEventListener('mousedown', handlers.mouseDownHandler);
+      console.log("DicomTools: Removed mousedown handler");
+    }
+    
+    if (handlers.mouseMoveHandler) {
+      document.removeEventListener('mousemove', handlers.mouseMoveHandler);
+      console.log("DicomTools: Removed document mousemove handler");
+    }
+    
+    if (handlers.mouseUpHandler) {
+      document.removeEventListener('mouseup', handlers.mouseUpHandler);
+      console.log("DicomTools: Removed document mouseup handler");
+    }
+    
+    if (handlers.toolsMouseDownHandler) {
+      element.removeEventListener('cornerstonetoolsmousedown', handlers.toolsMouseDownHandler);
+      console.log("DicomTools: Removed cornerstone tools mousedown handler");
+    }
+    
+    if (handlers.wheelHandler) {
+      element.removeEventListener('wheel', handlers.wheelHandler);
+      console.log("DicomTools: Removed wheel handler");
+    }
+    
+    // Remove the style element if it exists
+    if (handlers.styleElement) {
+      const styleElement = handlers.styleElement as unknown as HTMLStyleElement;
+      if (styleElement.parentNode) {
+        styleElement.parentNode.removeChild(styleElement);
+        console.log("DicomTools: Removed style element for cursor feedback");
+      }
+    }
+    
+    console.log("DicomTools: All event listeners cleaned up");
   } catch (error) {
     console.warn("DicomTools: Error during cleanup:", error);
   }

@@ -326,18 +326,31 @@ export function useCornerStoneTools(
       setActiveTool(toolName);
       console.log(`DicomTools: ${toolName} tool activated successfully`);
       
-      // Log the current state of the tool
-      console.log(`DicomTools: Current tool state:`, {
-        toolName,
-        isActive: cornerstoneTools.isToolActive(element, toolName),
-        mouseEnabled: mouseInputEnabled
-      });
+      // Log the current state of the tool using a safe approach for v6.0.8
+      // In v6.0.8, we need to check tool state in a different way since isToolActive might not exist directly
+      try {
+        // Try to check tool state via toolState if available
+        const toolData = cornerstoneTools.getElementToolStateManager(element);
+        const toolState = toolData ? "available" : "unavailable";
+        
+        console.log(`DicomTools: Current tool state:`, {
+          toolName,
+          toolStateManager: toolState,
+          mouseEnabled: mouseInputEnabled
+        });
+      } catch (toolError) {
+        // Fallback if tool state checking fails
+        console.log(`DicomTools: Unable to check detailed tool state, but activation was attempted:`, {
+          toolName,
+          mouseEnabled: mouseInputEnabled
+        });
+      }
       
       // Force cornerstone to redraw the image
       cornerstone.updateImage(element);
     } catch (e) {
       console.error(`DicomTools: Error activating ${toolName} tool:`, e);
-      setError(`Failed to activate ${toolName} tool`);
+      setError(`Failed to activate ${toolName} tool: ${e instanceof Error ? e.message : 'Unknown error'}`);
     }
   }, [isToolsInitialized, viewerRef, mouseInputEnabled]);
 

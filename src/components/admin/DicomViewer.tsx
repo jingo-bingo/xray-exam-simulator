@@ -1,8 +1,8 @@
-
 import { useEffect, useRef, useState } from "react";
 import cornerstone from "cornerstone-core";
 import cornerstoneWebImageLoader from "cornerstone-web-image-loader";
 import cornerstoneWADOImageLoader from "cornerstone-wado-image-loader";
+import cornerstoneTools from "cornerstone-tools";
 import dicomParser from "dicom-parser";
 import { DicomMetadata } from "./DicomMetadataDisplay";
 import { useCornerStoneTools } from "@/hooks/useCornerStoneTools";
@@ -364,6 +364,10 @@ export const DicomViewer = ({
         if (isToolsInitialized) {
           console.log("DicomViewer: Activating default Zoom tool after image load");
           try {
+            // Add tools directly to the element for more direct control
+            const element = viewerRef.current;
+            if (!element) return;
+            
             cornerstoneTools.addToolForElement(element, cornerstoneTools.ZoomTool);
             cornerstoneTools.setToolActiveForElement(element, 'Zoom', { mouseButtonMask: 1 });
             

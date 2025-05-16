@@ -46,6 +46,20 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
     onResetView();
   };
 
+  // Convert tool names to match what's expected in the cornerstone-tools API
+  const getButtonVariant = (buttonTool: string) => {
+    if (!activeTool) return "outline";
+    
+    // Map button tools to cornerstone tool names for comparison
+    const toolMapping: Record<string, string> = {
+      'Zoom': 'Zoom',
+      'Pan': 'Pan',
+      'Wwwc': 'Wwwc'
+    };
+    
+    return activeTool === toolMapping[buttonTool] ? "default" : "outline";
+  };
+
   return (
     <div className="flex items-center space-x-2 p-2 bg-gray-900 rounded-md mb-2">
       {error ? (
@@ -53,7 +67,7 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
       ) : (
         <>
           <Button
-            variant={activeTool === 'Zoom' ? "default" : "outline"}
+            variant={getButtonVariant('Zoom')}
             size="sm"
             onClick={() => handleToolClick('Zoom')}
             className="text-xs relative"
@@ -65,7 +79,7 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
           </Button>
           
           <Button
-            variant={activeTool === 'Pan' ? "default" : "outline"}
+            variant={getButtonVariant('Pan')}
             size="sm"
             onClick={() => handleToolClick('Pan')}
             className="text-xs relative"
@@ -78,7 +92,7 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
           </Button>
           
           <Button
-            variant={activeTool === 'Wwwc' ? "default" : "outline"}
+            variant={getButtonVariant('Wwwc')}
             size="sm"
             onClick={() => handleToolClick('Wwwc')}
             className="text-xs relative"
@@ -103,21 +117,19 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
           
           <div className="ml-auto">
             <Badge variant="outline" className="text-xs">
-              Zoom: {zoomLevel}%
+              Zoom: {Math.round(zoomLevel * 100)}%
             </Badge>
           </div>
         </>
       )}
 
-      <style>
-        {`
-          .clicked {
-            transform: scale(0.95);
-            opacity: 0.8;
-            transition: transform 0.1s, opacity 0.1s;
-          }
-        `}
-      </style>
+      <style jsx>{`
+        .clicked {
+          transform: scale(0.95);
+          opacity: 0.8;
+          transition: transform 0.1s, opacity 0.1s;
+        }
+      `}</style>
     </div>
   );
 };

@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import cornerstone from "cornerstone-core";
 import cornerstoneWebImageLoader from "cornerstone-web-image-loader";
@@ -8,27 +9,66 @@ import { DicomMetadata } from "./DicomMetadataDisplay";
 import { useCornerStoneTools } from "@/hooks/useCornerStoneTools";
 import { DicomToolbar } from "./DicomToolbar";
 
-// Initialize the web image loader
-cornerstoneWebImageLoader.external.cornerstone = cornerstone;
-cornerstone.registerImageLoader("webImage", cornerstoneWebImageLoader.loadImage);
+// Track global initialization state
+let cornerstoneInitialized = false;
 
-// Initialize the WADO image loader for DICOM files
-cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
-cornerstoneWADOImageLoader.external.dicomParser = dicomParser;
-cornerstone.registerImageLoader("wadouri", cornerstoneWADOImageLoader.wadouri.loadImage);
+// One-time initialization function for cornerstone libraries
+function initializeCornerstone() {
+  if (cornerstoneInitialized) {
+    console.log("DicomViewer: Cornerstone already initialized, skipping initialization");
+    return true;
+  }
+  
+  try {
+    console.log("DicomViewer: Starting cornerstone initialization sequence");
+    
+    // Check library availability
+    if (!cornerstone || !cornerstoneTools) {
+      console.error("DicomViewer: Required libraries not available");
+      return false;
+    }
+    
+    // Set up external dependencies in the correct order
+    console.log("DicomViewer: Setting up external dependencies");
+    
+    // Set up cornerstone-tools external dependencies
+    if (!cornerstoneTools.external) {
+      cornerstoneTools.external = {};
+    }
+    cornerstoneTools.external.cornerstone = cornerstone;
+    
+    // Set up loaders external dependencies
+    cornerstoneWebImageLoader.external.cornerstone = cornerstone;
+    cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
+    cornerstoneWADOImageLoader.external.dicomParser = dicomParser;
+    
+    // Initialize image loaders
+    cornerstone.registerImageLoader("webImage", cornerstoneWebImageLoader.loadImage);
+    cornerstone.registerImageLoader("wadouri", cornerstoneWADOImageLoader.wadouri.loadImage);
+    
+    // Configure WADO image loader with conservative memory settings
+    cornerstoneWADOImageLoader.configure({
+      useWebWorkers: false,
+      decodeConfig: {
+        convertFloatPixelDataToInt: false,
+        use16Bits: true,
+        maxWebWorkers: 1,
+        preservePixelData: false // Don't keep raw pixel data in memory
+      },
+      // Set a smaller max cache size to prevent memory issues
+      maxCacheSize: 50 // Default is 100
+    });
 
-// Configure WADO image loader with conservative memory settings
-cornerstoneWADOImageLoader.configure({
-  useWebWorkers: false,
-  decodeConfig: {
-    convertFloatPixelDataToInt: false,
-    use16Bits: true,
-    maxWebWorkers: 1,
-    preservePixelData: false // Don't keep raw pixel data in memory
-  },
-  // Set a smaller max cache size to prevent memory issues
-  maxCacheSize: 50 // Default is 100
-});
+    // Mark as initialized
+    cornerstoneInitialized = true;
+    console.log("DicomViewer: Cornerstone libraries initialized successfully");
+    
+    return true;
+  } catch (error) {
+    console.error("DicomViewer: Failed to initialize cornerstone libraries:", error);
+    return false;
+  }
+}
 
 // Cache for loaded images to prevent re-fetching
 const imageCache = new Map<string, any>();
@@ -63,18 +103,15 @@ export const DicomViewer = ({
     position: 'relative'
   });
   
-  // Initialize cornerstone tools
-  const {
-    isToolsInitialized,
-    error: toolsError,
-    activeTool,
-    activateTool,
-    resetView,
-    zoomLevel
-  } = useCornerStoneTools(viewerRef, isImageLoaded);
-
+  // Initialize cornerstone on component mount
   useEffect(() => {
-    console.log("DicomViewer: Component mounting with ref:", viewerRef.current ? "available" : "not available");
+    console.log("DicomViewer: Component mounting");
+    
+    // Initialize cornerstone libraries
+    const initialized = initializeCornerstone();
+    if (!initialized && onError) {
+      onError(new Error("Failed to initialize DICOM viewer libraries"));
+    }
     
     // Set up cleanup function
     return () => {
@@ -90,14 +127,23 @@ export const DicomViewer = ({
       // Clean up cornerstone element if it exists
       if (viewerRef.current) {
         try {
-          console.log("DicomViewer: Disabling cornerstone on element during cleanup");
           cornerstone.disable(viewerRef.current);
         } catch (error) {
           console.warn("DicomViewer: Error during cleanup:", error);
         }
       }
     };
-  }, []);
+  }, [onError]);
+  
+  // Initialize cornerstone tools
+  const {
+    isToolsInitialized,
+    error: toolsError,
+    activeTool,
+    activateTool,
+    resetView,
+    zoomLevel
+  } = useCornerStoneTools(viewerRef, isImageLoaded);
 
   // Update container dimensions based on image size
   const updateContainerSize = (image: any) => {
@@ -177,6 +223,7 @@ export const DicomViewer = ({
     }
   };
   
+  // Load DICOM image when URL changes
   useEffect(() => {
     const loadImage = async () => {
       if (!viewerRef.current || !imageUrl) return;
@@ -206,6 +253,7 @@ export const DicomViewer = ({
       try {
         if (viewerRef.current) {
           cornerstone.disable(viewerRef.current);
+          console.log("DicomViewer: Disabled previous cornerstone element");
         }
       } catch (error) {
         console.warn("DicomViewer: Error during cleanup:", error);
@@ -360,30 +408,12 @@ export const DicomViewer = ({
         setIsImageLoaded(true);
         console.log("DicomViewer: Image loading process complete, isImageLoaded set to true");
         
-        // Now that image is loaded, activate the default tool (zoom with left click)
-        if (isToolsInitialized) {
-          console.log("DicomViewer: Activating default Zoom tool after image load");
-          try {
-            // Add tools directly to the element for more direct control
-            const element = viewerRef.current;
-            if (!element) return;
-            
-            cornerstoneTools.addToolForElement(element, cornerstoneTools.ZoomTool);
-            cornerstoneTools.setToolActiveForElement(element, 'Zoom', { mouseButtonMask: 1 });
-            
-            // Also add Pan tool with right mouse button
-            cornerstoneTools.addToolForElement(element, cornerstoneTools.PanTool);
-            cornerstoneTools.setToolActiveForElement(element, 'Pan', { mouseButtonMask: 4 });
-            
-            // Add Window Level tool with middle mouse button
-            cornerstoneTools.addToolForElement(element, cornerstoneTools.WwwcTool);
-            cornerstoneTools.setToolActiveForElement(element, 'Wwwc', { mouseButtonMask: 2 });
-            
-            console.log("DicomViewer: Default tools activated with proper mouse button masks");
-          } catch (toolError) {
-            console.error("DicomViewer: Error setting up default tools:", toolError);
-          }
-        }
+        // Add event capture to ensure Cornerstone gets mouse events
+        element.style.pointerEvents = 'all';
+        element.style.touchAction = 'none'; // Prevent default touch actions
+        
+        // Force Cornerstone to be ready for mouse events
+        cornerstone.resize(element);
       } catch (error) {
         // Check if component is still mounted
         if (!isMounted.current) return;
@@ -397,7 +427,7 @@ export const DicomViewer = ({
     
     loadImage();
     
-  }, [imageUrl, onError, onMetadataLoaded, isToolsInitialized]);
+  }, [imageUrl, onError, onMetadataLoaded]);
 
   const displayedError = error || toolsError;
 

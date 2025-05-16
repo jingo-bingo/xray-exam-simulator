@@ -1,5 +1,5 @@
 
-import { useEffect, useState, RefObject, useCallback } from 'react';
+import { useEffect, useState, RefObject, useCallback, useRef } from 'react';
 import cornerstone from 'cornerstone-core';
 import cornerstoneTools from 'cornerstone-tools';
 
@@ -18,8 +18,9 @@ export function useCornerStoneTools(
   const [isToolsInitialized, setIsToolsInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
-  const [zoomLevel, setZoomLevel] = useState<number>(100);
-  const [toolsRegistered, setToolsRegistered] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState<number>(1.0); // Default zoom level is 1.0 (100%)
+  const eventHandlersRef = useRef<{ [key: string]: EventListener }>({});
+  const toolsRegisteredRef = useRef(false);
 
   // Initialize cornerstone tools once when the component mounts
   useEffect(() => {
@@ -49,10 +50,19 @@ export function useCornerStoneTools(
       cornerstoneTools.init({
         globalToolSyncEnabled: true,
         showSVGCursors: true,
+        mouseEnabled: true,
       });
       console.log("DicomTools: Tools initialized successfully");
       
+      // Add base tools to the registry
+      console.log("DicomTools: Adding tools to registry");
+      cornerstoneTools.addTool(cornerstoneTools.ZoomTool);
+      cornerstoneTools.addTool(cornerstoneTools.PanTool);
+      cornerstoneTools.addTool(cornerstoneTools.WwwcTool);
+      console.log("DicomTools: Tools added to registry successfully");
+      
       // Mark tools as initialized
+      toolsRegisteredRef.current = true;
       setIsToolsInitialized(true);
       setError(null);
 
@@ -60,36 +70,17 @@ export function useCornerStoneTools(
       console.error("DicomTools: Error initializing cornerstone tools:", e);
       setError(`Failed to initialize DICOM tools: ${e instanceof Error ? e.message : 'Unknown error'}`);
       setIsToolsInitialized(false);
+      toolsRegisteredRef.current = false;
     }
   }, [enabled, isToolsInitialized]);
 
-  // Register tools globally after initialization
-  useEffect(() => {
-    if (!isToolsInitialized || toolsRegistered || !enabled) return;
-    
-    try {
-      console.log("DicomTools: Registering tools globally");
-      
-      // Register all tools we need
-      cornerstoneTools.addTool(cornerstoneTools.ZoomTool);
-      cornerstoneTools.addTool(cornerstoneTools.PanTool);
-      cornerstoneTools.addTool(cornerstoneTools.WwwcTool);
-      console.log("DicomTools: Tools added to toolbox");
-      
-      setToolsRegistered(true);
-    } catch (e) {
-      console.error("DicomTools: Error registering tools:", e);
-      setError(`Failed to register tools: ${e instanceof Error ? e.message : 'Unknown error'}`);
-    }
-  }, [isToolsInitialized, toolsRegistered, enabled]);
-
   // Set up tools on the element when both element and tools are ready
   useEffect(() => {
-    if (!viewerRef.current || !isToolsInitialized || !toolsRegistered || !enabled) {
+    if (!viewerRef.current || !isToolsInitialized || !toolsRegisteredRef.current || !enabled) {
       console.log("DicomTools: Skipping tool setup - prerequisites not met", {
         elementAvailable: !!viewerRef.current,
         toolsInitialized: isToolsInitialized,
-        toolsRegistered: toolsRegistered,
+        toolsRegistered: toolsRegisteredRef.current,
         enabled: enabled
       });
       return;
@@ -106,26 +97,26 @@ export function useCornerStoneTools(
 
       console.log("DicomTools: Setting up tools on element");
 
-      // Set up tool state for the specific element
-      // IMPORTANT: We don't use addEnabledElement as it's not available in v6.0.8
-      // Instead, we add tools directly to the element
-
-      // Add specific tools to this element
+      // First clean up any existing tool state on this element
       try {
-        // Need to add the tool to the specific element first
-        cornerstoneTools.addToolForElement(element, cornerstoneTools.ZoomTool);
-        cornerstoneTools.addToolForElement(element, cornerstoneTools.PanTool);
-        cornerstoneTools.addToolForElement(element, cornerstoneTools.WwwcTool);
-        console.log("DicomTools: Added tools to specific element");
-      } catch (toolError) {
-        console.warn("DicomTools: Error adding tools to element, might already be added:", toolError);
-        // Continue, as tools might already be added
+        console.log("DicomTools: Cleaning up existing tools on element");
+        cornerstoneTools.clearToolState(element, 'Zoom');
+        cornerstoneTools.clearToolState(element, 'Pan');
+        cornerstoneTools.clearToolState(element, 'Wwwc');
+      } catch (cleanupError) {
+        console.warn("DicomTools: Error cleaning up existing tool state:", cleanupError);
       }
 
-      // Set tool modes based on active tool or set zoom as default
+      // Add the tools to this element. This will throw warnings if already added, but that's OK
+      cornerstoneTools.addToolForElement(element, cornerstoneTools.ZoomTool);
+      cornerstoneTools.addToolForElement(element, cornerstoneTools.PanTool);
+      cornerstoneTools.addToolForElement(element, cornerstoneTools.WwwcTool);
+      console.log("DicomTools: Added tools to specific element");
+
+      // Set default tool to Zoom with left mouse button
       if (!activeTool) {
-        // Default to zoom tool with left mouse button (button 1)
         try {
+          console.log("DicomTools: Setting initial tool (Zoom) for element");
           cornerstoneTools.setToolActiveForElement(element, 'Zoom', { mouseButtonMask: 1 });
           setActiveTool('Zoom');
           console.log("DicomTools: Set Zoom as default active tool with left mouse button");
@@ -139,18 +130,39 @@ export function useCornerStoneTools(
         try {
           const viewport = cornerstone.getViewport(element);
           if (viewport) {
-            const newZoomLevel = Math.round(viewport.scale * 100);
-            setZoomLevel(newZoomLevel);
+            setZoomLevel(viewport.scale);
+            console.log("DicomTools: Updated zoom level:", viewport.scale);
           }
         } catch (e) {
           console.warn("DicomTools: Error updating zoom level:", e);
         }
       };
       
-      // Clean up previous listener to avoid duplicates
+      // Store reference to handler so we can remove it later
+      eventHandlersRef.current.zoomHandler = updateZoomLevel;
+      
+      // Remove previous listener to avoid duplicates
       element.removeEventListener('cornerstoneimagerendered', updateZoomLevel);
       element.addEventListener('cornerstoneimagerendered', updateZoomLevel);
-
+      
+      // Listen for mouse events on the element for debugging
+      const mouseDownHandler = (event: MouseEvent) => {
+        console.log("DicomTools: Mouse down on element", {
+          button: event.button,
+          buttons: event.buttons,
+          clientX: event.clientX,
+          clientY: event.clientY,
+          currentTool: activeTool
+        });
+      };
+      
+      // Store reference to handler
+      eventHandlersRef.current.mouseDownHandler = mouseDownHandler;
+      
+      // Add mouse event listeners directly to the element
+      element.removeEventListener('mousedown', mouseDownHandler);
+      element.addEventListener('mousedown', mouseDownHandler);
+      
       console.log("DicomTools: Tool setup complete");
     } catch (e) {
       console.error("DicomTools: Error setting up tools on element:", e);
@@ -161,8 +173,16 @@ export function useCornerStoneTools(
     return () => {
       if (viewerRef.current) {
         try {
-          // Remove the zoom level update listener
-          viewerRef.current.removeEventListener('cornerstoneimagerendered', () => {});
+          const element = viewerRef.current;
+          
+          // Remove all event listeners using our stored references
+          Object.entries(eventHandlersRef.current).forEach(([name, handler]) => {
+            console.log(`DicomTools: Removing event listener ${name}`);
+            element.removeEventListener(name === 'zoomHandler' ? 'cornerstoneimagerendered' : 'mousedown', handler);
+          });
+          
+          // Clear handlers
+          eventHandlersRef.current = {};
           
           console.log("DicomTools: Event listeners cleaned up");
         } catch (error) {
@@ -170,11 +190,11 @@ export function useCornerStoneTools(
         }
       }
     };
-  }, [viewerRef, isToolsInitialized, activeTool, enabled, toolsRegistered]);
+  }, [viewerRef, isToolsInitialized, activeTool, enabled]);
 
   // Function to activate a specific tool with proper mouse button configuration
   const activateTool = useCallback((toolName: string) => {
-    if (!isToolsInitialized || !viewerRef.current || !toolsRegistered) {
+    if (!isToolsInitialized || !viewerRef.current || !toolsRegisteredRef.current) {
       console.warn("DicomTools: Cannot activate tool - tools not initialized or viewer not ready");
       return;
     }
@@ -190,8 +210,9 @@ export function useCornerStoneTools(
         return;
       }
       
-      // Disable all tools for this element first
+      // Disable all tools for this element first to ensure clean state
       try {
+        console.log("DicomTools: Disabling all tools for element");
         cornerstoneTools.setToolDisabledForElement(element, 'Zoom');
         cornerstoneTools.setToolDisabledForElement(element, 'Pan');
         cornerstoneTools.setToolDisabledForElement(element, 'Wwwc');
@@ -200,26 +221,27 @@ export function useCornerStoneTools(
         console.warn("DicomTools: Error disabling tools (may be expected if not active):", e);
       }
       
-      // Set the mouse button mask based on tool type
-      let mouseButtonMask = 1; // Default to left mouse button (1)
+      // Set the mouse button mask for left mouse button (1)
+      const mouseButtonMask = 1;
       
-      // Set new tool active with appropriate mouse button
+      // Set new tool active with left mouse button
       try {
+        console.log(`DicomTools: Setting tool ${toolName} active with mouseButtonMask ${mouseButtonMask}`);
         cornerstoneTools.setToolActiveForElement(element, toolName, { mouseButtonMask });
         setActiveTool(toolName);
         console.log(`DicomTools: ${toolName} tool activated successfully with mouseButtonMask: ${mouseButtonMask}`);
+        
+        // Force cornerstone to redraw the image to show updated tool status
+        cornerstone.updateImage(element);
       } catch (e) {
         console.error(`DicomTools: Failed to activate ${toolName} tool:`, e);
         setError(`Failed to activate ${toolName} tool: ${e instanceof Error ? e.message : 'Unknown error'}`);
       }
-      
-      // Force cornerstone to redraw the image
-      cornerstone.updateImage(element);
     } catch (e) {
       console.error(`DicomTools: Error activating ${toolName} tool:`, e);
       setError(`Failed to activate ${toolName} tool: ${e instanceof Error ? e.message : 'Unknown error'}`);
     }
-  }, [isToolsInitialized, viewerRef, toolsRegistered]);
+  }, [isToolsInitialized, viewerRef]);
 
   // Function to reset the view to natural size
   const resetView = useCallback(() => {
@@ -241,6 +263,7 @@ export function useCornerStoneTools(
         if (viewport) {
           viewport.scale = 1.0; // Natural size (1:1 pixel)
           cornerstone.setViewport(viewerRef.current, viewport);
+          setZoomLevel(1.0); // Update zoom level state
           console.log("DicomTools: Reset to natural size (1:1)");
         }
       }

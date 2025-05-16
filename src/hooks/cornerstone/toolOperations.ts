@@ -22,7 +22,6 @@ export function activateToolForElement(
       cornerstoneTools.setToolDisabledForElement(element, 'Zoom');
       cornerstoneTools.setToolDisabledForElement(element, 'Pan');
       cornerstoneTools.setToolDisabledForElement(element, 'Wwwc');
-      cornerstoneTools.setToolDisabledForElement(element, 'Rotate');
       console.log("DicomTools: All tools disabled for this element");
     } catch (e) {
       console.warn("DicomTools: Error disabling tools (may be expected if not active):", e);
@@ -36,9 +35,6 @@ export function activateToolForElement(
       console.log(`DicomTools: Setting tool ${toolName} active with mouseButtonMask ${mouseButtonMask}`);
       cornerstoneTools.setToolActiveForElement(element, toolName, { mouseButtonMask });
       console.log(`DicomTools: ${toolName} tool activated successfully with mouseButtonMask: ${mouseButtonMask}`);
-      
-      // Update cursor style based on active tool
-      updateCursorForTool(element, toolName);
       
       // Force cornerstone to redraw the image to show updated tool status
       cornerstone.updateImage(element);
@@ -57,29 +53,6 @@ export function activateToolForElement(
       error: `Failed to activate ${toolName} tool: ${e instanceof Error ? e.message : 'Unknown error'}`
     };
   }
-}
-
-// Function to update cursor style based on active tool
-function updateCursorForTool(element: HTMLDivElement, toolName: string): void {
-  // Set appropriate cursor style for the element based on the active tool
-  switch (toolName) {
-    case 'Zoom':
-      element.style.cursor = 'zoom-in';
-      break;
-    case 'Pan':
-      element.style.cursor = 'grab';
-      break;
-    case 'Wwwc':
-      element.style.cursor = 'context-menu';
-      break;
-    case 'Rotate':
-      element.style.cursor = 'url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLXJvdGF0ZS1jdyI+PHBhdGggZD0iTTIxLjUgMmE0LjYgNC42IDAgMCAxIDAgOS4yIi8+PHBhdGggZD0iTTIxLjUgMnYlIi8+PHBhdGggZD0iTTE1LjUgMmE0LjYgNC42IDAgMCAwIDAgOS4yIi8+PHBhdGggZD0iTTggMjJhOCA4IDAgMSAxIDAtMTYgOCA4IDAgMCAxIDAgMTYiLz48PHRoIGQ9Im0xOSA5LTkgMSAzIDctNyAxIDEtMiIvPjwvc3ZnPg==) 16 16, auto';
-      break;
-    default:
-      element.style.cursor = 'default';
-  }
-  
-  console.log(`DicomTools: Updated cursor style for ${toolName} tool`);
 }
 
 // Function to reset the view to natural size

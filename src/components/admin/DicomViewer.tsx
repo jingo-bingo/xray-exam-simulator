@@ -46,13 +46,6 @@ function initializeCornerstone() {
     cornerstone.registerImageLoader("webImage", cornerstoneWebImageLoader.loadImage);
     cornerstone.registerImageLoader("wadouri", cornerstoneWADOImageLoader.wadouri.loadImage);
     
-    // CRITICAL: Initialize cornerstone tools
-    console.log("DicomViewer: Initializing cornerstone tools");
-    cornerstoneTools.init({
-      showSVGCursors: true,
-      mouseEnabled: true,
-    });
-    
     // Configure WADO image loader with conservative memory settings
     cornerstoneWADOImageLoader.configure({
       useWebWorkers: false,
@@ -405,64 +398,22 @@ export const DicomViewer = ({
         cornerstone.displayImage(element, image);
         console.log("DicomViewer: Image displayed successfully");
         
-        // CRITICAL: Initialize tools directly on the element
-        try {
-          console.log("DicomViewer: Directly initializing tools after image display");
-          
-          // Remove any existing tools first
-          try {
-            cornerstoneTools.removeToolsForElement(element);
-          } catch (removeError) {
-            console.log("DicomViewer: Error removing existing tools (may be expected):", removeError);
-          }
-          
-          // Add essential tools
-          cornerstoneTools.addToolForElement(element, cornerstoneTools.PanTool);
-          cornerstoneTools.addToolForElement(element, cornerstoneTools.ZoomTool);
-          cornerstoneTools.addToolForElement(element, cornerstoneTools.WwwcTool);
-          
-          // Set Pan as the default tool
-          cornerstoneTools.setToolActiveForElement(element, 'Pan', { mouseButtonMask: 1 });
-          
-          // Force an update to make sure the tool is active
-          cornerstone.updateImage(element);
-          
-          console.log("DicomViewer: Tools directly initialized");
-        } catch (toolError) {
-          console.error("DicomViewer: Error directly initializing tools:", toolError);
-        }
-        
         // Notify parent about metadata
         if (onMetadataLoaded) {
           console.log("DicomViewer: Notifying parent about metadata");
           onMetadataLoaded(metadata);
         }
         
-        // Add event capture to ensure Cornerstone gets mouse events
-        element.style.pointerEvents = 'all'; 
-        element.tabIndex = 0; // Make element focusable
-        element.style.outline = 'none'; // Remove outline when focused
-        element.style.touchAction = 'none'; // Prevent default touch actions
-        
-        // Make sure mouse events propagate correctly
-        element.addEventListener('mousedown', function(e) {
-          console.log("DicomViewer: Native mousedown event captured", {
-            button: e.button,
-            buttons: e.buttons,
-            clientX: e.clientX,
-            clientY: e.clientY
-          });
-          // Prevent default only for middle mouse to avoid scrolling issues
-          if (e.button === 1) e.preventDefault();
-        });
-        
-        // Focus the element to ensure it gets keyboard events too
-        element.focus();
-        
         setIsLoading(false);
         setIsImageLoaded(true);
         console.log("DicomViewer: Image loading process complete, isImageLoaded set to true");
         
+        // Add event capture to ensure Cornerstone gets mouse events
+        element.style.pointerEvents = 'all';
+        element.style.touchAction = 'none'; // Prevent default touch actions
+        
+        // Force Cornerstone to be ready for mouse events
+        cornerstone.resize(element);
       } catch (error) {
         // Check if component is still mounted
         if (!isMounted.current) return;
@@ -504,12 +455,6 @@ export const DicomViewer = ({
           ref={viewerRef} 
           className={`w-full h-full ${className || ""}`}
           data-testid="dicom-viewer"
-          style={{ 
-            position: 'relative', 
-            pointerEvents: 'all', 
-            touchAction: 'none', 
-            zIndex: 10
-          }}
         >
           {isLoading && (
             <div className="flex items-center justify-center h-full text-white bg-opacity-70 bg-black absolute inset-0">

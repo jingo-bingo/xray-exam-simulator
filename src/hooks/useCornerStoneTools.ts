@@ -1,6 +1,14 @@
+
 import { useEffect, useState, RefObject, useCallback } from 'react';
 import cornerstone from 'cornerstone-core';
 import cornerstoneTools from 'cornerstone-tools';
+
+// Add TypeScript declaration to extend HTMLDivElement with our custom property
+declare global {
+  interface HTMLDivElement {
+    cornerstoneToolsRemoveHandlers?: () => void;
+  }
+}
 
 // Define the tools we'll be using
 interface ToolState {

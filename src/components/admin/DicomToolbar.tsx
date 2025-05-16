@@ -109,13 +109,15 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
         </>
       )}
 
-      <style jsx>{`
-        .clicked {
-          transform: scale(0.95);
-          opacity: 0.8;
-          transition: transform 0.1s, opacity 0.1s;
-        }
-      `}</style>
+      <style>
+        {`
+          .clicked {
+            transform: scale(0.95);
+            opacity: 0.8;
+            transition: transform 0.1s, opacity 0.1s;
+          }
+        `}
+      </style>
     </div>
   );
 };

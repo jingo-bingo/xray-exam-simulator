@@ -21,9 +21,22 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
   onResetView,
   error
 }) => {
+  console.log("DicomToolbar: Rendering with activeTool:", activeTool, "isToolsEnabled:", isToolsEnabled);
+  
   if (!isToolsEnabled) {
+    console.log("DicomToolbar: Tools not enabled, not rendering toolbar");
     return null;
   }
+
+  const handleToolClick = (toolName: string) => {
+    console.log(`DicomToolbar: Tool button clicked: ${toolName}`);
+    onActivateTool(toolName);
+  };
+
+  const handleResetClick = () => {
+    console.log("DicomToolbar: Reset button clicked");
+    onResetView();
+  };
 
   return (
     <div className="flex items-center space-x-2 p-2 bg-gray-900 rounded-md mb-2">
@@ -34,7 +47,7 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
           <Button
             variant={activeTool === 'Zoom' ? "default" : "outline"}
             size="sm"
-            onClick={() => onActivateTool('Zoom')}
+            onClick={() => handleToolClick('Zoom')}
             className="text-xs"
             title="Zoom Tool"
           >
@@ -45,7 +58,7 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
           <Button
             variant={activeTool === 'Pan' ? "default" : "outline"}
             size="sm"
-            onClick={() => onActivateTool('Pan')}
+            onClick={() => handleToolClick('Pan')}
             className="text-xs"
             title="Pan Tool"
           >
@@ -56,7 +69,7 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
           <Button
             variant={activeTool === 'Wwwc' ? "default" : "outline"}
             size="sm"
-            onClick={() => onActivateTool('Wwwc')}
+            onClick={() => handleToolClick('Wwwc')}
             className="text-xs"
             title="Window Level Tool"
           >
@@ -67,7 +80,7 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
           <Button
             variant="outline"
             size="sm"
-            onClick={onResetView}
+            onClick={handleResetClick}
             className="text-xs"
             title="Reset View"
           >

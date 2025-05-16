@@ -19,6 +19,7 @@ export function useCornerStoneTools(
   const [error, setError] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(100);
+  const [mouseInputEnabled, setMouseInputEnabled] = useState(false);
 
   // Initialize cornerstone tools once when the component mounts
   useEffect(() => {
@@ -88,6 +89,21 @@ export function useCornerStoneTools(
 
       console.log("DicomTools: Setting up tools on element");
 
+      // CRITICAL FIX: Enable mouse input on the element
+      // This is essential for the tools to respond to mouse events
+      if (!mouseInputEnabled) {
+        console.log("DicomTools: Enabling mouse input on element");
+        cornerstoneTools.mouseInput.enable(element);
+        
+        // Log the mousedown event to verify mouse events are being captured
+        element.addEventListener('mousedown', (event) => {
+          console.log("DicomTools: Mouse down event detected on element", event);
+        });
+        
+        setMouseInputEnabled(true);
+        console.log("DicomTools: Mouse input enabled successfully");
+      }
+
       // Set tool modes based on active tool or set zoom as default
       if (!activeTool) {
         // Default to zoom tool
@@ -110,7 +126,7 @@ export function useCornerStoneTools(
       console.error("DicomTools: Error setting up tools on element:", e);
       setError(`Error setting up DICOM tools: ${e instanceof Error ? e.message : 'Unknown error'}`);
     }
-  }, [viewerRef, isToolsInitialized, activeTool, enabled]);
+  }, [viewerRef, isToolsInitialized, activeTool, enabled, mouseInputEnabled]);
 
   // Function to activate a specific tool
   const activateTool = useCallback((toolName: string) => {
@@ -121,13 +137,25 @@ export function useCornerStoneTools(
 
     try {
       console.log(`DicomTools: Activating ${toolName} tool`);
+      
+      // Log mouse input status before activating tool
+      console.log(`DicomTools: Mouse input enabled status: ${mouseInputEnabled}`);
+      
+      // Enable mouse input if not already enabled (double-check)
+      if (!mouseInputEnabled && viewerRef.current) {
+        console.log("DicomTools: Re-enabling mouse input before activating tool");
+        cornerstoneTools.mouseInput.enable(viewerRef.current);
+        setMouseInputEnabled(true);
+      }
+      
       cornerstoneTools.setToolActive(toolName, { mouseButtonMask: 1 });
       setActiveTool(toolName);
+      console.log(`DicomTools: ${toolName} tool activated successfully`);
     } catch (e) {
       console.error(`DicomTools: Error activating ${toolName} tool:`, e);
       setError(`Failed to activate ${toolName} tool`);
     }
-  }, [isToolsInitialized, viewerRef]);
+  }, [isToolsInitialized, viewerRef, mouseInputEnabled]);
 
   // Function to reset the view to natural size
   const resetView = useCallback(() => {

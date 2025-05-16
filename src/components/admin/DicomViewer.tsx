@@ -9,6 +9,11 @@ import { DicomMetadata } from "./DicomMetadataDisplay";
 import { useCornerStoneTools } from "@/hooks/useCornerStoneTools";
 import { DicomToolbar } from "./DicomToolbar";
 
+// Define custom interface for cornerstone tool events
+interface CornerstoneToolsEvent extends Event {
+  detail?: any;
+}
+
 // Track global initialization state
 let cornerstoneInitialized = false;
 
@@ -97,6 +102,7 @@ export const DicomViewer = ({
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const loadingAttemptRef = useRef<AbortController | null>(null);
   const currentImageUrlRef = useRef<string | null>(null);
+  const debugOverlayRef = useRef<HTMLDivElement | null>(null);
   const [containerStyle, setContainerStyle] = useState<React.CSSProperties>({
     width: '100%',
     height: '100%',
@@ -132,6 +138,11 @@ export const DicomViewer = ({
           console.warn("DicomViewer: Error during cleanup:", error);
         }
       }
+      
+      // Remove debug overlay if it exists
+      if (debugOverlayRef.current && debugOverlayRef.current.parentNode) {
+        debugOverlayRef.current.parentNode.removeChild(debugOverlayRef.current);
+      }
     };
   }, [onError]);
   
@@ -144,6 +155,119 @@ export const DicomViewer = ({
     resetView,
     zoomLevel
   } = useCornerStoneTools(viewerRef, isImageLoaded);
+
+  // Add debug overlay with manual controls
+  const addDebugOverlay = (element: HTMLDivElement) => {
+    // Check if we already have a debug overlay
+    if (debugOverlayRef.current) return;
+    
+    // Create debug overlay container
+    const debugContainer = document.createElement('div');
+    debugContainer.style.position = 'absolute';
+    debugContainer.style.bottom = '10px';
+    debugContainer.style.right = '10px';
+    debugContainer.style.zIndex = '1000';
+    debugContainer.style.background = 'rgba(0,0,0,0.7)';
+    debugContainer.style.padding = '5px';
+    debugContainer.style.borderRadius = '5px';
+    debugContainer.style.fontSize = '10px';
+
+    const createButton = (name: string, action: () => void) => {
+      const btn = document.createElement('button');
+      btn.textContent = name;
+      btn.style.margin = '2px';
+      btn.style.padding = '5px 10px';
+      btn.style.background = '#444';
+      btn.style.color = 'white';
+      btn.style.border = 'none';
+      btn.style.borderRadius = '3px';
+      btn.style.cursor = 'pointer';
+      btn.onclick = action;
+      debugContainer.appendChild(btn);
+    };
+
+    // Add manual control buttons for direct viewport manipulation
+    createButton('Zoom +', () => {
+      try {
+        const viewport = cornerstone.getViewport(element);
+        viewport.scale *= 1.2;
+        cornerstone.setViewport(element, viewport);
+        console.log('Manual zoom in:', viewport.scale);
+      } catch (e) {
+        console.error("Debug zoom in error:", e);
+      }
+    });
+
+    createButton('Zoom -', () => {
+      try {
+        const viewport = cornerstone.getViewport(element);
+        viewport.scale /= 1.2;
+        cornerstone.setViewport(element, viewport);
+        console.log('Manual zoom out:', viewport.scale);
+      } catch (e) {
+        console.error("Debug zoom out error:", e);
+      }
+    });
+
+    createButton('Pan ←', () => {
+      try {
+        const viewport = cornerstone.getViewport(element);
+        viewport.translation.x -= 10;
+        cornerstone.setViewport(element, viewport);
+        console.log('Manual pan left:', viewport.translation);
+      } catch (e) {
+        console.error("Debug pan left error:", e);
+      }
+    });
+
+    createButton('Pan →', () => {
+      try {
+        const viewport = cornerstone.getViewport(element);
+        viewport.translation.x += 10;
+        cornerstone.setViewport(element, viewport);
+        console.log('Manual pan right:', viewport.translation);
+      } catch (e) {
+        console.error("Debug pan right error:", e);
+      }
+    });
+
+    createButton('Reset', () => {
+      try {
+        cornerstone.reset(element);
+        console.log('Manual reset');
+      } catch (e) {
+        console.error("Debug reset error:", e);
+      }
+    });
+
+    // Add debug status display
+    const statusDisplay = document.createElement('div');
+    statusDisplay.style.color = 'white';
+    statusDisplay.style.margin = '5px 0';
+    statusDisplay.style.fontSize = '9px';
+    statusDisplay.textContent = `Active tool: ${activeTool || 'None'}, Zoom: ${Math.round(zoomLevel * 100)}%`;
+    debugContainer.appendChild(statusDisplay);
+
+    // Update status periodically
+    const updateStatus = () => {
+      if (isMounted.current && statusDisplay) {
+        try {
+          const viewport = cornerstone.getViewport(element);
+          statusDisplay.textContent = `Active tool: ${activeTool || 'None'}, Zoom: ${Math.round((viewport?.scale || 1) * 100)}%`;
+        } catch (e) {
+          // Silently fail
+        }
+        setTimeout(updateStatus, 500);
+      }
+    };
+    updateStatus();
+
+    // Add to DOM
+    element.parentNode?.appendChild(debugContainer);
+    debugOverlayRef.current = debugContainer;
+    
+    console.log("DicomViewer: Added debug overlay");
+  };
 
   // Update container dimensions based on image size
   const updateContainerSize = (image: any) => {
@@ -223,6 +347,63 @@ export const DicomViewer = ({
     }
   };
   
+  // Add additional event logging for better debugging
+  const setupEventLogging = (element: HTMLDivElement) => {
+    const logEvent = (event: Event, name: string) => {
+      console.log(`DicomViewer: ${name} event`, {
+        type: event.type,
+        target: event.target,
+        currentTarget: event.currentTarget,
+        eventPhase: event.eventPhase,
+        ...(event instanceof MouseEvent ? {
+          clientX: event.clientX,
+          clientY: event.clientY,
+          button: event.button,
+          buttons: event.buttons,
+          ctrlKey: event.ctrlKey,
+          shiftKey: event.shiftKey,
+        } : {}),
+        ...(event instanceof WheelEvent ? {
+          deltaX: event.deltaX,
+          deltaY: event.deltaY,
+          deltaMode: event.deltaMode,
+          ctrlKey: event.ctrlKey,
+        } : {})
+      });
+    };
+
+    // Log core mouse events
+    element.addEventListener('mousedown', e => logEvent(e, 'mousedown'), true);
+    element.addEventListener('mousemove', e => logEvent(e, 'mousemove'), true);
+    element.addEventListener('mouseup', e => logEvent(e, 'mouseup'), true);
+    element.addEventListener('wheel', e => logEvent(e, 'wheel'), true);
+
+    // Log cornerstone-specific events
+    element.addEventListener('cornerstonetoolsmousedown', 
+      (e: Event) => console.log('cornerstonetoolsmousedown event:', (e as CornerstoneToolsEvent).detail), true);
+    element.addEventListener('cornerstonetoolsmousemove', 
+      (e: Event) => console.log('cornerstonetoolsmousemove event:', (e as CornerstoneToolsEvent).detail), true);
+    element.addEventListener('cornerstonetoolsmouseup', 
+      (e: Event) => console.log('cornerstonetoolsmouseup event:', (e as CornerstoneToolsEvent).detail), true);
+      
+    console.log("DicomViewer: Event logging configured");
+  };
+  
+  // Configure element for optimal trackpad interaction
+  const setupTrackpadSupport = (element: HTMLDivElement) => {
+    // Essential styles for proper event capture and preventing browser gestures
+    element.style.width = '100%';
+    element.style.height = '100%';
+    element.style.position = 'relative';
+    element.style.outline = 'none';
+    element.style.WebkitUserSelect = 'none';
+    element.style.userSelect = 'none';
+    element.style.touchAction = 'none'; // Critical for proper trackpad/touch handling
+    element.tabIndex = 0; // Make element focusable
+    
+    console.log("DicomViewer: Trackpad support configured");
+  };
+  
   // Load DICOM image when URL changes
   useEffect(() => {
     const loadImage = async () => {
@@ -266,6 +447,12 @@ export const DicomViewer = ({
         console.log("DicomViewer: Enabling cornerstone on element");
         cornerstone.enable(element);
         console.log("DicomViewer: Cornerstone enabled on element");
+        
+        // Configure the element for better trackpad support
+        setupTrackpadSupport(element);
+        
+        // Set up event logging
+        setupEventLogging(element);
       } catch (error) {
         console.error("DicomViewer: Error enabling cornerstone:", error);
         if (!isMounted.current) return;
@@ -412,6 +599,9 @@ export const DicomViewer = ({
         element.style.pointerEvents = 'all';
         element.style.touchAction = 'none'; // Prevent default touch actions
         
+        // Add debug overlay with manual controls
+        addDebugOverlay(element);
+        
         // Force Cornerstone to be ready for mouse events
         cornerstone.resize(element);
       } catch (error) {
@@ -450,11 +640,12 @@ export const DicomViewer = ({
         />
       )}
       
-      <div style={containerStyle} className="dicom-container">
+      <div style={containerStyle} className="dicom-container relative">
         <div 
           ref={viewerRef} 
-          className={`w-full h-full ${className || ""}`}
+          className={`w-full h-full ${className || ""} focus:outline-none`}
           data-testid="dicom-viewer"
+          tabIndex={0}
         >
           {isLoading && (
             <div className="flex items-center justify-center h-full text-white bg-opacity-70 bg-black absolute inset-0">

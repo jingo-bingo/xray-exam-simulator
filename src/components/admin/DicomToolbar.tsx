@@ -74,7 +74,7 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
       {/* Add the style tag as a regular style element */}
       <style dangerouslySetInnerHTML={{ __html: clickAnimationStyle }} />
       
-      <div className="flex items-center space-x-2 p-2 bg-gray-900 rounded-md mb-2">
+      <div className="flex items-center space-x-2 p-2 bg-gray-900 rounded-md mb-2 relative">
         {error ? (
           <div className="text-red-400 text-sm flex-1">{error}</div>
         ) : (
@@ -84,7 +84,7 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
               size="sm"
               onClick={() => handleToolClick('Zoom')}
               className="text-xs relative"
-              title="Zoom Tool"
+              title="Zoom Tool (Hold and drag up/down)"
               data-tool="Zoom"
             >
               <ZoomIn className="h-4 w-4 mr-1" />
@@ -96,7 +96,7 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
               size="sm"
               onClick={() => handleToolClick('Pan')}
               className="text-xs relative"
-              title="Pan Tool"
+              title="Pan Tool (Hold and drag to move image)"
               data-testid="pan-tool-button"
               data-tool="Pan"
             >
@@ -109,7 +109,7 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
               size="sm"
               onClick={() => handleToolClick('Wwwc')}
               className="text-xs relative"
-              title="Window Level Tool"
+              title="Window Level Tool (Hold and drag to adjust brightness/contrast)"
               data-tool="Wwwc"
             >
               <ZoomOut className="h-4 w-4 mr-1" />
@@ -132,6 +132,10 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
               <Badge variant="outline" className="text-xs">
                 Zoom: {Math.round(zoomLevel * 100)}%
               </Badge>
+            </div>
+            
+            <div className="absolute -bottom-6 left-0 right-0 text-center text-xs text-gray-400">
+              Using trackpad? Hold Ctrl+scroll for zoom, regular scroll for pan.
             </div>
           </>
         )}

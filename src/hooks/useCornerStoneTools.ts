@@ -3,6 +3,17 @@ import { useEffect, useState, RefObject, useCallback, useRef } from 'react';
 import cornerstone from 'cornerstone-core';
 import cornerstoneTools from 'cornerstone-tools';
 
+// Define custom event interface for cornerstone tool events
+interface CornerstoneToolsMouseEvent extends Event {
+  detail?: {
+    element: HTMLElement;
+    currentPoints: {
+      canvas: { x: number; y: number };
+      image: { x: number; y: number };
+    };
+  };
+}
+
 // Add TypeScript declaration to extend HTMLDivElement with our custom property
 declare global {
   interface HTMLDivElement {
@@ -46,17 +57,25 @@ export function useCornerStoneTools(
       cornerstoneTools.external.cornerstone = cornerstone;
       console.log("DicomTools: External cornerstone set");
 
-      // Initialize tools with configuration
+      // Initialize tools with configuration for improved trackpad support
       cornerstoneTools.init({
         globalToolSyncEnabled: true,
         showSVGCursors: true,
         mouseEnabled: true,
+        touchEnabled: true, // Enable touch to support trackpad better
       });
-      console.log("DicomTools: Tools initialized successfully");
+      console.log("DicomTools: Tools initialized successfully with trackpad support");
       
       // Add base tools to the registry
       console.log("DicomTools: Adding tools to registry");
-      cornerstoneTools.addTool(cornerstoneTools.ZoomTool);
+      cornerstoneTools.addTool(cornerstoneTools.ZoomTool, {
+        configuration: {
+          invert: false,
+          preventZoomOutsideImage: false,
+          minScale: 0.1,
+          maxScale: 20.0
+        }
+      });
       cornerstoneTools.addTool(cornerstoneTools.PanTool);
       cornerstoneTools.addTool(cornerstoneTools.WwwcTool);
       console.log("DicomTools: Tools added to registry successfully");
@@ -113,6 +132,13 @@ export function useCornerStoneTools(
       cornerstoneTools.addToolForElement(element, cornerstoneTools.WwwcTool);
       console.log("DicomTools: Added tools to specific element");
 
+      // Ensure element can capture all events
+      element.tabIndex = 0; // Make element focusable
+      element.style.outline = 'none';
+      element.style.WebkitUserSelect = 'none';
+      element.style.userSelect = 'none';
+      element.style.touchAction = 'none'; // Critical for proper trackpad/touch handling
+
       // Set default tool to Zoom with left mouse button
       if (!activeTool) {
         try {
@@ -126,7 +152,7 @@ export function useCornerStoneTools(
       }
 
       // Listen for cornerstone events to update zoom level
-      const updateZoomLevel = (event: any) => {
+      const updateZoomLevel = (event: Event) => {
         try {
           const viewport = cornerstone.getViewport(element);
           if (viewport) {
@@ -156,14 +182,68 @@ export function useCornerStoneTools(
         });
       };
       
-      // Store reference to handler
+      // Listen for cornerstone tools mouse events to debug tool usage
+      const toolsMouseDownHandler = (event: CornerstoneToolsMouseEvent) => {
+        console.log("DicomTools: cornerstone tools mouse down", {
+          detail: event.detail,
+          currentTool: activeTool
+        });
+      };
+
+      // Add wheel event handler for trackpad support
+      const wheelHandler = (event: WheelEvent) => {
+        // Log wheel event for debugging
+        console.log("DicomTools: Wheel event detected", {
+          deltaX: event.deltaX,
+          deltaY: event.deltaY,
+          ctrlKey: event.ctrlKey,
+          currentTool: activeTool
+        });
+
+        // Direct manipulation with wheel for trackpad users
+        if (event.ctrlKey) {
+          // Ctrl+scroll is zoom (pinch gesture on trackpad)
+          event.preventDefault();
+          const viewport = cornerstone.getViewport(element);
+          if (viewport) {
+            // Zoom factor based on wheel delta
+            const zoomFactor = event.deltaY < 0 ? 1.1 : 0.9;
+            viewport.scale *= zoomFactor;
+            cornerstone.setViewport(element, viewport);
+            console.log("DicomTools: Manual wheel zoom applied", viewport.scale);
+          }
+        } else if (Math.abs(event.deltaX) > 0 || Math.abs(event.deltaY) > 0) {
+          // Regular scroll for panning (two-finger swipe on trackpad)
+          event.preventDefault();
+          const viewport = cornerstone.getViewport(element);
+          if (viewport) {
+            // Pan based on wheel deltas
+            viewport.translation.x -= event.deltaX / 5;
+            viewport.translation.y -= event.deltaY / 5;
+            cornerstone.setViewport(element, viewport);
+            console.log("DicomTools: Manual wheel pan applied", viewport.translation);
+          }
+        }
+      };
+      
+      // Store references to handlers
       eventHandlersRef.current.mouseDownHandler = mouseDownHandler;
+      eventHandlersRef.current.toolsMouseDownHandler = toolsMouseDownHandler as EventListener;
+      eventHandlersRef.current.wheelHandler = wheelHandler;
       
       // Add mouse event listeners directly to the element
       element.removeEventListener('mousedown', mouseDownHandler);
       element.addEventListener('mousedown', mouseDownHandler);
+
+      // Add cornerstone tools specific event listeners
+      element.removeEventListener('cornerstonetoolsmousedown', toolsMouseDownHandler as EventListener);
+      element.addEventListener('cornerstonetoolsmousedown', toolsMouseDownHandler as EventListener);
       
-      console.log("DicomTools: Tool setup complete");
+      // Add wheel event listener for trackpad support with { passive: false } to allow preventDefault
+      element.removeEventListener('wheel', wheelHandler);
+      element.addEventListener('wheel', wheelHandler, { passive: false });
+      
+      console.log("DicomTools: Tool setup complete with enhanced trackpad support");
     } catch (e) {
       console.error("DicomTools: Error setting up tools on element:", e);
       setError(`Error setting up DICOM tools: ${e instanceof Error ? e.message : 'Unknown error'}`);
@@ -178,7 +258,15 @@ export function useCornerStoneTools(
           // Remove all event listeners using our stored references
           Object.entries(eventHandlersRef.current).forEach(([name, handler]) => {
             console.log(`DicomTools: Removing event listener ${name}`);
-            element.removeEventListener(name === 'zoomHandler' ? 'cornerstoneimagerendered' : 'mousedown', handler);
+            if (name === 'zoomHandler') {
+              element.removeEventListener('cornerstoneimagerendered', handler);
+            } else if (name === 'toolsMouseDownHandler') {
+              element.removeEventListener('cornerstonetoolsmousedown', handler);
+            } else if (name === 'wheelHandler') {
+              element.removeEventListener('wheel', handler);
+            } else {
+              element.removeEventListener('mousedown', handler);
+            }
           });
           
           // Clear handlers

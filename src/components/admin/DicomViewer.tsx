@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from "react";
 import cornerstone from "cornerstone-core";
 import cornerstoneWebImageLoader from "cornerstone-web-image-loader";
@@ -7,27 +8,6 @@ import dicomParser from "dicom-parser";
 import { DicomMetadata } from "./DicomMetadataDisplay";
 import { useCornerStoneTools } from "@/hooks/useCornerStoneTools";
 import { DicomToolbar } from "./DicomToolbar";
-
-// Define types for cornerstone custom events
-interface CornerstoneToolsMouseEvent extends Event {
-  detail: {
-    element: HTMLElement;
-    currentPoints: {
-      canvas: { x: number; y: number };
-      image: { x: number; y: number };
-    };
-    lastPoints: {
-      canvas: { x: number; y: number };
-      image: { x: number; y: number };
-    };
-    deltaPoints?: {
-      canvas: { x: number; y: number };
-      image: { x: number; y: number };
-    };
-    buttons?: number;
-    which?: number;
-  };
-}
 
 // Track global initialization state
 let cornerstoneInitialized = false;
@@ -69,16 +49,9 @@ function initializeCornerstone() {
     // CRITICAL: Initialize cornerstone tools
     console.log("DicomViewer: Initializing cornerstone tools");
     cornerstoneTools.init({
+      showSVGCursors: true,
       mouseEnabled: true,
-      touchEnabled: true,
-      globalToolSyncEnabled: false, 
-      showSVGCursors: true
     });
-    
-    // Register the tools we need
-    cornerstoneTools.addTool(cornerstoneTools.PanTool);
-    cornerstoneTools.addTool(cornerstoneTools.ZoomTool);
-    cornerstoneTools.addTool(cornerstoneTools.WwwcTool);
     
     // Configure WADO image loader with conservative memory settings
     cornerstoneWADOImageLoader.configure({
@@ -310,17 +283,6 @@ export const DicomViewer = ({
         return;
       }
       
-      // Ensure element is properly configured for interactions
-      element.style.touchAction = 'none';
-      element.style.pointerEvents = 'all';
-      element.tabIndex = 0;
-      element.dataset.cornerstoneEnabled = 'true';
-      
-      // Prevent context menu on right-click if using right mouse button for tools
-      element.addEventListener('contextmenu', function(e) {
-        e.preventDefault();
-      });
-      
       // Determine image type based on URL
       const getImageId = (url: string) => {
         if (url.startsWith('http')) {
@@ -442,26 +404,32 @@ export const DicomViewer = ({
         console.log("DicomViewer: Displaying image on element");
         cornerstone.displayImage(element, image);
         console.log("DicomViewer: Image displayed successfully");
-
-        // Set up the tools directly on the element
+        
+        // CRITICAL: Initialize tools directly on the element
         try {
-          console.log("DicomViewer: Setting up tools on element after image display");
+          console.log("DicomViewer: Directly initializing tools after image display");
           
-          // Set Pan as the default active tool with left mouse button
-          cornerstoneTools.setToolActive('Pan', { mouseButtonMask: 1 });
+          // Remove any existing tools first
+          try {
+            cornerstoneTools.removeToolsForElement(element);
+          } catch (removeError) {
+            console.log("DicomViewer: Error removing existing tools (may be expected):", removeError);
+          }
           
-          // Middle mouse button (button 1) for Zoom
-          cornerstoneTools.setToolActive('Zoom', { mouseButtonMask: 2 });
+          // Add essential tools
+          cornerstoneTools.addToolForElement(element, cornerstoneTools.PanTool);
+          cornerstoneTools.addToolForElement(element, cornerstoneTools.ZoomTool);
+          cornerstoneTools.addToolForElement(element, cornerstoneTools.WwwcTool);
           
-          // Right mouse button (button 2) for Window Level
-          cornerstoneTools.setToolActive('Wwwc', { mouseButtonMask: 4 });
+          // Set Pan as the default tool
+          cornerstoneTools.setToolActiveForElement(element, 'Pan', { mouseButtonMask: 1 });
           
-          console.log("DicomViewer: Direct tool setup complete");
-          
-          // Force cornerstone to update the image
+          // Force an update to make sure the tool is active
           cornerstone.updateImage(element);
+          
+          console.log("DicomViewer: Tools directly initialized");
         } catch (toolError) {
-          console.error("DicomViewer: Error setting up tools:", toolError);
+          console.error("DicomViewer: Error directly initializing tools:", toolError);
         }
         
         // Notify parent about metadata
@@ -470,28 +438,31 @@ export const DicomViewer = ({
           onMetadataLoaded(metadata);
         }
         
-        setIsLoading(false);
-        setIsImageLoaded(true);
-        console.log("DicomViewer: Image loading process complete, isImageLoaded set to true");
+        // Add event capture to ensure Cornerstone gets mouse events
+        element.style.pointerEvents = 'all'; 
+        element.tabIndex = 0; // Make element focusable
+        element.style.outline = 'none'; // Remove outline when focused
+        element.style.touchAction = 'none'; // Prevent default touch actions
         
-        // Add diagnostic logging for mouse events
-        element.addEventListener('mousedown', (e) => {
-          console.log("DicomViewer: Native mousedown event:", {
+        // Make sure mouse events propagate correctly
+        element.addEventListener('mousedown', function(e) {
+          console.log("DicomViewer: Native mousedown event captured", {
             button: e.button,
             buttons: e.buttons,
             clientX: e.clientX,
             clientY: e.clientY
           });
+          // Prevent default only for middle mouse to avoid scrolling issues
+          if (e.button === 1) e.preventDefault();
         });
         
-        element.addEventListener('cornerstonetoolsmousedown', (e: Event) => {
-          // Cast the event to our custom event interface
-          const csEvent = e as CornerstoneToolsMouseEvent;
-          console.log("DicomViewer: Cornerstone tool mousedown event:", csEvent.detail);
-        });
-        
-        // Focus the element to make sure it gets keyboard events
+        // Focus the element to ensure it gets keyboard events too
         element.focus();
+        
+        setIsLoading(false);
+        setIsImageLoaded(true);
+        console.log("DicomViewer: Image loading process complete, isImageLoaded set to true");
+        
       } catch (error) {
         // Check if component is still mounted
         if (!isMounted.current) return;
@@ -533,6 +504,12 @@ export const DicomViewer = ({
           ref={viewerRef} 
           className={`w-full h-full ${className || ""}`}
           data-testid="dicom-viewer"
+          style={{ 
+            position: 'relative', 
+            pointerEvents: 'all', 
+            touchAction: 'none', 
+            zIndex: 10
+          }}
         >
           {isLoading && (
             <div className="flex items-center justify-center h-full text-white bg-opacity-70 bg-black absolute inset-0">

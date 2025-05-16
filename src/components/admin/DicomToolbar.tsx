@@ -55,23 +55,15 @@ export const DicomToolbar: React.FC<DicomToolbarProps> = ({
     onResetView();
   };
 
-  // Convert tool names to match what's expected in the cornerstone-tools API
+  // Direct tool name comparison
   const getButtonVariant = (buttonTool: string) => {
     if (!activeTool) return "outline";
-    
-    // Map button tools to cornerstone tool names for comparison
-    const toolMapping: Record<string, string> = {
-      'Zoom': 'Zoom',
-      'Pan': 'Pan',
-      'Wwwc': 'Wwwc'
-    };
-    
-    return activeTool === toolMapping[buttonTool] ? "default" : "outline";
+    return activeTool === buttonTool ? "default" : "outline";
   };
 
   return (
     <>
-      {/* Add the style tag as a regular style element */}
+      {/* Add the style tag for button animations */}
       <style dangerouslySetInnerHTML={{ __html: clickAnimationStyle }} />
       
       <div className="flex items-center space-x-2 p-2 bg-gray-900 rounded-md mb-2">

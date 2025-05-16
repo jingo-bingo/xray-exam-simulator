@@ -38,7 +38,7 @@ export function createEventHandlers(element: HTMLDivElement, setZoomLevel: (leve
     });
   };
 
-  // Add wheel event handler for trackpad support
+  // Add wheel event handler for trackpad support - MODIFIED TO RESPECT ACTIVE TOOL
   const wheelHandler = (event: WheelEvent) => {
     // Log wheel event for debugging
     console.log("DicomTools: Wheel event detected", {
@@ -48,30 +48,48 @@ export function createEventHandlers(element: HTMLDivElement, setZoomLevel: (leve
       currentTool: activeTool
     });
 
-    // Direct manipulation with wheel for trackpad users
+    // Only handle wheel events if we have a valid tool selected
+    if (!activeTool) {
+      console.log("DicomTools: No active tool, ignoring wheel event");
+      return; // No active tool, don't handle the event
+    }
+
+    // Direct manipulation with wheel for trackpad users based on active tool
     if (event.ctrlKey) {
-      // Ctrl+scroll is zoom (pinch gesture on trackpad)
-      event.preventDefault();
-      const viewport = cornerstone.getViewport(element);
-      if (viewport) {
-        // Zoom factor based on wheel delta
-        const zoomFactor = event.deltaY < 0 ? 1.1 : 0.9;
-        viewport.scale *= zoomFactor;
-        cornerstone.setViewport(element, viewport);
-        console.log("DicomTools: Manual wheel zoom applied", viewport.scale);
+      // Ctrl+scroll should only work for Zoom tool
+      if (activeTool === 'Zoom') {
+        event.preventDefault();
+        const viewport = cornerstone.getViewport(element);
+        if (viewport) {
+          // Zoom factor based on wheel delta
+          const zoomFactor = event.deltaY < 0 ? 1.1 : 0.9;
+          viewport.scale *= zoomFactor;
+          cornerstone.setViewport(element, viewport);
+          console.log("DicomTools: Manual wheel zoom applied with Zoom tool", viewport.scale);
+        }
+      } else {
+        console.log(`DicomTools: Ignoring Ctrl+wheel because active tool is ${activeTool}, not Zoom`);
       }
     } else if (Math.abs(event.deltaX) > 0 || Math.abs(event.deltaY) > 0) {
-      // Regular scroll for panning (two-finger swipe on trackpad)
-      event.preventDefault();
-      const viewport = cornerstone.getViewport(element);
-      if (viewport) {
-        // Pan based on wheel deltas
-        viewport.translation.x -= event.deltaX / 5;
-        viewport.translation.y -= event.deltaY / 5;
-        cornerstone.setViewport(element, viewport);
-        console.log("DicomTools: Manual wheel pan applied", viewport.translation);
+      // Regular scroll for panning (two-finger swipe on trackpad) - only for Pan tool
+      if (activeTool === 'Pan') {
+        event.preventDefault();
+        const viewport = cornerstone.getViewport(element);
+        if (viewport) {
+          // Pan based on wheel deltas
+          viewport.translation.x -= event.deltaX / 5;
+          viewport.translation.y -= event.deltaY / 5;
+          cornerstone.setViewport(element, viewport);
+          console.log("DicomTools: Manual wheel pan applied with Pan tool", viewport.translation);
+        }
+      } else {
+        console.log(`DicomTools: Ignoring wheel pan because active tool is ${activeTool}, not Pan`);
       }
     }
+
+    // Note: We're intentionally not handling wheel events for Wwwc (Window Level) tool
+    // as this tool is better used with mouse drag. Adding trackpad support for Wwwc
+    // would require a more complex implementation.
   };
   
   // Store references to handlers
@@ -92,7 +110,7 @@ export function createEventHandlers(element: HTMLDivElement, setZoomLevel: (leve
   element.addEventListener('cornerstonetoolsmousedown', toolsMouseDownHandler as EventListener);
   element.addEventListener('wheel', wheelHandler, { passive: false });
   
-  console.log("DicomTools: Event handlers set up with enhanced trackpad support");
+  console.log("DicomTools: Event handlers set up with tool-aware trackpad support");
   
   return eventHandlers;
 }

@@ -19,7 +19,7 @@ export const useCaseSave = (
   const { user } = useAuth();
 
   const saveCaseMutation = useMutation({
-    mutationFn: async (data: Case) => {
+    mutationFn: async (data: Case & { id?: string }) => {
       console.log("useCaseSave: Starting case save mutation");
       
       try {
@@ -94,10 +94,28 @@ export const useCaseSave = (
           console.log("useCaseSave: Case created successfully with ID:", caseId);
         } else {
           console.log("useCaseSave: Updating case", data);
+          // For existing cases, we need the id property to update the correct record
+          if (!data.id) {
+            console.error("useCaseSave: Missing case ID for update");
+            throw new Error("Cannot update case: Missing ID");
+          }
+
+          const caseId = data.id;
           const { data: updatedCase, error } = await supabase
             .from("cases")
-            .update(data)
-            .eq("id", data.id as string)
+            .update({
+              title: data.title,
+              description: data.description,
+              region: data.region,
+              age_group: data.age_group,
+              difficulty: data.difficulty,
+              is_free_trial: data.is_free_trial,
+              published: data.published,
+              clinical_history: data.clinical_history,
+              dicom_path: data.dicom_path,
+              case_number: data.case_number
+            })
+            .eq("id", caseId)
             .select()
             .single();
           
@@ -106,7 +124,6 @@ export const useCaseSave = (
             throw error;
           }
           
-          caseId = data.id as string;
           console.log("useCaseSave: Case updated successfully");
         }
         
@@ -137,7 +154,7 @@ export const useCaseSave = (
   return {
     saveCaseMutation,
     isPendingSave: saveCaseMutation.isPending,
-    submitCase: (caseData: Case) => {
+    submitCase: (caseData: Case & { id?: string }) => {
       console.log("useCaseSave: Submitting case", caseData);
       saveCaseMutation.mutate(caseData);
     }

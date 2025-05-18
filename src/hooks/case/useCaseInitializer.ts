@@ -7,7 +7,7 @@ import { Case } from "@/components/admin/CaseForm";
 
 export interface UseCaseInitializerOptions {
   id?: string;
-  onCaseLoaded?: (caseData: Case) => void;
+  onCaseLoaded?: (caseData: Case & { id: string }) => void;
   onQuestionsLoad?: (caseId: string) => void;
 }
 

@@ -58,7 +58,15 @@ export const useCaseEditor = (id: string | undefined, navigateCallback: (path: s
   const submitCase = () => {
     console.log("useCaseEditor: Submitting case", caseData);
     console.log("useCaseEditor: With questions", questions);
-    saveCaseMutation(caseData);
+    // For existing cases, ensure we pass the id from loadedCase
+    if (!isNewCase && loadedCase) {
+      saveCaseMutation({
+        ...caseData,
+        id: loadedCase.id
+      });
+    } else {
+      saveCaseMutation(caseData);
+    }
   };
   
   return {

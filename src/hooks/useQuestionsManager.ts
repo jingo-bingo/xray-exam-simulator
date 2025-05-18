@@ -34,7 +34,7 @@ export const useQuestionsManager = (caseId?: string) => {
     console.log("useQuestionsManager: Adding new question");
     const newQuestion: Question = {
       question_text: "",
-      type: "multiple_choice",
+      type: "report", // Default to 'report' type
       display_order: questions.length + 1,
       isNew: true
     };
@@ -110,7 +110,6 @@ export const useQuestionsManager = (caseId?: string) => {
             question_text: question.question_text,
             type: question.type,
             display_order: question.display_order,
-            correct_answer: question.correct_answer,
             explanation: question.explanation
           })
           .eq("id", question.id);

@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { X } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 
@@ -16,7 +15,6 @@ export interface Question {
   question_text: string;
   type: QuestionType;
   display_order: number;
-  correct_answer?: string | null;
   explanation?: string | null;
   isNew?: boolean;
   isDeleted?: boolean;
@@ -62,46 +60,18 @@ export const QuestionForm = ({ question, index, onUpdate, onDelete }: QuestionFo
             value={localQuestion.question_text} 
             onChange={(e) => handleChange("question_text", e.target.value)}
             rows={3}
+            placeholder="e.g., Provide a short report for this case"
           />
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor={`question-type-${index}`}>Question Type</Label>
-          <Select 
-            value={localQuestion.type} 
-            onValueChange={(value: QuestionType) => handleChange("type", value)}
-          >
-            <SelectTrigger id={`question-type-${index}`}>
-              <SelectValue placeholder="Select question type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="report">Report</SelectItem>
-              <SelectItem value="management">Management</SelectItem>
-              <SelectItem value="multiple_choice">Multiple Choice</SelectItem>
-              <SelectItem value="short_answer">Short Answer</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        {(localQuestion.type === "multiple_choice" || localQuestion.type === "short_answer") && (
-          <div className="space-y-2">
-            <Label htmlFor={`correct-answer-${index}`}>Correct Answer</Label>
-            <Textarea 
-              id={`correct-answer-${index}`}
-              value={localQuestion.correct_answer || ''} 
-              onChange={(e) => handleChange("correct_answer", e.target.value)}
-              rows={2}
-            />
-          </div>
-        )}
-        
-        <div className="space-y-2">
-          <Label htmlFor={`explanation-${index}`}>Explanation</Label>
+          <Label htmlFor={`explanation-${index}`}>Model Answer/Explanation</Label>
           <Textarea 
             id={`explanation-${index}`}
             value={localQuestion.explanation || ''} 
             onChange={(e) => handleChange("explanation", e.target.value)}
-            rows={2}
+            rows={3}
+            placeholder="Provide a model answer or explanation for reference"
           />
         </div>
         

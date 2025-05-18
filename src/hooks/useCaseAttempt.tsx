@@ -44,7 +44,8 @@ export function useCaseAttempt(caseId: string | undefined, userId: string | unde
           console.log("useCaseAttempt: Found existing attempt:", data);
           setState({
             attemptId: data.id,
-            status: data.status,
+            // Here's the fix - ensure we only use allowed status values
+            status: data.status === 'in_progress' || data.status === 'completed' ? data.status : 'in_progress',
             isLoading: false,
             error: null
           });

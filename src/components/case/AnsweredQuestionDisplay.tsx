@@ -1,6 +1,6 @@
 
 import React from "react";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, X } from "lucide-react";
 import { type AnswerSubmission } from "@/hooks/useQuestions";
 
 interface AnsweredQuestionDisplayProps {
@@ -32,10 +32,10 @@ export const AnsweredQuestionDisplay: React.FC<AnsweredQuestionDisplayProps> = (
             {answer.isCorrect ? (
               <CheckCircle2 className="h-5 w-5 text-green-500 mr-2" />
             ) : (
-              <div className="h-5 w-5 text-red-500 mr-2">✗</div>
+              <X className="h-5 w-5 text-red-500 mr-2" />
             )}
             <p className={answer.isCorrect ? "text-green-400" : "text-red-400"}>
-              {answer.feedback}
+              {answer.feedback || (answer.isCorrect ? 'Correct' : 'Incorrect')}
             </p>
           </div>
           

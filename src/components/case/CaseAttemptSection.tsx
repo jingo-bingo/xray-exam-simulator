@@ -5,6 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, Play } from "lucide-react";
 import CaseQuestions from "@/components/CaseQuestions";
+import { CompletedCaseReview } from "./CompletedCaseReview";
 
 interface CaseAttemptSectionProps {
   caseId: string;
@@ -64,30 +65,34 @@ export const CaseAttemptSection = ({ caseId, userId }: CaseAttemptSectionProps) 
   // Case completed
   if (status === 'completed') {
     return (
-      <Card className="bg-gray-800 border-gray-700">
-        <CardHeader>
-          <CardTitle className="text-radiology-light">Case Completed</CardTitle>
-        </CardHeader>
-        <CardContent className="text-center py-8">
-          <div className="flex flex-col items-center justify-center">
-            <div className="rounded-full bg-green-900/30 p-3 mb-4">
-              <CheckCircle2 className="h-10 w-10 text-green-500" />
+      <div className="space-y-4">
+        <Card className="bg-gray-800 border-gray-700">
+          <CardHeader>
+            <CardTitle className="text-radiology-light">Case Completed</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center py-6">
+            <div className="flex flex-col items-center justify-center">
+              <div className="rounded-full bg-green-900/30 p-3 mb-4">
+                <CheckCircle2 className="h-10 w-10 text-green-500" />
+              </div>
+              <h3 className="text-xl font-bold text-radiology-light mb-2">
+                Great job!
+              </h3>
+              <p className="text-gray-400 max-w-md mx-auto">
+                You've completed this case study. Review your answers below.
+              </p>
             </div>
-            <h3 className="text-xl font-bold text-radiology-light mb-2">
-              Great job!
-            </h3>
-            <p className="text-gray-400 max-w-md mx-auto mb-6">
-              You've completed this case study. You can review your answers above or return to the cases list.
-            </p>
-            <Button 
-              variant="outline" 
-              onClick={() => window.location.href = "/cases"}
-            >
-              Back to Cases
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+        
+        {attemptId && (
+          <CompletedCaseReview
+            caseId={caseId}
+            userId={userId}
+            attemptId={attemptId}
+          />
+        )}
+      </div>
     );
   }
 

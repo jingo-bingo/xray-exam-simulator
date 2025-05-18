@@ -33,6 +33,15 @@ export interface UseCornerStoneToolsReturn {
   zoomLevel: number;
 }
 
+// SimpleDicomViewer props
+export interface SimpleDicomViewerProps {
+  imageUrl: string;
+  alt?: string;
+  className?: string;
+  onError?: (error: Error) => void;
+  onMetadataLoaded?: (metadata: any) => void;
+}
+
 // Add TypeScript declaration to extend HTMLDivElement with our custom property
 declare global {
   interface HTMLDivElement {

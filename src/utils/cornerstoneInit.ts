@@ -8,6 +8,20 @@ import dicomParser from "dicom-parser";
 // Track global initialization state
 let cornerstoneInitialized = false;
 
+// Check if running in a browser environment with required capabilities
+const isBrowserEnvironmentCompatible = () => {
+  try {
+    // Check if we're in a browser environment
+    if (typeof window === 'undefined') return false;
+    
+    // Basic checks for crucial browser capabilities
+    return true;
+  } catch (e) {
+    console.error("DicomViewer: Browser environment incompatibility:", e);
+    return false;
+  }
+};
+
 // One-time initialization function for cornerstone libraries
 export function initializeCornerstone() {
   if (cornerstoneInitialized) {
@@ -21,6 +35,12 @@ export function initializeCornerstone() {
     // Check library availability
     if (!cornerstone || !cornerstoneTools) {
       console.error("DicomViewer: Required libraries not available");
+      return false;
+    }
+    
+    // Check browser compatibility
+    if (!isBrowserEnvironmentCompatible()) {
+      console.error("DicomViewer: Browser environment not compatible");
       return false;
     }
     

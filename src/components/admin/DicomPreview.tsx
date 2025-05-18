@@ -3,8 +3,8 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { X, FileImage, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { DicomViewer } from "./DicomViewer";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { SimpleDicomViewer } from "./SimpleDicomViewer";
 
 interface DicomPreviewProps {
   filePath: string;
@@ -117,12 +117,14 @@ export const DicomPreview = ({ filePath, onRemove }: DicomPreviewProps) => {
 
   return (
     <div className="relative">
-      <DicomViewer 
-        imageUrl={previewUrl}
-        alt="DICOM preview"
-        className="w-full h-48 object-contain border rounded-md"
-        onError={handleViewerError}
-      />
+      <div className="w-full h-48">
+        <SimpleDicomViewer 
+          imageUrl={previewUrl}
+          alt="DICOM preview"
+          className="w-full h-full object-contain border rounded-md"
+          onError={handleViewerError}
+        />
+      </div>
       
       {viewerError && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100 border rounded-md">

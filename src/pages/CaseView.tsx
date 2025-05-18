@@ -8,6 +8,7 @@ import { useCaseData } from "@/hooks/useCaseData";
 import { CaseHeader } from "@/components/case/CaseHeader";
 import { CaseDetails } from "@/components/case/CaseDetails";
 import { DicomImageSection } from "@/components/case/DicomImageSection";
+import { CaseAttemptSection } from "@/components/case/CaseAttemptSection";
 
 const CaseView = () => {
   const { id } = useParams<{ id: string }>();
@@ -51,19 +52,31 @@ const CaseView = () => {
             <Skeleton className="h-40 w-full" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Left column - Case information */}
-            <div className="lg:col-span-1 space-y-4">
-              <CaseDetails caseData={caseData} />
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left column - Case information */}
+              <div className="lg:col-span-1 space-y-4">
+                <CaseDetails caseData={caseData} />
+              </div>
+              
+              {/* Right column - DICOM viewer and metadata */}
+              <div className="lg:col-span-2">
+                <DicomImageSection 
+                  dicomPath={caseData?.dicom_path} 
+                  title={caseData?.title}
+                />
+              </div>
             </div>
             
-            {/* Right column - DICOM viewer and metadata */}
-            <div className="lg:col-span-2">
-              <DicomImageSection 
-                dicomPath={caseData?.dicom_path} 
-                title={caseData?.title}
-              />
-            </div>
+            {/* Questions section - Only shown when user is authenticated */}
+            {user && id && (
+              <div className="mt-8">
+                <CaseAttemptSection 
+                  caseId={id}
+                  userId={user.id}
+                />
+              </div>
+            )}
           </div>
         )}
       </main>

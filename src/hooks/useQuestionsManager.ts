@@ -88,30 +88,37 @@ export const useQuestionsManager = (caseId?: string) => {
           throw error;
         }
       } else if (question.isNew || !question.id) {
-        // Create new question
+        // Create new question - strip UI-only properties
         console.log("useQuestionsManager: Creating new question:", question);
+        const questionData = {
+          question_text: question.question_text,
+          type: question.type,
+          display_order: question.display_order,
+          explanation: question.explanation,
+          case_id: caseId
+        };
+        
         const { error } = await supabase
           .from("questions")
-          .insert({
-            ...question,
-            case_id: caseId,
-          });
+          .insert(questionData);
           
         if (error) {
           console.error("useQuestionsManager: Error creating question:", error);
           throw error;
         }
       } else {
-        // Update existing question
+        // Update existing question - strip UI-only properties
         console.log("useQuestionsManager: Updating question:", question.id);
+        const questionData = {
+          question_text: question.question_text,
+          type: question.type,
+          display_order: question.display_order,
+          explanation: question.explanation
+        };
+        
         const { error } = await supabase
           .from("questions")
-          .update({
-            question_text: question.question_text,
-            type: question.type,
-            display_order: question.display_order,
-            explanation: question.explanation
-          })
+          .update(questionData)
           .eq("id", question.id);
           
         if (error) {

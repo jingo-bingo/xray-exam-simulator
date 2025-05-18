@@ -54,9 +54,22 @@ const CaseView = () => {
         ) : (
           <div className="space-y-8">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left column - Case information */}
-              <div className="lg:col-span-1 space-y-4">
-                <CaseDetails caseData={caseData} />
+              {/* Left column - Case information and Questions */}
+              <div className="lg:col-span-1 space-y-6 flex flex-col">
+                {/* Case Details */}
+                <div className="flex-shrink-0">
+                  <CaseDetails caseData={caseData} />
+                </div>
+                
+                {/* Questions section - Only shown when user is authenticated */}
+                {user && id && (
+                  <div className="flex-grow overflow-auto">
+                    <CaseAttemptSection 
+                      caseId={id}
+                      userId={user.id}
+                    />
+                  </div>
+                )}
               </div>
               
               {/* Right column - DICOM viewer and metadata */}
@@ -67,16 +80,6 @@ const CaseView = () => {
                 />
               </div>
             </div>
-            
-            {/* Questions section - Only shown when user is authenticated */}
-            {user && id && (
-              <div className="mt-8">
-                <CaseAttemptSection 
-                  caseId={id}
-                  userId={user.id}
-                />
-              </div>
-            )}
           </div>
         )}
       </main>

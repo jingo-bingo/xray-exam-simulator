@@ -1,5 +1,4 @@
-
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, memo } from "react";
 import cornerstone from "cornerstone-core";
 import cornerstoneWebImageLoader from "cornerstone-web-image-loader";
 import cornerstoneWADOImageLoader from "cornerstone-wado-image-loader";
@@ -64,7 +63,11 @@ const initializeSimpleCornerstoneViewer = () => {
   }
 };
 
-export const SimpleDicomViewer = ({ 
+// Track loaded images to avoid reloading the same image
+const loadedImages = new Map();
+
+// Define the component with memo to prevent unnecessary re-renders
+const SimpleDicomViewerComponent = ({ 
   imageUrl, 
   alt, 
   className = "", 
@@ -78,10 +81,12 @@ export const SimpleDicomViewer = ({
   const isMounted = useRef(true);
   const loadingAttemptRef = useRef<AbortController | null>(null);
   const currentImageUrlRef = useRef<string | null>(null);
+  const imageInstanceRef = useRef<any>(null);
   
   // Initialize cornerstone on component mount
   useEffect(() => {
     console.log("SimpleDicomViewer: Component mounting");
+    isMounted.current = true;
     
     // Initialize cornerstone libraries
     const initialized = initializeSimpleCornerstoneViewer();
@@ -102,7 +107,10 @@ export const SimpleDicomViewer = ({
       // Clean up cornerstone element if it exists
       if (viewerRef.current) {
         try {
-          cornerstone.disable(viewerRef.current);
+          // Only disable if cornerstone knows about this element
+          if (cornerstone.getElementData(viewerRef.current)) {
+            cornerstone.disable(viewerRef.current);
+          }
         } catch (error) {
           console.warn("SimpleDicomViewer: Error during cleanup:", error);
         }
@@ -127,39 +135,52 @@ export const SimpleDicomViewer = ({
       // Reset states when URL changes
       setIsLoading(true);
       setError(null);
-      setImageDisplayed(false);
       
       // Create abort controller for this loading attempt
       if (loadingAttemptRef.current) {
         loadingAttemptRef.current.abort();
       }
       loadingAttemptRef.current = new AbortController();
-      const { signal } = loadingAttemptRef.current;
+      
+      // Check if element is already enabled
+      let needToEnableElement = true;
       
       // Clean up previous instance if necessary
       try {
         if (viewerRef.current) {
-          cornerstone.disable(viewerRef.current);
-          console.log("SimpleDicomViewer: Disabled previous cornerstone element");
+          // Check if the element is already enabled
+          try {
+            // This will throw if the element is not enabled
+            cornerstone.getElementData(viewerRef.current);
+            needToEnableElement = false;
+          } catch (e) {
+            needToEnableElement = true;
+          }
+          
+          // If already enabled, we'll keep it, otherwise enable it below
         }
       } catch (error) {
-        console.warn("SimpleDicomViewer: Error during cleanup:", error);
+        console.warn("SimpleDicomViewer: Error checking element state:", error);
       }
       
-      // Enable the element for cornerstone
+      // Enable the element for cornerstone if needed
       const element = viewerRef.current;
       
       try {
-        console.log("SimpleDicomViewer: Enabling cornerstone on element");
-        
-        // Basic element preparation - avoid touchAction and pointer events settings
-        element.style.width = '100%';
-        element.style.height = '100%';
-        element.style.position = 'relative';
-        element.style.outline = 'none';
-        
-        cornerstone.enable(element);
-        console.log("SimpleDicomViewer: Cornerstone enabled on element");
+        if (needToEnableElement) {
+          console.log("SimpleDicomViewer: Enabling cornerstone on element");
+          
+          // Basic element preparation - avoid touchAction and pointer events settings
+          element.style.width = '100%';
+          element.style.height = '100%';
+          element.style.position = 'relative';
+          element.style.outline = 'none';
+          
+          cornerstone.enable(element);
+          console.log("SimpleDicomViewer: Cornerstone enabled on element");
+        } else {
+          console.log("SimpleDicomViewer: Element already enabled");
+        }
       } catch (error) {
         console.error("SimpleDicomViewer: Error enabling cornerstone:", error);
         if (!isMounted.current) return;
@@ -183,6 +204,21 @@ export const SimpleDicomViewer = ({
         console.log("SimpleDicomViewer: Loading as DICOM:", imageId);
       }
 
+      // Check if we've already loaded this image
+      if (loadedImages.has(imageId)) {
+        console.log("SimpleDicomViewer: Using cached image");
+        const image = loadedImages.get(imageId);
+        
+        if (!isMounted.current) return;
+        
+        // Display the cached image
+        cornerstone.displayImage(element, image);
+        imageInstanceRef.current = image;
+        setIsLoading(false);
+        setImageDisplayed(true);
+        return;
+      }
+
       // Load the image
       try {
         console.log("SimpleDicomViewer: Loading image with imageId:", imageId);
@@ -192,6 +228,10 @@ export const SimpleDicomViewer = ({
         if (!isMounted.current) return;
         
         console.log("SimpleDicomViewer: Image loaded successfully");
+        
+        // Cache the image
+        loadedImages.set(imageId, image);
+        imageInstanceRef.current = image;
         
         // Extract metadata for DICOM images
         if (!isImageFormat && onMetadataLoaded) {
@@ -217,6 +257,8 @@ export const SimpleDicomViewer = ({
             
             if (!isMounted.current) return;
             
+            loadedImages.set(webImageId, image);
+            imageInstanceRef.current = image;
             cornerstone.displayImage(element, image);
             setIsLoading(false);
             setImageDisplayed(true);
@@ -270,3 +312,6 @@ export const SimpleDicomViewer = ({
     </div>
   );
 };
+
+// Memoize the component to prevent unnecessary re-renders
+export const SimpleDicomViewer = memo(SimpleDicomViewerComponent);

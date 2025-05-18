@@ -7,6 +7,14 @@ const imageCache = new Map<string, any>();
 // Track active loading operations to prevent duplicate loads
 const activeLoads = new Map<string, Promise<any>>();
 
+// Clear an image from the cache
+export function clearImageFromCache(imageId: string) {
+  if (imageCache.has(imageId)) {
+    imageCache.delete(imageId);
+    console.log(`DicomViewer: Removed ${imageId} from cache`);
+  }
+}
+
 // Determine image type based on URL
 export function getImageId(url: string) {
   if (url.startsWith('http')) {
@@ -102,4 +110,18 @@ export async function loadImageSafely(imageId: string, signal: AbortSignal, isDi
   activeLoads.set(imageId, loadPromise);
   
   return loadPromise;
+}
+
+// Helper function to purge image cache
+export function purgeImageCache() {
+  imageCache.clear();
+  console.log("DicomViewer: Image cache purged");
+  
+  // Also tell cornerstone to purge its cache
+  try {
+    cornerstone.imageCache.purgeCache();
+    console.log("DicomViewer: Cornerstone image cache purged");
+  } catch (error) {
+    console.error("DicomViewer: Error purging cornerstone cache:", error);
+  }
 }

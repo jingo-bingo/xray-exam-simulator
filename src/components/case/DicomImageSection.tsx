@@ -1,5 +1,5 @@
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, memo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Image } from "lucide-react";
 import { DicomViewer } from "@/components/admin/DicomViewer";
@@ -13,7 +13,7 @@ interface DicomImageSectionProps {
   onMetadataLoaded?: (metadata: DicomMetadata) => void;
 }
 
-export const DicomImageSection = ({ dicomPath, title, onMetadataLoaded }: DicomImageSectionProps) => {
+const DicomImageSectionComponent = ({ dicomPath, title, onMetadataLoaded }: DicomImageSectionProps) => {
   const [signedDicomUrl, setSignedDicomUrl] = useState<string | null>(null);
   const [dicomError, setDicomError] = useState<string | null>(null);
   const [dicomMetadata, setDicomMetadata] = useState<DicomMetadata | null>(null);
@@ -147,7 +147,7 @@ export const DicomImageSection = ({ dicomPath, title, onMetadataLoaded }: DicomI
           )}
         </CardHeader>
         <CardContent>
-          <div className="relative bg-black max-w-full overflow-auto">
+          <div key={`dicom-viewer-${dicomPath}`} className="relative bg-black max-w-full overflow-auto">
             {signedDicomUrl ? (
               <DicomViewer 
                 imageUrl={signedDicomUrl}
@@ -182,3 +182,6 @@ export const DicomImageSection = ({ dicomPath, title, onMetadataLoaded }: DicomI
     </>
   );
 };
+
+// Memoize the component to prevent unnecessary re-renders
+export const DicomImageSection = memo(DicomImageSectionComponent);

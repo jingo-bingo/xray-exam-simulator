@@ -4,6 +4,10 @@ import { Button } from "@/components/ui/button";
 import { CaseForm } from "@/components/admin/CaseForm";
 import { QuestionsSection } from "@/components/admin/QuestionsSection";
 import { useCaseEditor } from "@/hooks/useCaseEditor";
+import { memo } from "react";
+
+// Memoize the QuestionsSection component to prevent re-renders when case data changes
+const MemoizedQuestionsSection = memo(QuestionsSection);
 
 const CaseEditor = () => {
   const { id } = useParams();
@@ -55,7 +59,7 @@ const CaseEditor = () => {
           onDicomUpload={handleDicomUpload}
         />
         
-        <QuestionsSection 
+        <MemoizedQuestionsSection 
           questions={questions}
           onUpdateQuestion={handleUpdateQuestion}
           onDeleteQuestion={handleDeleteQuestion}

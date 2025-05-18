@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { X, FileImage, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,7 +11,10 @@ interface DicomPreviewProps {
   onRemove: () => void;
 }
 
-export const DicomPreview = ({ filePath, onRemove }: DicomPreviewProps) => {
+// Cache for signed URLs to avoid unnecessary regeneration
+const signedUrlCache = new Map<string, { url: string; expires: number }>();
+
+const DicomPreviewComponent = ({ filePath, onRemove }: DicomPreviewProps) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [viewerError, setViewerError] = useState<Error | null>(null);
   const [isExpired, setIsExpired] = useState(false);
@@ -22,6 +25,27 @@ export const DicomPreview = ({ filePath, onRemove }: DicomPreviewProps) => {
     const loadPreview = async () => {
       try {
         console.log("DicomPreview: Loading preview for file:", filePath);
+        
+        // Check for cached URL that isn't expired
+        const now = Date.now();
+        const cached = signedUrlCache.get(filePath);
+        if (cached && cached.expires > now) {
+          console.log("DicomPreview: Using cached URL");
+          setPreviewUrl(cached.url);
+          setViewerError(null);
+          setFileNotFound(false);
+          
+          // Set a timer to check if URL is close to expiration
+          const timeToExpiry = cached.expires - now;
+          const checkExpiration = setTimeout(() => {
+            console.log("DicomPreview: Cached URL is about to expire, will regenerate");
+            setIsExpired(true);
+          }, Math.max(10000, timeToExpiry - 300000)); // Refresh 5 minutes before expiry or after 10 seconds minimum
+          
+          return () => clearTimeout(checkExpiration);
+        }
+        
+        // Generate new signed URL
         const { data, error } = await supabase.storage
           .from("dicom_images")
           .createSignedUrl(filePath, 3600);
@@ -38,6 +62,13 @@ export const DicomPreview = ({ filePath, onRemove }: DicomPreviewProps) => {
         
         if (data) {
           console.log("DicomPreview: Preview URL created:", data.signedUrl);
+          
+          // Store in cache with expiry time (slightly less than the actual expiry)
+          signedUrlCache.set(filePath, {
+            url: data.signedUrl,
+            expires: now + 3550 * 1000 // 5 minutes less than the hour
+          });
+          
           setPreviewUrl(data.signedUrl);
           setViewerError(null);
           setFileNotFound(false);
@@ -151,3 +182,6 @@ export const DicomPreview = ({ filePath, onRemove }: DicomPreviewProps) => {
     </div>
   );
 };
+
+// Memoize the component to prevent unnecessary re-renders
+export const DicomPreview = memo(DicomPreviewComponent);

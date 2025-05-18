@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { fileExists } from "@/utils/dicomStorage";
 import { toast } from "@/components/ui/use-toast";
 import { handleDicomFileUpload, handleDicomFileRemoval, processUploadResult } from "@/utils/dicomFileHandler";
@@ -27,6 +27,16 @@ export const useDicomUpload = (
   const [validationError, setValidationError] = useState<string | null>(null);
   const [fileCheckComplete, setFileCheckComplete] = useState(false);
   const [fileIsMissing, setFileIsMissing] = useState(false);
+  
+  // Use refs for stable callback references
+  const onUploadCompleteRef = useRef(onUploadComplete);
+  const initialFileRef = useRef(initialFilePath);
+  
+  // Update refs when props change
+  useEffect(() => {
+    onUploadCompleteRef.current = onUploadComplete;
+    initialFileRef.current = initialFilePath;
+  }, [onUploadComplete, initialFilePath]);
 
   // Check if the initial file exists when component mounts
   useEffect(() => {
@@ -50,7 +60,8 @@ export const useDicomUpload = (
     checkInitialFile();
   }, [initialFilePath]);
 
-  const handleFileUpload = async (file: File) => {
+  // Use useCallback for handler functions to maintain stability
+  const handleFileUpload = useCallback(async (file: File) => {
     try {
       console.log("useDicomUpload: File selected for upload:", file.name);
       setValidationError(null);
@@ -69,7 +80,7 @@ export const useDicomUpload = (
       setFileIsMissing(false);
       
       if (result.filePath) {
-        onUploadComplete(result.filePath);
+        onUploadCompleteRef.current(result.filePath);
       }
       
       processUploadResult(result);
@@ -83,9 +94,9 @@ export const useDicomUpload = (
     } finally {
       setUploading(false);
     }
-  };
+  }, [isTemporaryUpload]);
 
-  const handleRemoveFile = async () => {
+  const handleRemoveFile = useCallback(async () => {
     if (!filePath) return;
     
     console.log("useDicomUpload: Removing file:", filePath);
@@ -97,7 +108,7 @@ export const useDicomUpload = (
       setFilePath(null);
       setValidationError(null);
       setFileIsMissing(false);
-      onUploadComplete("");
+      onUploadCompleteRef.current("");
       
       if (removed) {
         toast({
@@ -118,7 +129,7 @@ export const useDicomUpload = (
         variant: "destructive"
       });
     }
-  };
+  }, [filePath]);
 
   return {
     filePath,

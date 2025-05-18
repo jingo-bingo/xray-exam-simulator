@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { CaseForm } from "@/components/admin/CaseForm";
 import { QuestionsSection } from "@/components/admin/QuestionsSection";
 import { useCaseEditor } from "@/hooks/useCaseEditor";
-import { memo } from "react";
+import { memo, useCallback } from "react";
 
-// Memoize the QuestionsSection component to prevent re-renders when case data changes
+// Memoize both main components to prevent re-renders
 const MemoizedQuestionsSection = memo(QuestionsSection);
+// CaseForm is already memoized in its own file
 
 const CaseEditor = () => {
   const { id } = useParams();
@@ -29,15 +30,16 @@ const CaseEditor = () => {
     submitCase
   } = useCaseEditor(id, navigate);
   
-  const handleSubmit = (e: React.FormEvent) => {
+  // Use useCallback to stabilize these functions
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     submitCase();
-  };
+  }, [submitCase]);
   
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     console.log("CaseEditor: Cancel clicked, navigating back to case management");
     navigate("/admin/cases");
-  };
+  }, [navigate]);
   
   if (!isNewCase && isLoadingCase) {
     return <div>Loading case...</div>;

@@ -1,5 +1,5 @@
 
-import { useState, useEffect, memo } from "react";
+import { useState, useEffect, memo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { X, FileImage, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,12 +19,28 @@ const DicomPreviewComponent = ({ filePath, onRemove }: DicomPreviewProps) => {
   const [viewerError, setViewerError] = useState<Error | null>(null);
   const [isExpired, setIsExpired] = useState(false);
   const [fileNotFound, setFileNotFound] = useState(false);
+  
+  // Use refs to maintain instance stability
+  const urlExpiryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentPathRef = useRef<string>(filePath);
+  const instanceIdRef = useRef<string>(`dicom-preview-${Math.random().toString(36).substring(2, 9)}`);
 
-  // Load preview URL when filePath changes
+  // Track when filePath changes to avoid unnecessary state updates
+  useEffect(() => {
+    currentPathRef.current = filePath;
+  }, [filePath]);
+
+  // Load preview URL when filePath changes or URL expires
   useEffect(() => {
     const loadPreview = async () => {
       try {
         console.log("DicomPreview: Loading preview for file:", filePath);
+        
+        // Clear any existing expiry timer
+        if (urlExpiryTimerRef.current) {
+          clearTimeout(urlExpiryTimerRef.current);
+          urlExpiryTimerRef.current = null;
+        }
         
         // Check for cached URL that isn't expired
         const now = Date.now();
@@ -37,12 +53,12 @@ const DicomPreviewComponent = ({ filePath, onRemove }: DicomPreviewProps) => {
           
           // Set a timer to check if URL is close to expiration
           const timeToExpiry = cached.expires - now;
-          const checkExpiration = setTimeout(() => {
+          urlExpiryTimerRef.current = setTimeout(() => {
             console.log("DicomPreview: Cached URL is about to expire, will regenerate");
             setIsExpired(true);
           }, Math.max(10000, timeToExpiry - 300000)); // Refresh 5 minutes before expiry or after 10 seconds minimum
           
-          return () => clearTimeout(checkExpiration);
+          return;
         }
         
         // Generate new signed URL
@@ -61,8 +77,6 @@ const DicomPreviewComponent = ({ filePath, onRemove }: DicomPreviewProps) => {
         }
         
         if (data) {
-          console.log("DicomPreview: Preview URL created:", data.signedUrl);
-          
           // Store in cache with expiry time (slightly less than the actual expiry)
           signedUrlCache.set(filePath, {
             url: data.signedUrl,
@@ -74,12 +88,10 @@ const DicomPreviewComponent = ({ filePath, onRemove }: DicomPreviewProps) => {
           setFileNotFound(false);
           
           // Set a timer to check if URL is close to expiration
-          const checkExpiration = setTimeout(() => {
+          urlExpiryTimerRef.current = setTimeout(() => {
             console.log("DicomPreview: Signed URL is about to expire, will regenerate");
             setIsExpired(true);
           }, 3000 * 1000); // Check after 50 minutes (URLs valid for 60 minutes)
-          
-          return () => clearTimeout(checkExpiration);
         }
       } catch (error) {
         console.error("DicomPreview: Error in loadPreview:", error);
@@ -92,6 +104,13 @@ const DicomPreviewComponent = ({ filePath, onRemove }: DicomPreviewProps) => {
     
     // Reset expired state when filePath changes
     setIsExpired(false);
+    
+    // Clean up timer on unmount or when filePath changes
+    return () => {
+      if (urlExpiryTimerRef.current) {
+        clearTimeout(urlExpiryTimerRef.current);
+      }
+    };
   }, [filePath, isExpired]);
 
   const handleViewerError = (error: Error) => {
@@ -149,11 +168,14 @@ const DicomPreviewComponent = ({ filePath, onRemove }: DicomPreviewProps) => {
   return (
     <div className="relative">
       <div className="w-full h-48">
+        {/* Using a stable key and instance ID to prevent re-mounting */}
         <SimpleDicomViewer 
+          key={`${instanceIdRef.current}-${filePath}`}
           imageUrl={previewUrl}
           alt="DICOM preview"
           className="w-full h-full object-contain border rounded-md"
           onError={handleViewerError}
+          instanceId={instanceIdRef.current}
         />
       </div>
       
@@ -185,3 +207,4 @@ const DicomPreviewComponent = ({ filePath, onRemove }: DicomPreviewProps) => {
 
 // Memoize the component to prevent unnecessary re-renders
 export const DicomPreview = memo(DicomPreviewComponent);
+

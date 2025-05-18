@@ -2,10 +2,32 @@
 import cornerstone from "cornerstone-core";
 import cornerstoneWADOImageLoader from "cornerstone-wado-image-loader";
 
-// Cache for loaded images to prevent re-fetching
-const imageCache = new Map<string, any>();
+// Cache for loaded images to prevent re-fetching - with longer TTL
+const imageCache = new Map<string, { image: any; timestamp: number }>();
+const IMAGE_CACHE_TTL = 1000 * 60 * 30; // 30 minutes
+
 // Track active loading operations to prevent duplicate loads
 const activeLoads = new Map<string, Promise<any>>();
+
+// Periodically clean up old cache entries
+const cleanupCache = () => {
+  const now = Date.now();
+  let removed = 0;
+  
+  imageCache.forEach((entry, key) => {
+    if (now - entry.timestamp > IMAGE_CACHE_TTL) {
+      imageCache.delete(key);
+      removed++;
+    }
+  });
+  
+  if (removed > 0) {
+    console.log(`DicomViewer: Cleaned up ${removed} stale cache entries`);
+  }
+};
+
+// Set up periodic cache cleanup
+setInterval(cleanupCache, 60000); // Clean every minute
 
 // Clear an image from the cache
 export function clearImageFromCache(imageId: string) {
@@ -34,10 +56,16 @@ export async function loadImageSafely(imageId: string, signal: AbortSignal, isDi
     throw new Error("Loading aborted");
   }
   
-  // Check if we already have this image in our cache
-  if (imageCache.has(imageId)) {
-    console.log(`DicomViewer: Using cached image for ${imageId}`);
-    return imageCache.get(imageId);
+  // Check if we already have this image in our cache and it's not expired
+  const cachedEntry = imageCache.get(imageId);
+  if (cachedEntry) {
+    const now = Date.now();
+    if (now - cachedEntry.timestamp < IMAGE_CACHE_TTL) {
+      console.log(`DicomViewer: Using cached image for ${imageId}`);
+      return cachedEntry.image;
+    } else {
+      console.log(`DicomViewer: Cached image for ${imageId} is expired, reloading`);
+    }
   }
   
   // Check if this image is already being loaded
@@ -52,8 +80,12 @@ export async function loadImageSafely(imageId: string, signal: AbortSignal, isDi
       console.log(`DicomViewer: Loading with imageId: ${imageId}`);
       const image = await cornerstone.loadImage(imageId);
       
-      // Cache the image for future use
-      imageCache.set(imageId, image);
+      // Cache the image with timestamp
+      imageCache.set(imageId, { 
+        image: image,
+        timestamp: Date.now()
+      });
+      
       return image;
     } catch (error: any) {
       console.error(`DicomViewer: Error loading image with ${imageId}:`, error);
@@ -82,7 +114,13 @@ export async function loadImageSafely(imageId: string, signal: AbortSignal, isDi
           console.log("DicomViewer: Trying with image downsampling");
           // Add image processing URL parameters for downsampling
           const image = await cornerstone.loadImage(`${imageId}?quality=50&downsampleFactor=2`);
-          imageCache.set(imageId, image);
+          
+          // Cache with timestamp
+          imageCache.set(imageId, {
+            image: image,
+            timestamp: Date.now()
+          });
+          
           return image;
         }
       }

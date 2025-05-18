@@ -14,6 +14,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { DicomUploader } from "@/components/admin/DicomUploader";
 import { Database } from "@/integrations/supabase/types";
+import { memo } from "react";
 
 type RegionType = Database["public"]["Enums"]["region_type"];
 type DifficultyLevel = Database["public"]["Enums"]["difficulty_level"];
@@ -39,7 +40,8 @@ interface CaseFormProps {
   onDicomUpload: (filePath: string) => void;
 }
 
-export const CaseForm = ({ caseData, isNewCase, onInputChange, onDicomUpload }: CaseFormProps) => {
+// Implement CaseForm as a memoized component
+const CaseFormComponent = ({ caseData, isNewCase, onInputChange, onDicomUpload }: CaseFormProps) => {
   console.log("CaseForm: Rendering with data", caseData);
 
   return (
@@ -75,7 +77,9 @@ export const CaseForm = ({ caseData, isNewCase, onInputChange, onDicomUpload }: 
           />
         </div>
         
+        {/* DicomUploader with stable key to prevent re-renders */}
         <DicomUploader 
+          key={`dicom-uploader-${caseData.dicom_path || 'new'}`}
           currentPath={caseData.dicom_path} 
           onUploadComplete={onDicomUpload}
           isTemporaryUpload={isNewCase} // Only mark as temporary during new case creation
@@ -169,3 +173,7 @@ export const CaseForm = ({ caseData, isNewCase, onInputChange, onDicomUpload }: 
     </div>
   );
 };
+
+// Export memoized version of the component
+export const CaseForm = memo(CaseFormComponent);
+

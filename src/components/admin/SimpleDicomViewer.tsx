@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState, memo } from "react";
 import cornerstone from "cornerstone-core";
 import cornerstoneWebImageLoader from "cornerstone-web-image-loader";
@@ -12,10 +13,17 @@ interface SimpleDicomViewerProps {
   className?: string;
   onError?: (error: Error) => void;
   onMetadataLoaded?: (metadata: DicomMetadata) => void;
+  instanceId?: string; // Added instance ID prop for stability
 }
 
 // Track global initialization state
 let cornerstoneInitialized = false;
+
+// This global cache tracks loaded images across all instances
+const loadedImages = new Map();
+
+// Global registry of active elements to prevent multiple initializations
+const initializedElements = new Set<string>();
 
 // Simplified initialization function for cornerstone core only (no tools)
 const initializeSimpleCornerstoneViewer = () => {
@@ -63,29 +71,33 @@ const initializeSimpleCornerstoneViewer = () => {
   }
 };
 
-// Track loaded images to avoid reloading the same image
-const loadedImages = new Map();
-
 // Define the component with memo to prevent unnecessary re-renders
 const SimpleDicomViewerComponent = ({ 
   imageUrl, 
   alt, 
   className = "", 
   onError,
-  onMetadataLoaded 
+  onMetadataLoaded,
+  instanceId = "default"
 }: SimpleDicomViewerProps) => {
   const viewerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [imageDisplayed, setImageDisplayed] = useState(false);
+  
+  // Use refs to track component state and avoid dependency cycles
   const isMounted = useRef(true);
   const loadingAttemptRef = useRef<AbortController | null>(null);
   const currentImageUrlRef = useRef<string | null>(null);
   const imageInstanceRef = useRef<any>(null);
+  const initializedRef = useRef<boolean>(false);
+  
+  // Composite key combining instanceId and URL to track initialization
+  const elementKey = `${instanceId}-${imageUrl}`;
   
   // Initialize cornerstone on component mount
   useEffect(() => {
-    console.log("SimpleDicomViewer: Component mounting");
+    console.log(`SimpleDicomViewer[${instanceId}]: Component mounting`);
     isMounted.current = true;
     
     // Initialize cornerstone libraries
@@ -95,7 +107,7 @@ const SimpleDicomViewerComponent = ({
     }
     
     return () => {
-      console.log("SimpleDicomViewer: Component unmounting");
+      console.log(`SimpleDicomViewer[${instanceId}]: Component unmounting`);
       isMounted.current = false;
       
       // Abort any pending load operations
@@ -109,14 +121,18 @@ const SimpleDicomViewerComponent = ({
         try {
           // Only disable if cornerstone knows about this element
           if (cornerstone.getElementData(viewerRef.current)) {
+            console.log(`SimpleDicomViewer[${instanceId}]: Disabling cornerstone element`);
             cornerstone.disable(viewerRef.current);
+            
+            // Remove from initialized elements
+            initializedElements.delete(elementKey);
           }
         } catch (error) {
-          console.warn("SimpleDicomViewer: Error during cleanup:", error);
+          console.warn(`SimpleDicomViewer[${instanceId}]: Error during cleanup:`, error);
         }
       }
     };
-  }, [onError]);
+  }, [instanceId, onError, elementKey]);
   
   // Load DICOM image when URL changes
   useEffect(() => {
@@ -125,11 +141,11 @@ const SimpleDicomViewerComponent = ({
       
       // Skip if URL hasn't changed to prevent unnecessary reloads
       if (currentImageUrlRef.current === imageUrl && imageDisplayed) {
-        console.log("SimpleDicomViewer: URL unchanged, skipping reload");
+        console.log(`SimpleDicomViewer[${instanceId}]: URL unchanged, skipping reload`);
         return;
       }
       
-      console.log("SimpleDicomViewer: Initializing viewer for image:", imageUrl);
+      console.log(`SimpleDicomViewer[${instanceId}]: Initializing viewer for image:`, imageUrl);
       currentImageUrlRef.current = imageUrl;
       
       // Reset states when URL changes
@@ -142,8 +158,8 @@ const SimpleDicomViewerComponent = ({
       }
       loadingAttemptRef.current = new AbortController();
       
-      // Check if element is already enabled
-      let needToEnableElement = true;
+      // Check if element is already enabled for this specific instance
+      let needToEnableElement = !initializedRef.current;
       
       // Clean up previous instance if necessary
       try {
@@ -156,11 +172,9 @@ const SimpleDicomViewerComponent = ({
           } catch (e) {
             needToEnableElement = true;
           }
-          
-          // If already enabled, we'll keep it, otherwise enable it below
         }
       } catch (error) {
-        console.warn("SimpleDicomViewer: Error checking element state:", error);
+        console.warn(`SimpleDicomViewer[${instanceId}]: Error checking element state:`, error);
       }
       
       // Enable the element for cornerstone if needed
@@ -168,7 +182,7 @@ const SimpleDicomViewerComponent = ({
       
       try {
         if (needToEnableElement) {
-          console.log("SimpleDicomViewer: Enabling cornerstone on element");
+          console.log(`SimpleDicomViewer[${instanceId}]: Enabling cornerstone on element`);
           
           // Basic element preparation - avoid touchAction and pointer events settings
           element.style.width = '100%';
@@ -177,12 +191,14 @@ const SimpleDicomViewerComponent = ({
           element.style.outline = 'none';
           
           cornerstone.enable(element);
-          console.log("SimpleDicomViewer: Cornerstone enabled on element");
+          initializedRef.current = true;
+          initializedElements.add(elementKey);
+          console.log(`SimpleDicomViewer[${instanceId}]: Cornerstone enabled on element`);
         } else {
-          console.log("SimpleDicomViewer: Element already enabled");
+          console.log(`SimpleDicomViewer[${instanceId}]: Element already enabled`);
         }
       } catch (error) {
-        console.error("SimpleDicomViewer: Error enabling cornerstone:", error);
+        console.error(`SimpleDicomViewer[${instanceId}]: Error enabling cornerstone:`, error);
         if (!isMounted.current) return;
         
         setError("Failed to initialize viewer");
@@ -198,15 +214,15 @@ const SimpleDicomViewerComponent = ({
       
       if (isImageFormat) {
         imageId = `webImage:${imageUrl}`;
-        console.log("SimpleDicomViewer: Loading as web image:", imageId);
+        console.log(`SimpleDicomViewer[${instanceId}]: Loading as web image:`, imageId);
       } else {
         imageId = `wadouri:${imageUrl}`;
-        console.log("SimpleDicomViewer: Loading as DICOM:", imageId);
+        console.log(`SimpleDicomViewer[${instanceId}]: Loading as DICOM:`, imageId);
       }
 
       // Check if we've already loaded this image
       if (loadedImages.has(imageId)) {
-        console.log("SimpleDicomViewer: Using cached image");
+        console.log(`SimpleDicomViewer[${instanceId}]: Using cached image`);
         const image = loadedImages.get(imageId);
         
         if (!isMounted.current) return;
@@ -221,13 +237,13 @@ const SimpleDicomViewerComponent = ({
 
       // Load the image
       try {
-        console.log("SimpleDicomViewer: Loading image with imageId:", imageId);
+        console.log(`SimpleDicomViewer[${instanceId}]: Loading image with imageId:`, imageId);
         const image = await cornerstone.loadImage(imageId);
         
         // Check if component is still mounted
         if (!isMounted.current) return;
         
-        console.log("SimpleDicomViewer: Image loaded successfully");
+        console.log(`SimpleDicomViewer[${instanceId}]: Image loaded successfully`);
         
         // Cache the image
         loadedImages.set(imageId, image);
@@ -236,14 +252,14 @@ const SimpleDicomViewerComponent = ({
         // Extract metadata for DICOM images
         if (!isImageFormat && onMetadataLoaded) {
           const metadata = extractMetadata(image);
-          console.log("SimpleDicomViewer: Metadata extracted", metadata);
+          console.log(`SimpleDicomViewer[${instanceId}]: Metadata extracted`, metadata);
           onMetadataLoaded(metadata);
         }
         
         // Display the image
-        console.log("SimpleDicomViewer: Displaying image on element");
+        console.log(`SimpleDicomViewer[${instanceId}]: Displaying image on element`);
         cornerstone.displayImage(element, image);
-        console.log("SimpleDicomViewer: Image displayed successfully");
+        console.log(`SimpleDicomViewer[${instanceId}]: Image displayed successfully`);
         
         setIsLoading(false);
         setImageDisplayed(true);
@@ -252,7 +268,7 @@ const SimpleDicomViewerComponent = ({
         if (imageId.startsWith('wadouri:') && !isImageFormat) {
           try {
             const webImageId = `webImage:${imageUrl}`;
-            console.log("SimpleDicomViewer: DICOM load failed, trying as web image:", webImageId);
+            console.log(`SimpleDicomViewer[${instanceId}]: DICOM load failed, trying as web image:`, webImageId);
             const image = await cornerstone.loadImage(webImageId);
             
             if (!isMounted.current) return;
@@ -264,13 +280,13 @@ const SimpleDicomViewerComponent = ({
             setImageDisplayed(true);
             return;
           } catch (webImageError) {
-            console.error("SimpleDicomViewer: Web image load also failed:", webImageError);
+            console.error(`SimpleDicomViewer[${instanceId}]: Web image load also failed:`, webImageError);
           }
         }
         
         if (!isMounted.current) return;
         
-        console.error("SimpleDicomViewer: All image loading attempts failed:", error);
+        console.error(`SimpleDicomViewer[${instanceId}]: All image loading attempts failed:`, error);
         setError(error instanceof Error ? error.message : "Failed to load image");
         if (onError) onError(error instanceof Error ? error : new Error("Failed to load image"));
         setIsLoading(false);
@@ -278,13 +294,14 @@ const SimpleDicomViewerComponent = ({
     };
     
     loadImage();
-  }, [imageUrl, onError, onMetadataLoaded]);
+  }, [imageUrl, onError, onMetadataLoaded, instanceId, imageDisplayed]);
 
   return (
     <div className="relative w-full h-full">
       <div 
         ref={viewerRef} 
         className={`w-full h-full ${className}`}
+        data-instance-id={instanceId}
         data-testid="simple-dicom-viewer"
       >
         {isLoading && (

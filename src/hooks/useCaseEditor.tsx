@@ -1,11 +1,11 @@
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useCaseInitializer } from "./case/useCaseInitializer";
 import { useCaseForm } from "./case/useCaseForm";
 import { useCaseSave } from "./case/useCaseSave";
 import { useQuestionsManager } from "./useQuestionsManager";
-import { Question } from "@/components/admin/QuestionForm";
-import { Case } from "@/components/admin/CaseForm";
+import { useCaseScans } from "./case/useCaseScans";
+import { CaseScan } from "@/components/admin/ScanManager";
 
 /**
  * Main hook for case editor functionality - now much leaner by delegating to specialized hooks
@@ -20,6 +20,21 @@ export const useCaseEditor = (id: string | undefined, navigateCallback: (path: s
     handleDeleteQuestion,
     saveQuestions
   } = useQuestionsManager();
+  
+  // Use case scans hook
+  const { saveScans, isProcessingScans } = useCaseScans();
+  
+  // Reference to store scans for submission
+  const scansRef = useRef<CaseScan[]>([]);
+  
+  // Track if the component is mounted
+  const isMounted = useRef(true);
+  
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
   
   // Use case initializer hook
   const {
@@ -41,11 +56,21 @@ export const useCaseEditor = (id: string | undefined, navigateCallback: (path: s
     updateCaseData
   } = useCaseForm(initialCase);
   
-  // Use case save hook
+  // Use case save hook with extended callback for saving scans
   const {
     submitCase: saveCaseMutation,
     isPendingSave
-  } = useCaseSave(isNewCase, originalDicomPath, navigateCallback, saveQuestions);
+  } = useCaseSave(isNewCase, originalDicomPath, navigateCallback, async (caseId) => {
+    // First save questions
+    await saveQuestions(caseId);
+    
+    // Then save scans if we have any
+    if (scansRef.current && scansRef.current.length > 0) {
+      return saveScans(caseId, scansRef.current);
+    }
+    
+    return true;
+  });
   
   // Update form data when loaded case changes
   useEffect(() => {
@@ -54,6 +79,12 @@ export const useCaseEditor = (id: string | undefined, navigateCallback: (path: s
       updateCaseData(loadedCase);
     }
   }, [loadedCase, updateCaseData]);
+  
+  // Function to set scans for submission
+  const setScansForSubmission = (scans: CaseScan[]) => {
+    console.log("useCaseEditor: Setting scans for submission", scans);
+    scansRef.current = scans;
+  };
   
   const submitCase = () => {
     console.log("useCaseEditor: Submitting case", caseData);
@@ -74,12 +105,13 @@ export const useCaseEditor = (id: string | undefined, navigateCallback: (path: s
     questions,
     isLoadingCase,
     isNewCase,
-    isPendingSave,
+    isPendingSave: isPendingSave || isProcessingScans,
     handleInputChange,
     handleDicomUpload,
     handleAddQuestion,
     handleUpdateQuestion,
     handleDeleteQuestion,
+    setScansForSubmission,
     submitCase
   };
 };

@@ -6,18 +6,24 @@ import { DicomViewer } from "@/components/admin/DicomViewer";
 import { DicomMetadataDisplay, DicomMetadata } from "@/components/admin/DicomMetadataDisplay";
 import { toast } from "@/components/ui/use-toast";
 import { getSignedUrl } from "@/utils/dicomStorage";
+import { supabase } from "@/integrations/supabase/client";
+import { ScanSelector, type Scan } from "./ScanSelector";
 
 interface DicomImageSectionProps {
   dicomPath: string | null | undefined;
   title: string | undefined;
+  caseId: string | undefined;
   onMetadataLoaded?: (metadata: DicomMetadata) => void;
 }
 
-const DicomImageSectionComponent = ({ dicomPath, title, onMetadataLoaded }: DicomImageSectionProps) => {
+const DicomImageSectionComponent = ({ dicomPath, title, caseId, onMetadataLoaded }: DicomImageSectionProps) => {
   const [signedDicomUrl, setSignedDicomUrl] = useState<string | null>(null);
   const [dicomError, setDicomError] = useState<string | null>(null);
   const [dicomMetadata, setDicomMetadata] = useState<DicomMetadata | null>(null);
   const [isLoadingMetadata, setIsLoadingMetadata] = useState<boolean>(false);
+  const [isLoadingScans, setIsLoadingScans] = useState<boolean>(true);
+  const [scans, setScans] = useState<Scan[]>([]);
+  const [currentScan, setCurrentScan] = useState<Scan | null>(null);
   
   // Use refs to prevent dependency cycles and track loading state
   const isGeneratingUrlRef = useRef<boolean>(false);
@@ -35,6 +41,76 @@ const DicomImageSectionComponent = ({ dicomPath, title, onMetadataLoaded }: Dico
       isMountedRef.current = false;
     };
   }, []);
+
+  // Fetch scans whenever caseId changes
+  useEffect(() => {
+    const fetchScans = async () => {
+      if (!caseId) {
+        setIsLoadingScans(false);
+        return;
+      }
+      
+      try {
+        setIsLoadingScans(true);
+        
+        const { data, error } = await supabase
+          .from('case_scans')
+          .select('*')
+          .eq('case_id', caseId)
+          .order('display_order', { ascending: true });
+          
+        if (error) throw error;
+        
+        if (isMountedRef.current) {
+          // If we have scans from the new table, use those
+          if (data && data.length > 0) {
+            setScans(data);
+            // Select the first scan by default
+            setCurrentScan(data[0]);
+          } else if (dicomPath) {
+            // Fallback to legacy single scan if no scan records but we have dicomPath
+            const legacyScan = {
+              id: 'legacy',
+              label: 'Primary View',
+              dicom_path: dicomPath,
+              display_order: 1
+            };
+            setScans([legacyScan]);
+            setCurrentScan(legacyScan);
+          } else {
+            setScans([]);
+            setCurrentScan(null);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching case scans:", error);
+        if (isMountedRef.current) {
+          // Fallback to legacy single scan on error
+          if (dicomPath) {
+            const legacyScan = {
+              id: 'legacy',
+              label: 'Primary View',
+              dicom_path: dicomPath,
+              display_order: 1
+            };
+            setScans([legacyScan]);
+            setCurrentScan(legacyScan);
+          }
+          toast({
+            title: "Error",
+            description: "Failed to load case scans",
+            variant: "destructive",
+          });
+        }
+      } finally {
+        if (isMountedRef.current) {
+          setIsLoadingScans(false);
+        }
+      }
+    };
+    
+    fetchScans();
+  }, [caseId, dicomPath]);
 
   // Memoized function to generate signed URL - no state dependencies
   const generateSignedUrl = useCallback(async (dicomPath: string) => {
@@ -84,16 +160,19 @@ const DicomImageSectionComponent = ({ dicomPath, title, onMetadataLoaded }: Dico
     }
   }, []);
 
-  // Generate signed URL for DICOM when dicomPath is available
+  // Generate signed URL when currentScan changes
   useEffect(() => {
-    if (!dicomPath) return;
+    if (!currentScan) return;
     
-    console.log("DicomImageSection: DICOM path received:", dicomPath);
+    const scanDicomPath = currentScan.dicom_path;
+    if (!scanDicomPath) return;
+    
+    console.log("DicomImageSection: DICOM path received for scan:", scanDicomPath);
     
     // Track previous path to avoid unnecessary regeneration
     const previousPath = currentDicomPathRef.current;
     
-    if (previousPath !== dicomPath) {
+    if (previousPath !== scanDicomPath) {
       console.log("DicomImageSection: DICOM path changed, generating new URL");
       
       // Reset metadata when path changes
@@ -102,11 +181,11 @@ const DicomImageSectionComponent = ({ dicomPath, title, onMetadataLoaded }: Dico
         setIsLoadingMetadata(true);
       }
       
-      generateSignedUrl(dicomPath);
+      generateSignedUrl(scanDicomPath);
     } else {
       console.log("DicomImageSection: DICOM path unchanged, skipping URL generation");
     }
-  }, [dicomPath, generateSignedUrl]);
+  }, [currentScan, generateSignedUrl]);
 
   // Handle metadata loading - use stable callback
   const handleMetadataLoaded = useCallback((metadata: DicomMetadata) => {
@@ -132,6 +211,13 @@ const DicomImageSectionComponent = ({ dicomPath, title, onMetadataLoaded }: Dico
     });
   }, []);
 
+  const handleSelectScan = useCallback((scan: Scan) => {
+    console.log("DicomImageSection: Selected scan:", scan);
+    setCurrentScan(scan);
+    // Reset URL to force refresh when scan changes
+    setSignedDicomUrl(null);
+  }, []);
+
   return (
     <>
       <Card className="bg-gray-800 border-gray-700">
@@ -145,13 +231,30 @@ const DicomImageSectionComponent = ({ dicomPath, title, onMetadataLoaded }: Dico
               Error: {dicomError}
             </CardDescription>
           )}
+          
+          {/* Scan Selector */}
+          <ScanSelector 
+            scans={scans}
+            currentScanId={currentScan?.id}
+            onSelectScan={handleSelectScan}
+          />
         </CardHeader>
         <CardContent>
-          <div key={`dicom-viewer-${dicomPath}`} className="relative bg-black max-w-full overflow-auto">
-            {signedDicomUrl ? (
+          <div 
+            key={`dicom-viewer-${currentScan?.dicom_path || 'none'}`} 
+            className="relative bg-black max-w-full overflow-auto"
+          >
+            {isLoadingScans ? (
+              <div className="w-full aspect-square max-h-[600px] bg-black flex items-center justify-center text-gray-400">
+                <div className="flex flex-col items-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-400 mb-2"></div>
+                  <div>Loading scans...</div>
+                </div>
+              </div>
+            ) : signedDicomUrl && currentScan ? (
               <DicomViewer 
                 imageUrl={signedDicomUrl}
-                alt={`DICOM for case ${title}`}
+                alt={`DICOM for case ${title} - ${currentScan.label}`}
                 className="bg-black"
                 onError={handleViewerError}
                 onMetadataLoaded={handleMetadataLoaded}
@@ -166,7 +269,7 @@ const DicomImageSectionComponent = ({ dicomPath, title, onMetadataLoaded }: Dico
                 ) : (
                   dicomError ? 
                     "Error loading DICOM image" : 
-                    (dicomPath ? "Loading DICOM image..." : "No DICOM image available for this case")
+                    (currentScan ? "Loading DICOM image..." : "No DICOM image available for this case")
                 )}
               </div>
             )}

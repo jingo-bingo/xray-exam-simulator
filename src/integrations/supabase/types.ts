@@ -98,6 +98,44 @@ export type Database = {
           },
         ]
       }
+      case_scans: {
+        Row: {
+          case_id: string
+          created_at: string
+          dicom_path: string
+          display_order: number
+          id: string
+          label: string
+          updated_at: string
+        }
+        Insert: {
+          case_id: string
+          created_at?: string
+          dicom_path: string
+          display_order?: number
+          id?: string
+          label: string
+          updated_at?: string
+        }
+        Update: {
+          case_id?: string
+          created_at?: string
+          dicom_path?: string
+          display_order?: number
+          id?: string
+          label?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "case_scans_case_id_fkey"
+            columns: ["case_id"]
+            isOneToOne: false
+            referencedRelation: "cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cases: {
         Row: {
           age_group: Database["public"]["Enums"]["age_group"]
@@ -252,6 +290,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
         }
         Returns: boolean
+      }
+      migrate_existing_case_scans: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
     }
     Enums: {

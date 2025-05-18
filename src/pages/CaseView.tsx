@@ -77,6 +77,7 @@ const CaseView = () => {
                 <DicomImageSection 
                   dicomPath={caseData?.dicom_path} 
                   title={caseData?.title}
+                  caseId={id}
                 />
               </div>
             </div>

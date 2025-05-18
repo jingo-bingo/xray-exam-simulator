@@ -10,7 +10,7 @@ export const useCaseScans = () => {
   
   // Function to save scans for a case
   const saveScans = useCallback(async (caseId: string, scans: CaseScan[]) => {
-    if (!caseId) return false;
+    if (!caseId) return;
     
     console.log("useCaseScans: Saving scans for case", caseId, scans);
     setIsProcessingScans(true);
@@ -75,8 +75,6 @@ export const useCaseScans = () => {
           }
         }
       }
-      
-      return true;
     } catch (error) {
       console.error("useCaseScans: Error saving scans", error);
       toast({
@@ -84,7 +82,6 @@ export const useCaseScans = () => {
         description: "Failed to save case scans",
         variant: "destructive"
       });
-      return false;
     } finally {
       setIsProcessingScans(false);
     }

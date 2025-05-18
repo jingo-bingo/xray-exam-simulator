@@ -66,10 +66,11 @@ export const useCaseEditor = (id: string | undefined, navigateCallback: (path: s
     
     // Then save scans if we have any
     if (scansRef.current && scansRef.current.length > 0) {
-      return saveScans(caseId, scansRef.current);
+      await saveScans(caseId, scansRef.current);
     }
     
-    return true;
+    // Return void (not boolean) to match the expected type
+    return;
   });
   
   // Update form data when loaded case changes

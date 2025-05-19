@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/sonner";
 import { UserRole } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 
 type UserWithRole = {
   id: string;
@@ -27,6 +28,7 @@ type UserWithRole = {
 const UserManagement = () => {
   const [filter, setFilter] = useState<UserRole | "all">("all");
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   
   useEffect(() => {
     console.log("UserManagement: Component mounted with filter:", filter);
@@ -122,6 +124,11 @@ const UserManagement = () => {
     updateRoleMutation.mutate({ userId, role: newRole });
   };
   
+  const handleBackToAdmin = () => {
+    console.log("UserManagement: Navigating back to admin panel");
+    navigate("/admin");
+  };
+
   if (error) {
     console.error("UserManagement: Error in component", error);
     return <div className="text-red-500">Error loading users: {(error as Error).message}</div>;
@@ -129,7 +136,17 @@ const UserManagement = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">User Management</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">User Management</h1>
+        <Button 
+          variant="outline" 
+          onClick={handleBackToAdmin}
+          className="gap-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Admin Panel
+        </Button>
+      </div>
       
       <div className="flex gap-2 mb-4">
         <Button 

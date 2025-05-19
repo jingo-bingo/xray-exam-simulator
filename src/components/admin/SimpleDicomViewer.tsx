@@ -6,6 +6,7 @@ import cornerstoneWADOImageLoader from "cornerstone-wado-image-loader";
 import dicomParser from "dicom-parser";
 import { DicomMetadata } from "./DicomMetadataDisplay";
 import { extractMetadata } from "@/utils/dicomMetadataExtractor";
+import { initializeCornerstone, isCornerstoneInitialized } from "@/utils/cornerstoneInit";
 
 interface SimpleDicomViewerProps {
   imageUrl: string;
@@ -16,9 +17,6 @@ interface SimpleDicomViewerProps {
   instanceId?: string; // Added instance ID prop for stability
 }
 
-// Track global initialization state
-let cornerstoneInitialized = false;
-
 // This global cache tracks loaded images across all instances
 const loadedImages = new Map();
 
@@ -26,49 +24,14 @@ const loadedImages = new Map();
 const initializedElements = new Set<string>();
 
 // Simplified initialization function for cornerstone core only (no tools)
-const initializeSimpleCornerstoneViewer = () => {
-  if (cornerstoneInitialized) {
-    console.log("SimpleDicomViewer: Already initialized");
+const ensureCornerstoneInitialized = (): boolean => {
+  // Check if already initialized
+  if (isCornerstoneInitialized()) {
     return true;
   }
   
-  try {
-    console.log("SimpleDicomViewer: Starting simple initialization");
-    
-    // Check if cornerstone is available
-    if (!cornerstone) {
-      console.error("SimpleDicomViewer: Cornerstone library not available");
-      return false;
-    }
-    
-    // Set up image loaders
-    cornerstoneWebImageLoader.external.cornerstone = cornerstone;
-    cornerstoneWADOImageLoader.external.cornerstone = cornerstone;
-    cornerstoneWADOImageLoader.external.dicomParser = dicomParser;
-    
-    // Register the image loaders
-    cornerstone.registerImageLoader("webImage", cornerstoneWebImageLoader.loadImage);
-    cornerstone.registerImageLoader("wadouri", cornerstoneWADOImageLoader.wadouri.loadImage);
-    
-    // Configure WADO image loader with conservative memory settings
-    cornerstoneWADOImageLoader.configure({
-      useWebWorkers: false,
-      decodeConfig: {
-        convertFloatPixelDataToInt: false,
-        use16Bits: true,
-        maxWebWorkers: 1,
-        preservePixelData: false
-      },
-      maxCacheSize: 50
-    });
-
-    cornerstoneInitialized = true;
-    console.log("SimpleDicomViewer: Core libraries initialized successfully");
-    return true;
-  } catch (error) {
-    console.error("SimpleDicomViewer: Failed to initialize:", error);
-    return false;
-  }
+  // Initialize cornerstone if not already initialized
+  return initializeCornerstone();
 };
 
 // Define the component with memo to prevent unnecessary re-renders
@@ -84,6 +47,7 @@ const SimpleDicomViewerComponent = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [imageDisplayed, setImageDisplayed] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   
   // Use refs to track component state and avoid dependency cycles
   const isMounted = useRef(true);
@@ -91,6 +55,8 @@ const SimpleDicomViewerComponent = ({
   const currentImageUrlRef = useRef<string | null>(null);
   const imageInstanceRef = useRef<any>(null);
   const initializedRef = useRef<boolean>(false);
+  const initAttemptRef = useRef(0);
+  const MAX_INIT_ATTEMPTS = 3;
   
   // Composite key combining instanceId and URL to track initialization
   const elementKey = `${instanceId}-${imageUrl}`;
@@ -100,10 +66,47 @@ const SimpleDicomViewerComponent = ({
     console.log(`SimpleDicomViewer[${instanceId}]: Component mounting`);
     isMounted.current = true;
     
-    // Initialize cornerstone libraries
-    const initialized = initializeSimpleCornerstoneViewer();
-    if (!initialized && onError) {
-      onError(new Error("Failed to initialize DICOM viewer libraries"));
+    const attemptInitialization = () => {
+      // Check if we've exceeded maximum attempts
+      if (initAttemptRef.current >= MAX_INIT_ATTEMPTS) {
+        if (onError) {
+          onError(new Error("Failed to initialize DICOM viewer after multiple attempts"));
+        }
+        setError("Failed to initialize DICOM viewer after multiple attempts");
+        return false;
+      }
+      
+      initAttemptRef.current++;
+      console.log(`SimpleDicomViewer[${instanceId}]: Attempting cornerstone initialization (attempt ${initAttemptRef.current})`);
+      
+      // Initialize cornerstone libraries
+      const initialized = ensureCornerstoneInitialized();
+      if (!initialized) {
+        if (onError) {
+          onError(new Error("Failed to initialize DICOM viewer libraries"));
+        }
+        setError("Failed to initialize DICOM viewer libraries");
+        return false;
+      }
+      
+      setIsInitialized(true);
+      return true;
+    };
+    
+    // Attempt initialization immediately
+    const initialized = attemptInitialization();
+    
+    // If initialization failed, retry a few times
+    if (!initialized) {
+      const initInterval = setInterval(() => {
+        if (attemptInitialization() || initAttemptRef.current >= MAX_INIT_ATTEMPTS) {
+          clearInterval(initInterval);
+        }
+      }, 500);
+      
+      return () => {
+        clearInterval(initInterval);
+      };
     }
     
     return () => {
@@ -134,8 +137,13 @@ const SimpleDicomViewerComponent = ({
     };
   }, [instanceId, onError, elementKey]);
   
-  // Load DICOM image when URL changes
+  // Load DICOM image when URL changes and cornerstone is initialized
   useEffect(() => {
+    if (!isInitialized) {
+      console.log(`SimpleDicomViewer[${instanceId}]: Waiting for cornerstone to initialize`);
+      return;
+    }
+    
     const loadImage = async () => {
       if (!viewerRef.current || !imageUrl) return;
       
@@ -294,7 +302,7 @@ const SimpleDicomViewerComponent = ({
     };
     
     loadImage();
-  }, [imageUrl, onError, onMetadataLoaded, instanceId, imageDisplayed]);
+  }, [imageUrl, onError, onMetadataLoaded, instanceId, imageDisplayed, isInitialized, elementKey]);
 
   return (
     <div className="relative w-full h-full">

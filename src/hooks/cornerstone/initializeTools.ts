@@ -2,6 +2,7 @@
 import cornerstone from 'cornerstone-core';
 import cornerstoneTools from 'cornerstone-tools';
 import { CornerstoneTool } from './types';
+import { isCornerstoneInitialized } from '@/utils/cornerstoneInit';
 
 // Initialize cornerstone tools once when the component mounts
 export function initializeCornerStoneTools(): {
@@ -11,15 +12,31 @@ export function initializeCornerStoneTools(): {
   try {
     console.log("DicomTools: Starting cornerstone-tools initialization");
     
+    // Check if cornerstone core is initialized first
+    if (!isCornerstoneInitialized()) {
+      console.error("DicomTools: Cornerstone core not initialized yet, cannot initialize tools");
+      return { success: false, error: "Cornerstone core not initialized yet" };
+    }
+    
     // Check if cornerstone is already initialized
     if (!cornerstone) {
       console.error("DicomTools: Cornerstone core not available");
       return { success: false, error: "Cornerstone core not available" };
     }
 
-    // Set external dependencies for cornerstone tools - CRUCIAL for proper functioning
-    cornerstoneTools.external.cornerstone = cornerstone;
-    console.log("DicomTools: External cornerstone set");
+    // Verify the external dependencies are properly set
+    if (!cornerstoneTools.external || !cornerstoneTools.external.cornerstone) {
+      console.error("DicomTools: External cornerstone not set for tools");
+      return { success: false, error: "External cornerstone not set for tools" };
+    }
+
+    // Verify the external dependency references the actual cornerstone object
+    if (cornerstoneTools.external.cornerstone !== cornerstone) {
+      console.error("DicomTools: External cornerstone reference mismatch");
+      // Correct the reference
+      cornerstoneTools.external.cornerstone = cornerstone;
+      console.log("DicomTools: Fixed external cornerstone reference");
+    }
 
     // Initialize tools with configuration for improved trackpad support
     cornerstoneTools.init({
@@ -61,8 +78,16 @@ export function setupElementTools(element: HTMLDivElement, activeTool: Cornersto
   error: string | null;
 } {
   try {
+    // Verify cornerstone and cornerstone tools are initialized
+    if (!cornerstone || !cornerstoneTools) {
+      console.error("DicomTools: Cornerstone libraries not available");
+      return { success: false, error: "Cornerstone libraries not available" };
+    }
+    
     // Make sure the element is enabled for cornerstone
-    if (!cornerstone.getEnabledElement(element)) {
+    try {
+      cornerstone.getEnabledElement(element);
+    } catch (e) {
       console.log("DicomTools: Element not enabled for cornerstone yet, skipping tool setup");
       return { success: false, error: "Element not enabled for cornerstone" };
     }
@@ -121,7 +146,7 @@ export function prepareElementForInteraction(element: HTMLDivElement): void {
   // Essential styles for proper event capture and preventing browser gestures
   element.tabIndex = 0; // Make element focusable
   element.style.outline = 'none';
-  element.style.webkitUserSelect = 'none'; // Fixed: lowercase 'w' in webkitUserSelect
+  element.style.webkitUserSelect = 'none';
   element.style.userSelect = 'none';
   element.style.touchAction = 'none'; // Critical for proper trackpad/touch handling
 }

@@ -4,6 +4,7 @@ import { UseCornerStoneToolsReturn, CornerstoneTool } from './cornerstone/types'
 import { initializeCornerStoneTools, setupElementTools } from './cornerstone/initializeTools';
 import { createEventHandlers, removeEventHandlers } from './cornerstone/eventHandlers';
 import { activateToolForElement, resetViewToNatural } from './cornerstone/toolOperations';
+import { isCornerstoneInitialized } from '@/utils/cornerstoneInit';
 
 export function useCornerStoneTools(
   viewerRef: RefObject<HTMLDivElement>,
@@ -16,17 +17,31 @@ export function useCornerStoneTools(
   const [zoomLevel, setZoomLevel] = useState<number>(1.0); // Default zoom level is 1.0 (100%)
   const eventHandlersRef = useRef<{ [key: string]: EventListener }>({});
   const toolsRegisteredRef = useRef(false);
-
-  // Initialize cornerstone tools once when the component mounts
-  useEffect(() => {
-    if (!enabled) return;
-
-    // Safety check - don't try to initialize if already done
-    if (isToolsInitialized) {
-      console.log("DicomTools: Tools already initialized, skipping initialization");
+  const initAttemptRef = useRef(0);
+  const MAX_INIT_ATTEMPTS = 3;
+  
+  // Function to attempt tool initialization with retries
+  const attemptToolInitialization = useCallback(() => {
+    // Don't try to initialize if disabled or already done
+    if (!enabled || isToolsInitialized) return;
+    
+    // Check if cornerstone core is initialized first
+    if (!isCornerstoneInitialized()) {
+      console.log("DicomTools: Cornerstone core not initialized yet, deferring tools initialization");
+      setError("Waiting for DICOM viewer initialization");
       return;
     }
-
+    
+    // Safety check for maximum attempts
+    if (initAttemptRef.current >= MAX_INIT_ATTEMPTS) {
+      console.error("DicomTools: Exceeded maximum tool initialization attempts");
+      setError("Failed to initialize DICOM tools after multiple attempts");
+      return;
+    }
+    
+    initAttemptRef.current += 1;
+    console.log(`DicomTools: Attempting tools initialization (attempt ${initAttemptRef.current})`);
+    
     // Initialize tools
     const { success, error } = initializeCornerStoneTools();
     
@@ -34,12 +49,41 @@ export function useCornerStoneTools(
       toolsRegisteredRef.current = true;
       setIsToolsInitialized(true);
       setError(null);
+      console.log("DicomTools: Tools initialized successfully");
     } else {
       setError(error);
       setIsToolsInitialized(false);
       toolsRegisteredRef.current = false;
+      console.error("DicomTools: Tool initialization failed:", error);
     }
   }, [enabled, isToolsInitialized]);
+
+  // Initialize cornerstone tools once when the component mounts
+  // or retry if cornerstone core becomes initialized
+  useEffect(() => {
+    if (!enabled) return;
+    
+    // First attempt
+    attemptToolInitialization();
+    
+    // Set up retry if first attempt failed
+    if (!isToolsInitialized) {
+      const checkInterval = setInterval(() => {
+        if (isCornerstoneInitialized() && !isToolsInitialized) {
+          console.log("DicomTools: Cornerstone core now initialized, retrying tools initialization");
+          attemptToolInitialization();
+        }
+        
+        // Clear interval if initialized or max attempts reached
+        if (isToolsInitialized || initAttemptRef.current >= MAX_INIT_ATTEMPTS) {
+          clearInterval(checkInterval);
+        }
+      }, 500);
+      
+      // Clean up interval
+      return () => clearInterval(checkInterval);
+    }
+  }, [enabled, isToolsInitialized, attemptToolInitialization]);
 
   // Set up tools on the element when both element and tools are ready
   useEffect(() => {

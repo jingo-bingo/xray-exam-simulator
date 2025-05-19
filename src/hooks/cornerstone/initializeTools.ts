@@ -4,6 +4,9 @@ import cornerstoneTools from 'cornerstone-tools';
 import { CornerstoneTool } from './types';
 import { isCornerstoneInitialized } from '@/utils/cornerstoneInit';
 
+// Track if tools have been registered
+let toolsRegistered = false;
+
 // Initialize cornerstone tools once when the component mounts
 export function initializeCornerStoneTools(): {
   success: boolean;
@@ -11,6 +14,12 @@ export function initializeCornerStoneTools(): {
 } {
   try {
     console.log("DicomTools: Starting cornerstone-tools initialization");
+    
+    // If tools already registered, return success immediately
+    if (toolsRegistered) {
+      console.log("DicomTools: Tools already registered, skipping initialization");
+      return { success: true, error: null };
+    }
     
     // Check if cornerstone core is initialized first
     if (!isCornerstoneInitialized()) {
@@ -24,43 +33,84 @@ export function initializeCornerStoneTools(): {
       return { success: false, error: "Cornerstone core not available" };
     }
 
-    // Verify the external dependencies are properly set
-    if (!cornerstoneTools.external || !cornerstoneTools.external.cornerstone) {
-      console.error("DicomTools: External cornerstone not set for tools");
-      return { success: false, error: "External cornerstone not set for tools" };
+    // Make sure cornerstone tools is available
+    if (!cornerstoneTools) {
+      console.error("DicomTools: Cornerstone tools library not available");
+      return { success: false, error: "Cornerstone tools library not available" };
     }
 
-    // Verify the external dependency references the actual cornerstone object
-    if (cornerstoneTools.external.cornerstone !== cornerstone) {
-      console.error("DicomTools: External cornerstone reference mismatch");
+    // Create the external object if it doesn't exist
+    if (!cornerstoneTools.external) {
+      cornerstoneTools.external = {};
+    }
+
+    // Verify the external dependencies are properly set, set them if needed
+    if (!cornerstoneTools.external.cornerstone) {
+      console.log("DicomTools: Setting external cornerstone reference");
+      cornerstoneTools.external.cornerstone = cornerstone;
+    } else if (cornerstoneTools.external.cornerstone !== cornerstone) {
+      console.warn("DicomTools: External cornerstone reference mismatch, correcting");
       // Correct the reference
       cornerstoneTools.external.cornerstone = cornerstone;
-      console.log("DicomTools: Fixed external cornerstone reference");
+    }
+
+    // Verify the reference was properly set
+    if (!cornerstoneTools.external.cornerstone || cornerstoneTools.external.cornerstone !== cornerstone) {
+      console.error("DicomTools: External cornerstone reference still invalid after setup");
+      return { success: false, error: "Failed to set external cornerstone reference" };
     }
 
     // Initialize tools with configuration for improved trackpad support
-    cornerstoneTools.init({
-      globalToolSyncEnabled: true,
-      showSVGCursors: true,
-      mouseEnabled: true,
-      touchEnabled: true, // Enable touch to support trackpad better
-    });
-    console.log("DicomTools: Tools initialized successfully with trackpad support");
+    try {
+      cornerstoneTools.init({
+        globalToolSyncEnabled: true,
+        showSVGCursors: true,
+        mouseEnabled: true,
+        touchEnabled: true, // Enable touch to support trackpad better
+      });
+      console.log("DicomTools: Tools initialized successfully with trackpad support");
+    } catch (initError) {
+      console.error("DicomTools: Failed to initialize cornerstone tools:", initError);
+      return { 
+        success: false, 
+        error: `Failed to initialize tools: ${initError instanceof Error ? initError.message : 'Unknown error'}`
+      };
+    }
     
-    // Add base tools to the registry
-    console.log("DicomTools: Adding tools to registry");
-    cornerstoneTools.addTool(cornerstoneTools.ZoomTool, {
-      configuration: {
-        invert: false,
-        preventZoomOutsideImage: false,
-        minScale: 0.1,
-        maxScale: 20.0
-      }
-    });
-    cornerstoneTools.addTool(cornerstoneTools.PanTool);
-    cornerstoneTools.addTool(cornerstoneTools.WwwcTool);
-    cornerstoneTools.addTool(cornerstoneTools.RotateTool); // Add the rotate tool
-    console.log("DicomTools: Tools added to registry successfully");
+    // Now add the tools to the registry
+    try {
+      console.log("DicomTools: Adding tools to registry");
+      
+      // Add the Zoom tool first
+      cornerstoneTools.addTool(cornerstoneTools.ZoomTool, {
+        configuration: {
+          invert: false,
+          preventZoomOutsideImage: false,
+          minScale: 0.1,
+          maxScale: 20.0
+        }
+      });
+      
+      // Add the Pan tool
+      cornerstoneTools.addTool(cornerstoneTools.PanTool);
+      
+      // Add the Window/Level tool
+      cornerstoneTools.addTool(cornerstoneTools.WwwcTool);
+      
+      // Add the Rotate tool
+      cornerstoneTools.addTool(cornerstoneTools.RotateTool);
+      
+      console.log("DicomTools: Tools added to registry successfully");
+    } catch (addToolError) {
+      console.error("DicomTools: Failed to add tools to registry:", addToolError);
+      return { 
+        success: false, 
+        error: `Failed to register tools: ${addToolError instanceof Error ? addToolError.message : 'Unknown error'}`
+      };
+    }
+    
+    // Mark tools as registered
+    toolsRegistered = true;
     
     return { success: true, error: null };
   } catch (e) {
@@ -106,11 +156,17 @@ export function setupElementTools(element: HTMLDivElement, activeTool: Cornersto
     }
 
     // Add the tools to this element. This will throw warnings if already added, but that's OK
-    cornerstoneTools.addToolForElement(element, cornerstoneTools.ZoomTool);
-    cornerstoneTools.addToolForElement(element, cornerstoneTools.PanTool);
-    cornerstoneTools.addToolForElement(element, cornerstoneTools.WwwcTool);
-    cornerstoneTools.addToolForElement(element, cornerstoneTools.RotateTool);
-    console.log("DicomTools: Added tools to specific element");
+    try {
+      console.log("DicomTools: Adding tools to element");
+      cornerstoneTools.addToolForElement(element, cornerstoneTools.ZoomTool);
+      cornerstoneTools.addToolForElement(element, cornerstoneTools.PanTool);
+      cornerstoneTools.addToolForElement(element, cornerstoneTools.WwwcTool);
+      cornerstoneTools.addToolForElement(element, cornerstoneTools.RotateTool);
+      console.log("DicomTools: Added tools to specific element");
+    } catch (addToolError) {
+      console.warn("DicomTools: Error adding tools to element (may be expected if already added):", addToolError);
+      // Continue as this might be expected
+    }
 
     // Ensure element can capture all events
     prepareElementForInteraction(element);
@@ -121,7 +177,6 @@ export function setupElementTools(element: HTMLDivElement, activeTool: Cornersto
         console.log("DicomTools: Setting initial tool (Zoom) for element");
         cornerstoneTools.setToolActiveForElement(element, 'Zoom', { mouseButtonMask: 1 });
         console.log("DicomTools: Set Zoom as default active tool with left mouse button");
-        return { success: true, error: null };
       } catch (toolError) {
         console.error("DicomTools: Failed to set initial tool active:", toolError);
         return { 
@@ -148,5 +203,15 @@ export function prepareElementForInteraction(element: HTMLDivElement): void {
   element.style.outline = 'none';
   element.style.webkitUserSelect = 'none';
   element.style.userSelect = 'none';
-  element.style.touchAction = 'none'; // Critical for proper trackpad/touch handling
+  
+  // Critical for proper touch/trackpad handling
+  // Do this safely to handle potential issues with older browsers
+  try {
+    element.style.touchAction = 'none'; 
+  } catch (e) {
+    console.warn("DicomTools: Could not set touchAction style on element:", e);
+  }
+  
+  // Ensure the element can receive pointer events
+  element.style.pointerEvents = 'all';
 }

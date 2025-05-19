@@ -6,7 +6,7 @@ import cornerstoneWADOImageLoader from "cornerstone-wado-image-loader";
 import dicomParser from "dicom-parser";
 import { DicomMetadata } from "./DicomMetadataDisplay";
 import { extractMetadata } from "@/utils/dicomMetadataExtractor";
-import { initializeCornerstone, isCornerstoneInitialized } from "@/utils/cornerstoneInit";
+import { initializeCornerstone, isCornerstoneInitialized, waitForCornerstoneInitialization } from "@/utils/cornerstoneInit";
 
 interface SimpleDicomViewerProps {
   imageUrl: string;
@@ -23,15 +23,23 @@ const loadedImages = new Map();
 // Global registry of active elements to prevent multiple initializations
 const initializedElements = new Set<string>();
 
-// Simplified initialization function for cornerstone core only (no tools)
-const ensureCornerstoneInitialized = (): boolean => {
+// Simplified initialization function that ensures cornerstone core is properly initialized
+const ensureCornerstoneInitialized = async (): Promise<boolean> => {
   // Check if already initialized
   if (isCornerstoneInitialized()) {
     return true;
   }
   
-  // Initialize cornerstone if not already initialized
-  return initializeCornerstone();
+  // Try to initialize cornerstone
+  const initialized = initializeCornerstone();
+  
+  // If initialization fails, wait for it to complete
+  if (!initialized) {
+    console.log("SimpleDicomViewer: Initial initialization failed, waiting for completion event");
+    return waitForCornerstoneInitialization(5000);
+  }
+  
+  return initialized;
 };
 
 // Define the component with memo to prevent unnecessary re-renders
@@ -56,7 +64,7 @@ const SimpleDicomViewerComponent = ({
   const imageInstanceRef = useRef<any>(null);
   const initializedRef = useRef<boolean>(false);
   const initAttemptRef = useRef(0);
-  const MAX_INIT_ATTEMPTS = 3;
+  const MAX_INIT_ATTEMPTS = 5;
   
   // Composite key combining instanceId and URL to track initialization
   const elementKey = `${instanceId}-${imageUrl}`;
@@ -66,7 +74,7 @@ const SimpleDicomViewerComponent = ({
     console.log(`SimpleDicomViewer[${instanceId}]: Component mounting`);
     isMounted.current = true;
     
-    const attemptInitialization = () => {
+    const attemptInitialization = async () => {
       // Check if we've exceeded maximum attempts
       if (initAttemptRef.current >= MAX_INIT_ATTEMPTS) {
         if (onError) {
@@ -79,35 +87,52 @@ const SimpleDicomViewerComponent = ({
       initAttemptRef.current++;
       console.log(`SimpleDicomViewer[${instanceId}]: Attempting cornerstone initialization (attempt ${initAttemptRef.current})`);
       
-      // Initialize cornerstone libraries
-      const initialized = ensureCornerstoneInitialized();
-      if (!initialized) {
-        if (onError) {
-          onError(new Error("Failed to initialize DICOM viewer libraries"));
+      try {
+        // Initialize cornerstone libraries
+        const initialized = await ensureCornerstoneInitialized();
+        
+        if (!initialized) {
+          console.error(`SimpleDicomViewer[${instanceId}]: Failed to initialize cornerstone`);
+          
+          // If we haven't reached the max attempts, schedule another attempt
+          if (initAttemptRef.current < MAX_INIT_ATTEMPTS && isMounted.current) {
+            setTimeout(() => {
+              attemptInitialization();
+            }, 300 * initAttemptRef.current);
+          } else if (onError && isMounted.current) {
+            onError(new Error("Failed to initialize DICOM viewer libraries after multiple attempts"));
+            setError("Failed to initialize DICOM viewer libraries");
+          }
+          return false;
         }
-        setError("Failed to initialize DICOM viewer libraries");
-        return false;
+        
+        if (isMounted.current) {
+          setIsInitialized(true);
+        }
+        return true;
+      } catch (error) {
+        console.error(`SimpleDicomViewer[${instanceId}]: Error during initialization:`, error);
+        
+        if (!isMounted.current) return false;
+        
+        if (initAttemptRef.current < MAX_INIT_ATTEMPTS) {
+          // Schedule another attempt
+          setTimeout(() => {
+            attemptInitialization();
+          }, 300 * initAttemptRef.current);
+          return false;
+        } else {
+          if (onError) {
+            onError(error instanceof Error ? error : new Error("Failed to initialize DICOM viewer"));
+          }
+          setError("Failed to initialize DICOM viewer");
+          return false;
+        }
       }
-      
-      setIsInitialized(true);
-      return true;
     };
     
     // Attempt initialization immediately
-    const initialized = attemptInitialization();
-    
-    // If initialization failed, retry a few times
-    if (!initialized) {
-      const initInterval = setInterval(() => {
-        if (attemptInitialization() || initAttemptRef.current >= MAX_INIT_ATTEMPTS) {
-          clearInterval(initInterval);
-        }
-      }, 500);
-      
-      return () => {
-        clearInterval(initInterval);
-      };
-    }
+    attemptInitialization();
     
     return () => {
       console.log(`SimpleDicomViewer[${instanceId}]: Component unmounting`);
@@ -198,7 +223,26 @@ const SimpleDicomViewerComponent = ({
           element.style.position = 'relative';
           element.style.outline = 'none';
           
-          cornerstone.enable(element);
+          // Make a defensive copy of the element properties to prevent errors
+          const elementProps = {
+            width: element.clientWidth || 100,
+            height: element.clientHeight || 100,
+          };
+          
+          // Try to safely enable the element
+          try {
+            cornerstone.enable(element, { renderer: 'webgl' });
+          } catch (enableError) {
+            console.warn(`SimpleDicomViewer[${instanceId}]: Error with WebGL renderer, falling back to canvas:`, enableError);
+            
+            // Retry with canvas renderer
+            try {
+              cornerstone.enable(element);
+            } catch (canvasError) {
+              throw new Error(`Failed to enable cornerstone with either renderer: ${canvasError instanceof Error ? canvasError.message : 'Unknown error'}`);
+            }
+          }
+          
           initializedRef.current = true;
           initializedElements.add(elementKey);
           console.log(`SimpleDicomViewer[${instanceId}]: Cornerstone enabled on element`);

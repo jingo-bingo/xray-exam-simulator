@@ -53,6 +53,26 @@ const AdminDashboard = () => {
     }
   });
 
+  // New query to fetch published cases count
+  const { data: publishedCaseCount, isLoading: isLoadingPublishedCases } = useQuery({
+    queryKey: ["admin-published-case-count"],
+    queryFn: async () => {
+      console.log("AdminDashboard: Fetching published case count");
+      const { count, error } = await supabase
+        .from("cases")
+        .select("*", { count: "exact", head: true })
+        .eq("published", true);
+      
+      if (error) {
+        console.error("AdminDashboard: Error fetching published case count", error);
+        throw error;
+      }
+      
+      console.log("AdminDashboard: Published case count fetched successfully", { count });
+      return count || 0;
+    }
+  });
+
   // Navigation handler with logging
   const handleNavigation = (path: string) => {
     console.log(`AdminDashboard: Navigating to ${path}`);
@@ -96,7 +116,11 @@ const AdminDashboard = () => {
             <CardTitle className="text-sm font-medium">Published Cases</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">Coming soon</div>
+            {isLoadingPublishedCases ? (
+              <Skeleton className="h-10 w-20" />
+            ) : (
+              <div className="text-3xl font-bold">{publishedCaseCount}</div>
+            )}
           </CardContent>
         </Card>
       </div>

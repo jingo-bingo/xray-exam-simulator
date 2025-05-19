@@ -312,7 +312,8 @@ export const ScanManager = ({ caseId, isNewCase, mainDicomPath }: ScanManagerPro
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Changed from grid to vertical stack layout */}
+                    <div className="flex flex-col space-y-4">
                       <div>
                         <Label htmlFor={`scan-label-${index}`}>Label</Label>
                         <Input 
@@ -320,6 +321,7 @@ export const ScanManager = ({ caseId, isNewCase, mainDicomPath }: ScanManagerPro
                           value={scan.label} 
                           onChange={(e) => handleLabelChange(actualIndex, e.target.value)}
                           placeholder="e.g., AP View, Lateral View"
+                          className="w-full"
                         />
                       </div>
                       <div>

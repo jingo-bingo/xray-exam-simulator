@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AnsweredQuestionDisplay } from "./AnsweredQuestionDisplay";
@@ -96,27 +95,16 @@ export const CompletedCaseReview = ({
   return (
     <Card className="bg-gray-800 border-gray-700">
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-radiology-light flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-green-500" />
-            Case Review
-          </CardTitle>
-        </div>
+        <CardTitle className="text-radiology-light">
+          Case Review
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Add completion message at the top */}
-        <div className="text-center mb-6 py-2">
-          <div className="flex flex-col items-center justify-center">
-            <div className="rounded-full bg-green-900/30 p-3 mb-4">
-              <CheckCircle2 className="h-10 w-10 text-green-500" />
-            </div>
-            <h3 className="text-xl font-bold text-radiology-light mb-2">
-              Great job!
-            </h3>
-            <p className="text-gray-400 max-w-md mx-auto">
-              You've completed this case study. Review your answers below.
-            </p>
-          </div>
+        {/* Simplified completion message */}
+        <div className="mb-6 py-2">
+          <p className="text-gray-400 max-w-md">
+            You've completed this case study. Review your answers below.
+          </p>
         </div>
 
         <ScrollArea className="h-[500px] pr-4">

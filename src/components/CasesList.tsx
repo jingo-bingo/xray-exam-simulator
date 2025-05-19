@@ -31,6 +31,8 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "@/components/ui/use-toast";
 
 type RegionType = Database["public"]["Enums"]["region_type"];
 type DifficultyLevel = Database["public"]["Enums"]["difficulty_level"];
@@ -45,24 +47,24 @@ type Case = {
   is_free_trial: boolean;
 };
 
+type CaseAttempt = {
+  id: string;
+  case_id: string;
+  status: Database["public"]["Enums"]["attempt_status"];
+  completed_at: string | null;
+};
+
 const ITEMS_PER_PAGE = 10;
 
 const CasesList = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [regionFilter, setRegionFilter] = useState<RegionType | null>(null);
   const [difficultyFilter, setDifficultyFilter] = useState<DifficultyLevel | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   
-  // Get user attempts from localStorage for now (in a real app, fetch from backend)
-  const [userAttempts, setUserAttempts] = useState<string[]>([]);
-  
-  useEffect(() => {
-    // In production, this would fetch from the database
-    const attempts = JSON.parse(localStorage.getItem('userCaseAttempts') || '[]');
-    setUserAttempts(attempts);
-  }, []);
-
-  const { data: cases, isLoading, error } = useQuery({
+  // Fetch cases from the database
+  const { data: cases, isLoading: casesLoading, error: casesError } = useQuery({
     queryKey: ["cases", { regionFilter, difficultyFilter }],
     queryFn: async () => {
       console.log("CasesList: Fetching cases with filters:", { regionFilter, difficultyFilter });
@@ -90,6 +92,36 @@ const CasesList = () => {
       console.log("CasesList: Cases fetched successfully, count:", data?.length);
       return data as Case[];
     },
+    enabled: true,
+  });
+
+  // Fetch case attempts for the current user from the database
+  const { data: attempts, isLoading: attemptsLoading } = useQuery({
+    queryKey: ["case-attempts", user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+
+      console.log("CasesList: Fetching case attempts for user:", user.id);
+      
+      const { data, error } = await supabase
+        .from("case_attempts")
+        .select("*")
+        .eq("user_id", user.id);
+      
+      if (error) {
+        console.error("CasesList: Error fetching case attempts:", error.message);
+        toast({
+          title: "Error",
+          description: "Failed to load your progress data",
+          variant: "destructive",
+        });
+        return [];
+      }
+      
+      console.log("CasesList: Case attempts fetched successfully, count:", data?.length);
+      return data as CaseAttempt[];
+    },
+    enabled: !!user,
   });
 
   const handleRegionChange = (value: string) => {
@@ -129,8 +161,23 @@ const CasesList = () => {
     }
   };
   
-  const hasAttempted = (caseId: string): boolean => {
-    return userAttempts.includes(caseId);
+  // Check if the user has attempted a case using the database data
+  const getAttemptStatus = (caseId: string): { attempted: boolean; status: string } => {
+    if (!attempts || attempts.length === 0) {
+      return { attempted: false, status: "Not Attempted" };
+    }
+    
+    const caseAttempt = attempts.find(attempt => attempt.case_id === caseId);
+    
+    if (!caseAttempt) {
+      return { attempted: false, status: "Not Attempted" };
+    }
+    
+    if (caseAttempt.status === "completed") {
+      return { attempted: true, status: "Completed" };
+    } else {
+      return { attempted: true, status: "In Progress" };
+    }
   };
   
   // Calculate pagination
@@ -139,13 +186,18 @@ const CasesList = () => {
   const paginatedCases = cases ? 
     cases.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE) : [];
   
-  // Calculate progress stats
-  const attemptedCount = cases ? cases.filter(c => hasAttempted(c.id)).length : 0;
+  // Calculate progress stats from the actual database data
+  const attemptedCount = attempts && cases ? 
+    cases.filter(c => !!attempts.find(a => a.case_id === c.id)).length : 0;
+  const completedCount = attempts && cases ? 
+    cases.filter(c => !!attempts.find(a => a.case_id === c.id && a.status === "completed")).length : 0;
   const remainingCount = totalCases - attemptedCount;
-  const attemptedPercentage = totalCases > 0 ? Math.round((attemptedCount / totalCases) * 100) : 0;
+  const attemptedPercentage = totalCases > 0 ? Math.round((completedCount / totalCases) * 100) : 0;
+
+  const isLoading = casesLoading || (user && attemptsLoading);
 
   if (isLoading) return <div className="text-center p-8">Loading cases...</div>;
-  if (error) return <div className="text-center p-8 text-red-500">Error loading cases: {(error as Error).message}</div>;
+  if (casesError) return <div className="text-center p-8 text-red-500">Error loading cases: {(casesError as Error).message}</div>;
 
   return (
     <div className="space-y-8">
@@ -202,39 +254,47 @@ const CasesList = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedCases.map((caseItem, index) => (
-                <TableRow key={caseItem.id} className="border-gray-700">
-                  <TableCell className="text-center">{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</TableCell>
-                  <TableCell className="font-medium">{caseItem.title}</TableCell>
-                  <TableCell>{getRegionDisplayName(caseItem.region)}</TableCell>
-                  <TableCell>{caseItem.age_group.charAt(0).toUpperCase() + caseItem.age_group.slice(1)}</TableCell>
-                  <TableCell>
-                    <Badge className={`${getDifficultyColor(caseItem.difficulty)} text-white`}>
-                      {caseItem.difficulty.charAt(0).toUpperCase() + caseItem.difficulty.slice(1)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {hasAttempted(caseItem.id) ? (
-                      <Badge variant="outline" className="border-green-500 text-green-500">
-                        Completed
+              {paginatedCases.map((caseItem, index) => {
+                const { attempted, status } = getAttemptStatus(caseItem.id);
+                
+                return (
+                  <TableRow key={caseItem.id} className="border-gray-700">
+                    <TableCell className="text-center">{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</TableCell>
+                    <TableCell className="font-medium">{caseItem.title}</TableCell>
+                    <TableCell>{getRegionDisplayName(caseItem.region)}</TableCell>
+                    <TableCell>{caseItem.age_group.charAt(0).toUpperCase() + caseItem.age_group.slice(1)}</TableCell>
+                    <TableCell>
+                      <Badge className={`${getDifficultyColor(caseItem.difficulty)} text-white`}>
+                        {caseItem.difficulty.charAt(0).toUpperCase() + caseItem.difficulty.slice(1)}
                       </Badge>
-                    ) : (
-                      <Badge variant="outline" className="border-yellow-500 text-yellow-500">
-                        Not Attempted
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button 
-                      onClick={() => navigate(`/cases/${caseItem.id}`)}
-                      variant="outline"
-                      size="sm"
-                    >
-                      {hasAttempted(caseItem.id) ? "Review" : "Start Tutorial"}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell>
+                      {status === "Completed" ? (
+                        <Badge variant="outline" className="border-green-500 text-green-500">
+                          Completed
+                        </Badge>
+                      ) : status === "In Progress" ? (
+                        <Badge variant="outline" className="border-blue-500 text-blue-500">
+                          In Progress
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="border-yellow-500 text-yellow-500">
+                          Not Attempted
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button 
+                        onClick={() => navigate(`/cases/${caseItem.id}`)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        {attempted ? "Review" : "Start Tutorial"}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
@@ -312,7 +372,7 @@ const CasesList = () => {
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>{attemptedPercentage}% complete</span>
-                <span>{attemptedCount}/{totalCases}</span>
+                <span>{completedCount}/{totalCases}</span>
               </div>
               <Progress value={attemptedPercentage} className="h-2" />
             </div>
@@ -324,3 +384,4 @@ const CasesList = () => {
 };
 
 export default CasesList;
+

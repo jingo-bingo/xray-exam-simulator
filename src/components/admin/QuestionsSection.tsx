@@ -1,5 +1,4 @@
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Question, QuestionForm } from "@/components/admin/QuestionForm";
 import { PlusCircle } from "lucide-react";
@@ -34,7 +33,7 @@ export const QuestionsSection = ({
         </Button>
       </div>
       
-      <div className="space-y-4">
+      <div className="space-y-4 bg-gray-900">
         {questions.length === 0 ? (
           <div className="text-center py-8 bg-gray-800 border border-gray-700 rounded-md">
             <p className="text-gray-400">No questions added yet.</p>

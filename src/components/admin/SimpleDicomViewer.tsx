@@ -1,5 +1,5 @@
 
-import { useRef, memo } from "react";
+import React, { useRef, memo, useEffect } from "react";
 import { DicomMetadata } from "./DicomMetadataDisplay";
 import { useSimpleCornerstoneInit } from "@/hooks/useSimpleCornerstoneInit";
 import { useSimpleCornerstoneImage } from "@/hooks/useSimpleCornerstoneImage";
@@ -37,7 +37,7 @@ const SimpleDicomViewerComponent = ({
   } = useSimpleCornerstoneImage(viewerRef, isInitialized, onMetadataLoaded, instanceId);
   
   // Load image when URL changes or when cornerstone is initialized
-  React.useEffect(() => {
+  useEffect(() => {
     if (isInitialized && imageUrl) {
       loadImage(imageUrl).catch((error) => {
         console.error(`SimpleDicomViewer[${instanceId}]: Error during image loading:`, error);
@@ -46,10 +46,10 @@ const SimpleDicomViewerComponent = ({
         }
       });
     }
-  }, [imageUrl, isInitialized, instanceId]);
+  }, [imageUrl, isInitialized, instanceId, loadImage, onError]);
   
   // Handle errors from initialization or image loading
-  React.useEffect(() => {
+  useEffect(() => {
     const error = initError || imageError;
     
     if (error && onError) {

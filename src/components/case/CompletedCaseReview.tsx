@@ -109,7 +109,7 @@ export const CompletedCaseReview = ({
           </p>
         </div>
 
-        <ScrollArea className="h-[500px] pr-4">
+        <ScrollArea className="max-h-[70vh] pr-4">
           <div className="space-y-8">
             {questions.map((question) => (
               <div key={question.id} className="border-b border-gray-700 pb-6 last:border-b-0">

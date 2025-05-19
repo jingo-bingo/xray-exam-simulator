@@ -6,10 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
-  LayoutDashboard, 
   FileText, 
-  Users, 
-  Settings 
+  Users
 } from "lucide-react";
 
 const AdminDashboard = () => {
@@ -103,22 +101,9 @@ const AdminDashboard = () => {
         </Card>
       </div>
       
-      {/* Navigation Cards */}
+      {/* Navigation Cards - Removed Dashboard and Settings panels */}
       <h2 className="text-2xl font-semibold mb-4">Admin Navigation</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card 
-          className="cursor-pointer hover:bg-gray-700 transition-colors"
-          onClick={() => handleNavigation("/admin")}
-        >
-          <CardHeader>
-            <LayoutDashboard className="h-8 w-8 mb-2" />
-            <CardTitle>Dashboard</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-300">Overview of system metrics and statistics</p>
-          </CardContent>
-        </Card>
-        
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card 
           className="cursor-pointer hover:bg-gray-700 transition-colors"
           onClick={() => handleNavigation("/admin/cases")}
@@ -142,19 +127,6 @@ const AdminDashboard = () => {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-gray-300">Manage user accounts and permissions</p>
-          </CardContent>
-        </Card>
-        
-        <Card 
-          className="cursor-pointer hover:bg-gray-700 transition-colors"
-          onClick={() => handleNavigation("/admin/settings")}
-        >
-          <CardHeader>
-            <Settings className="h-8 w-8 mb-2" />
-            <CardTitle>Settings</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-300">Configure system settings and preferences</p>
           </CardContent>
         </Card>
         

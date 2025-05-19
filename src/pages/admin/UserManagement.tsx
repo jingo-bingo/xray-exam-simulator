@@ -37,65 +37,31 @@ const UserManagement = () => {
     queryFn: async () => {
       console.log("UserManagement: Fetching users with filter:", filter);
       
-      // First, get all auth users
-      const { data: authUsers, error: authError } = await supabase.auth.admin.listUsers();
-      
-      if (authError) {
-        console.error("UserManagement: Error fetching auth users", authError);
-        throw authError;
-      }
-      
-      if (!authUsers?.users) {
-        console.warn("UserManagement: No users found");
-        return [];
-      }
-      
-      // Then, get user profiles and roles
-      const userIds = authUsers.users.map(user => user.id);
-      
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("*")
-        .in("id", userIds);
-      
-      if (profilesError) {
-        console.error("UserManagement: Error fetching profiles", profilesError);
-        throw profilesError;
-      }
-      
-      const { data: roles, error: rolesError } = await supabase
-        .from("user_roles")
-        .select("*")
-        .in("user_id", userIds);
-      
-      if (rolesError) {
-        console.error("UserManagement: Error fetching roles", rolesError);
-        throw rolesError;
-      }
-      
-      // Combine the data
-      const combinedUsers = authUsers.users.map(user => {
-        const profile = profiles?.find(p => p.id === user.id) || null;
-        const roleObj = roles?.find(r => r.user_id === user.id) || null;
+      try {
+        // Call our Edge Function instead of direct admin API
+        const { data, error } = await supabase.functions.invoke("list-users", {
+          body: { filter }
+        });
         
-        return {
-          id: user.id,
-          email: user.email,
-          created_at: user.created_at,
-          first_name: profile?.first_name || null,
-          last_name: profile?.last_name || null,
-          role: roleObj?.role as UserRole || null
-        };
-      });
-      
-      // Apply filter if needed
-      let filteredUsers = combinedUsers;
-      if (filter !== "all") {
-        filteredUsers = combinedUsers.filter(user => user.role === filter);
+        if (error) {
+          console.error("UserManagement: Error invoking list-users function", error);
+          throw error;
+        }
+        
+        if (!data?.data) {
+          console.warn("UserManagement: No users returned from function");
+          return [];
+        }
+        
+        console.log("UserManagement: Users fetched successfully via function", { 
+          count: data.data.length 
+        });
+        
+        return data.data as UserWithRole[];
+      } catch (err) {
+        console.error("UserManagement: Error in query function", err);
+        throw new Error(err instanceof Error ? err.message : "Failed to fetch users");
       }
-      
-      console.log("UserManagement: Users fetched successfully", { count: filteredUsers.length });
-      return filteredUsers as UserWithRole[];
     }
   });
   
@@ -153,7 +119,7 @@ const UserManagement = () => {
   
   const handleRoleChange = (userId: string, newRole: UserRole) => {
     console.log("UserManagement: Handling role change", { userId, newRole });
-    updateRoleMutation.mutate({ userId, role: newRole }); // Fixed: changed newRole to role
+    updateRoleMutation.mutate({ userId, role: newRole });
   };
   
   if (error) {

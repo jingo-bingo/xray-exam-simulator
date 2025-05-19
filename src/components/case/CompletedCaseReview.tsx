@@ -118,6 +118,7 @@ export const CompletedCaseReview = ({
                     questionText={question.question_text}
                     answer={answers[question.id]}
                     explanation={question.explanation}
+                    modelAnswer={question.correct_answer}
                   />
                 ) : (
                   <div className="bg-gray-700/50 p-4 rounded-md">

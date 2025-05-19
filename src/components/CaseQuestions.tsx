@@ -136,6 +136,7 @@ const CaseQuestions = ({
             questionText={currentQuestion.question_text}
             answer={answeredQuestions[currentQuestion.id]}
             explanation={currentQuestion.explanation}
+            modelAnswer={currentQuestion.correct_answer}
           />
         ) : (
           <QuestionAnswer

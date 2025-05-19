@@ -44,7 +44,7 @@ export const AnsweredQuestionDisplay: React.FC<AnsweredQuestionDisplayProps> = (
         
         {explanation && (
           <div className="bg-gray-800 p-3 rounded-md border border-gray-700">
-            <p className="text-sm font-medium text-gray-300 mb-1">Explanation:</p>
+            <p className="text-sm font-medium text-gray-300 mb-1">Additional Notes:</p>
             <p className="text-gray-200 text-sm">{explanation}</p>
           </div>
         )}

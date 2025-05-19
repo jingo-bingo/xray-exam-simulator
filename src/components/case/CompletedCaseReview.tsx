@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AnsweredQuestionDisplay } from "./AnsweredQuestionDisplay";
@@ -95,7 +96,8 @@ export const CompletedCaseReview = ({
   return (
     <Card className="bg-gray-800 border-gray-700">
       <CardHeader>
-        <CardTitle className="text-radiology-light">
+        <CardTitle className="text-radiology-light flex items-center gap-2">
+          <CheckCircle2 className="h-5 w-5 text-green-500" />
           Case Review
         </CardTitle>
       </CardHeader>

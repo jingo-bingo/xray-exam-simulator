@@ -62,29 +62,10 @@ export const CaseAttemptSection = ({ caseId, userId }: CaseAttemptSectionProps) 
     );
   }
 
-  // Case completed
+  // Case completed - directly render CompletedCaseReview component
   if (status === 'completed') {
     return (
       <div className="space-y-4">
-        <Card className="bg-gray-800 border-gray-700">
-          <CardHeader>
-            <CardTitle className="text-radiology-light">Case Completed</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center py-6">
-            <div className="flex flex-col items-center justify-center">
-              <div className="rounded-full bg-green-900/30 p-3 mb-4">
-                <CheckCircle2 className="h-10 w-10 text-green-500" />
-              </div>
-              <h3 className="text-xl font-bold text-radiology-light mb-2">
-                Great job!
-              </h3>
-              <p className="text-gray-400 max-w-md mx-auto">
-                You've completed this case study. Review your answers below.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        
         {attemptId && (
           <CompletedCaseReview
             caseId={caseId}

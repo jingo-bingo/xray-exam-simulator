@@ -2,8 +2,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, CheckCircle2, X } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AnsweredQuestionDisplay } from "./AnsweredQuestionDisplay";
@@ -102,16 +101,24 @@ export const CompletedCaseReview = ({
             <CheckCircle2 className="h-5 w-5 text-green-500" />
             Case Review
           </CardTitle>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => window.location.href = "/cases"}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Cases
-          </Button>
         </div>
       </CardHeader>
       <CardContent>
+        {/* Add completion message at the top */}
+        <div className="text-center mb-6 py-2">
+          <div className="flex flex-col items-center justify-center">
+            <div className="rounded-full bg-green-900/30 p-3 mb-4">
+              <CheckCircle2 className="h-10 w-10 text-green-500" />
+            </div>
+            <h3 className="text-xl font-bold text-radiology-light mb-2">
+              Great job!
+            </h3>
+            <p className="text-gray-400 max-w-md mx-auto">
+              You've completed this case study. Review your answers below.
+            </p>
+          </div>
+        </div>
+
         <ScrollArea className="h-[500px] pr-4">
           <div className="space-y-8">
             {questions.map((question) => (

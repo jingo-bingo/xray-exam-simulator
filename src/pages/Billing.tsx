@@ -2,65 +2,28 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CreditCard, Clock, CheckCircle } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { User, LogOut } from "lucide-react";
+import { CreditCard, Clock, CheckCircle, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import Logo from "@/components/Logo";
+import { AppHeader } from "@/components/AppHeader";
 
 const Billing = () => {
-  const { user, userRole, signOut } = useAuth();
+  const { user, userRole } = useAuth();
   const navigate = useNavigate();
 
-  const getUserInitials = () => {
-    const firstName = user?.user_metadata?.first_name || "";
-    const lastName = user?.user_metadata?.last_name || "";
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || user?.email?.charAt(0).toUpperCase() || "U";
-  };
+  const navigation = (
+    <Button 
+      variant="outline" 
+      onClick={() => navigate("/dashboard")}
+      className="border-medical-border hover:bg-medical-lighter"
+    >
+      <ArrowLeft className="mr-2 h-4 w-4" />
+      Back to Dashboard
+    </Button>
+  );
 
   return (
     <div className="min-h-screen bg-medical-light text-medical-dark">
-      <header className="bg-white shadow-sm border-b border-medical-border py-4 px-6">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Logo size="md" />
-            <span className="text-2xl font-bold text-medical-dark">Billing</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={() => navigate("/dashboard")}>
-              Back to Dashboard
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-medical-primary text-white">
-                      {getUserInitials()}
-                    </AvatarFallback>
-                  </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <div className="flex flex-col space-y-1 p-2">
-                  <p className="text-sm font-medium leading-none">{user?.user_metadata?.first_name} {user?.user_metadata?.last_name}</p>
-                  <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate("/profile")}>
-                  <User className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={signOut}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Sign out</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </header>
+      <AppHeader title="Billing" navigation={navigation} />
 
       <main className="container mx-auto py-8 px-4">
         <div className="max-w-4xl mx-auto">

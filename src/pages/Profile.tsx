@@ -9,9 +9,10 @@ import { ArrowLeft, User, Lock, CreditCard } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "sonner";
+import { AppHeader } from "@/components/AppHeader";
 
 const Profile = () => {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [firstName, setFirstName] = useState(user?.user_metadata?.first_name || "");
   const [lastName, setLastName] = useState(user?.user_metadata?.last_name || "");
@@ -36,27 +37,21 @@ const Profile = () => {
     setConfirmPassword("");
   };
 
+  const navigation = (
+    <Button 
+      variant="outline" 
+      size="sm"
+      onClick={() => navigate("/dashboard")}
+      className="border-medical-border hover:bg-medical-lighter"
+    >
+      <ArrowLeft className="mr-2 h-4 w-4" /> 
+      Back to Dashboard
+    </Button>
+  );
+
   return (
     <div className="min-h-screen bg-medical-light text-medical-dark">
-      <header className="bg-white shadow-sm border-b border-medical-border py-4 px-6">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => navigate("/dashboard")}
-              className="mr-4 border-medical-border hover:bg-medical-lighter"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" /> 
-              Back to Dashboard
-            </Button>
-            <h1 className="text-2xl font-bold text-medical-primary">Profile Settings</h1>
-          </div>
-          <Button variant="outline" onClick={signOut} className="border-medical-border">
-            Sign Out
-          </Button>
-        </div>
-      </header>
+      <AppHeader title="Profile Settings" navigation={navigation} />
 
       <main className="container mx-auto py-8 px-4 max-w-4xl">
         <div className="space-y-6">

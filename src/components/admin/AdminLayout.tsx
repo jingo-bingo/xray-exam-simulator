@@ -4,13 +4,15 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
+import { AppHeader } from "@/components/AppHeader";
+import { ArrowLeft } from "lucide-react";
 
 interface AdminLayoutProps {
   children?: ReactNode;
 }
 
 export const AdminLayout = ({ children }: AdminLayoutProps) => {
-  const { user, userRole, signOut } = useAuth();
+  const { user, userRole } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,24 +26,24 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
 
   if (!user) return null;
 
+  const navigation = (
+    <Button 
+      variant="outline" 
+      size="sm"
+      onClick={() => {
+        console.log("AdminLayout: Navigating back to main dashboard");
+        navigate("/dashboard");
+      }}
+      className="border-medical-border text-medical-primary hover:bg-medical-lighter"
+    >
+      <ArrowLeft className="mr-2 h-4 w-4" />
+      Back to Dashboard
+    </Button>
+  );
+
   return (
     <div className="min-h-screen bg-medical-light text-medical-dark">      
-      <header className="bg-white shadow-sm border-b border-medical-border py-4 px-6 flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-medical-primary">Rad2B Admin Panel</h1>
-        <div className="flex items-center gap-4">
-          <span className="text-medical-dark">{user.email}</span>
-          <Button 
-            variant="outline" 
-            className="border-medical-border hover:bg-medical-lighter"
-            onClick={() => {
-              console.log("AdminLayout: User signed out");
-              signOut();
-            }}
-          >
-            Sign Out
-          </Button>
-        </div>
-      </header>
+      <AppHeader title="Admin Panel" navigation={navigation} />
       
       <main className="container mx-auto p-6">
         {children || <Outlet />}

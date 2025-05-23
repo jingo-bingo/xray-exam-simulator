@@ -6,6 +6,7 @@ import { Plus, ArrowLeft } from "lucide-react";
 import { useCaseManagement } from "@/hooks/admin/useCaseManagement";
 import { CaseFilters } from "@/components/admin/CaseFilters";
 import { CasesManagementTable } from "@/components/admin/CasesManagementTable";
+import { AppHeader } from "@/components/AppHeader";
 
 const CaseManagement = () => {
   const navigate = useNavigate();
@@ -38,41 +39,47 @@ const CaseManagement = () => {
     return <div className="text-red-500">Error loading cases: {(error as Error).message}</div>;
   }
 
+  const navigation = (
+    <div className="flex items-center gap-4">
+      <Button 
+        variant="outline" 
+        size="sm" 
+        onClick={() => {
+          console.log("CaseManagement: Navigating back to admin dashboard");
+          navigate("/admin");
+        }}
+        className="border-medical-border text-medical-primary hover:bg-medical-lighter"
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        Back to Admin
+      </Button>
+      <Button onClick={handleCreateCase} className="bg-medical-primary hover:bg-medical-primary/90">
+        <Plus className="mr-2 h-4 w-4" />
+        Create Case
+      </Button>
+    </div>
+  );
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => {
-              console.log("CaseManagement: Navigating back to admin dashboard");
-              navigate("/admin");
-            }}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
-          </Button>
-          <h1 className="text-3xl font-bold">Cases Management</h1>
+    <div className="min-h-screen bg-medical-light text-medical-dark">
+      <AppHeader title="Cases Management" navigation={navigation} />
+      
+      <main className="container mx-auto p-6">
+        <div className="space-y-6">
+          <CaseFilters filter={filter} onFilterChange={setFilter} />
+          
+          {isLoading ? (
+            <div>Loading cases...</div>
+          ) : (
+            <CasesManagementTable 
+              cases={cases || []}
+              getCreatorName={getCreatorName}
+              onEdit={handleEditCase}
+              onDelete={handleDeleteCase}
+            />
+          )}
         </div>
-        <Button onClick={handleCreateCase}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Case
-        </Button>
-      </div>
-      
-      <CaseFilters filter={filter} onFilterChange={setFilter} />
-      
-      {isLoading ? (
-        <div>Loading cases...</div>
-      ) : (
-        <CasesManagementTable 
-          cases={cases || []}
-          getCreatorName={getCreatorName}
-          onEdit={handleEditCase}
-          onDelete={handleDeleteCase}
-        />
-      )}
+      </main>
     </div>
   );
 };

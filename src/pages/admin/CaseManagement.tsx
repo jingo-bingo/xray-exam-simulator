@@ -42,7 +42,7 @@ const CaseManagement = () => {
         .from("cases")
         .select(`
           *,
-          creator:profiles!cases_created_by_fkey(first_name, last_name)
+          creator:profiles!created_by(first_name, last_name)
         `);
       
       if (filter === "published") {
@@ -59,16 +59,7 @@ const CaseManagement = () => {
       }
       
       console.log("CaseManagement: Cases fetched successfully", { count: data?.length });
-      
-      // Transform the data to handle the creator relationship properly
-      const transformedData = data?.map(caseItem => ({
-        ...caseItem,
-        creator: Array.isArray(caseItem.creator) 
-          ? (caseItem.creator[0] || null)
-          : caseItem.creator
-      })) || [];
-      
-      return transformedData as Case[];
+      return data as Case[];
     }
   });
   

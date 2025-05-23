@@ -43,7 +43,7 @@ const Auth = () => {
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] bg-gradient-to-br from-blue-50 to-indigo-50 px-4">
         <Card className="w-full max-w-md bg-white border-gray-200 shadow-xl">
           <CardHeader className="text-center pb-8">
-            <CardTitle className="text-3xl font-bold text-blue-600">RadExam</CardTitle>
+            <CardTitle className="text-3xl font-bold text-blue-600">Rad2B</CardTitle>
             <CardDescription className="text-gray-600 mt-2">
               Sign in to access your radiology examination simulator
             </CardDescription>

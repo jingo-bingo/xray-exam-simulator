@@ -215,7 +215,7 @@ const SubmitCases = () => {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => navigate(`/cases/${caseItem.id}`)}
+                            onClick={() => navigate(`/cases/${caseItem.id}`, { state: { from: 'submitted' } })}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>

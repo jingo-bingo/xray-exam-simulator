@@ -14,11 +14,11 @@ const Cases = () => {
   }, [userRole]);
 
   return (
-    <div className="min-h-screen bg-radiology-dark text-radiology-light">
-      <header className="bg-gray-800 shadow-md py-4 px-6">
+    <div className="min-h-screen bg-medical-light text-medical-dark">
+      <header className="bg-white shadow-sm border-b border-medical-border py-4 px-6">
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold">RadExam Cases</h1>
+            <h1 className="text-2xl font-bold text-medical-primary">Rad2B Cases</h1>
             {userRole === "admin" && (
               <Button 
                 variant="outline" 
@@ -27,19 +27,21 @@ const Cases = () => {
                   console.log("Cases: Admin returning to admin panel");
                   navigate("/admin");
                 }}
+                className="border-medical-border text-medical-primary hover:bg-medical-lighter"
               >
                 Return to Admin Panel
               </Button>
             )}
           </div>
           <div className="flex items-center gap-4">
-            <span>{user?.email} ({userRole})</span>
-            <button 
+            <span className="text-medical-dark">{user?.email} ({userRole})</span>
+            <Button 
+              variant="outline"
               onClick={signOut}
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md transition"
+              className="border-medical-border hover:bg-medical-lighter"
             >
               Sign Out
-            </button>
+            </Button>
           </div>
         </div>
       </header>

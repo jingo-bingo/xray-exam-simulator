@@ -25,13 +25,14 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-radiology-dark text-radiology-light">      
-      <header className="bg-gray-800 shadow-md py-4 px-6 flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Admin Panel</h1>
+    <div className="min-h-screen bg-medical-light text-medical-dark">      
+      <header className="bg-white shadow-sm border-b border-medical-border py-4 px-6 flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-medical-primary">Rad2B Admin Panel</h1>
         <div className="flex items-center gap-4">
-          <span>{user.email}</span>
+          <span className="text-medical-dark">{user.email}</span>
           <Button 
             variant="outline" 
+            className="border-medical-border hover:bg-medical-lighter"
             onClick={() => {
               console.log("AdminLayout: User signed out");
               signOut();

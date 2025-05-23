@@ -13,38 +13,44 @@ const Dashboard = () => {
   }, [userRole]);
 
   return (
-    <div className="min-h-screen bg-radiology-dark text-radiology-light">
-      <header className="bg-gray-800 shadow-md py-4 px-6">
+    <div className="min-h-screen bg-medical-light text-medical-dark">
+      <header className="bg-white shadow-sm border-b border-medical-border py-4 px-6">
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-2xl font-bold">RadExam Dashboard</h1>
+          <h1 className="text-2xl font-bold text-medical-primary">Rad2B Dashboard</h1>
           <div className="flex items-center gap-4">
-            <span>{user?.email}</span>
-            <Button variant="outline" onClick={signOut}>Sign Out</Button>
+            <span className="text-medical-dark">{user?.email}</span>
+            <Button variant="outline" onClick={signOut} className="border-medical-border">Sign Out</Button>
           </div>
         </div>
       </header>
 
       <main className="container mx-auto py-8 px-4">
-        <div className="bg-gray-800 rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-2">Welcome, {userRole === "admin" ? "Admin" : "Trainee"}!</h2>
-          <p className="text-gray-300 mb-4">
-            You're logged in to the RadExam platform, the advanced radiology examination simulator.
+        <div className="bg-white rounded-lg p-6 mb-8 shadow-sm border border-medical-border">
+          <h2 className="text-xl font-semibold mb-2 text-medical-dark">Welcome, {userRole === "admin" ? "Admin" : "Trainee"}!</h2>
+          <p className="text-medical-muted mb-4">
+            You're logged in to the Rad2B platform, the advanced radiology examination simulator.
           </p>
           
           {/* Show admin panel button only for admins */}
           {userRole === "admin" && (
             <div className="mt-4 flex gap-4">
-              <Button onClick={() => {
-                console.log("Dashboard: Admin navigating to admin panel");
-                navigate("/admin");
-              }}>
+              <Button 
+                onClick={() => {
+                  console.log("Dashboard: Admin navigating to admin panel");
+                  navigate("/admin");
+                }}
+                className="bg-medical-primary hover:bg-medical-primary/90 text-white"
+              >
                 Access Admin Panel
               </Button>
               
-              <Button onClick={() => {
-                console.log("Dashboard: Admin navigating to cases as an admin");
-                navigate("/cases");
-              }}>
+              <Button 
+                onClick={() => {
+                  console.log("Dashboard: Admin navigating to cases as an admin");
+                  navigate("/cases");
+                }}
+                className="bg-medical-secondary hover:bg-medical-secondary/90 text-white"
+              >
                 Browse Cases
               </Button>
             </div>
@@ -53,10 +59,13 @@ const Dashboard = () => {
           {/* Show browse cases button for trainees */}
           {userRole === "trainee" && (
             <div className="mt-4">
-              <Button onClick={() => {
-                console.log("Dashboard: Trainee navigating to cases");
-                navigate("/cases");
-              }}>
+              <Button 
+                onClick={() => {
+                  console.log("Dashboard: Trainee navigating to cases");
+                  navigate("/cases");
+                }}
+                className="bg-medical-primary hover:bg-medical-primary/90 text-white"
+              >
                 Browse Cases
               </Button>
             </div>
@@ -64,23 +73,23 @@ const Dashboard = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="bg-gray-800 rounded-lg p-6">
-            <h3 className="text-lg font-semibold mb-2">Quick Stats</h3>
-            <div className="text-gray-300">
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-medical-border">
+            <h3 className="text-lg font-semibold mb-2 text-medical-dark">Quick Stats</h3>
+            <div className="text-medical-muted">
               <p>Coming soon...</p>
             </div>
           </div>
           
-          <div className="bg-gray-800 rounded-lg p-6">
-            <h3 className="text-lg font-semibold mb-2">Recent Activity</h3>
-            <div className="text-gray-300">
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-medical-border">
+            <h3 className="text-lg font-semibold mb-2 text-medical-dark">Recent Activity</h3>
+            <div className="text-medical-muted">
               <p>Coming soon...</p>
             </div>
           </div>
           
-          <div className="bg-gray-800 rounded-lg p-6">
-            <h3 className="text-lg font-semibold mb-2">Resources</h3>
-            <div className="text-gray-300">
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-medical-border">
+            <h3 className="text-lg font-semibold mb-2 text-medical-dark">Resources</h3>
+            <div className="text-medical-muted">
               <p>Coming soon...</p>
             </div>
           </div>

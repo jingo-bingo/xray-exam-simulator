@@ -17,17 +17,17 @@ const UserManagement = () => {
 
   if (error) {
     console.error("UserManagement: Error in component", error);
-    return <div className="text-red-500">Error loading users: {(error as Error).message}</div>;
+    return <div className="text-medical-danger">Error loading users: {(error as Error).message}</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">User Management</h1>
+        <h1 className="text-3xl font-bold text-medical-dark">User Management</h1>
         <Button 
           variant="outline" 
           onClick={handleBackToAdmin}
-          className="gap-2"
+          className="gap-2 border-medical-border hover:bg-medical-lighter"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Admin Panel

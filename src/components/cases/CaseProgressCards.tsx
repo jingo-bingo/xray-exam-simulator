@@ -19,41 +19,41 @@ export const CaseProgressCards = ({
 }: CaseProgressCardsProps) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-white border-medical-border shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-xl font-medium">Attempted Cases</CardTitle>
+          <CardTitle className="text-xl font-medium text-medical-dark">Attempted Cases</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
-            <span className="text-3xl font-bold">{attemptedCount}</span>
-            <span className="text-sm text-gray-400">of {totalCases} total</span>
+            <span className="text-3xl font-bold text-medical-dark">{attemptedCount}</span>
+            <span className="text-sm text-medical-muted">of {totalCases} total</span>
           </div>
         </CardContent>
       </Card>
       
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-white border-medical-border shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-xl font-medium">Remaining Cases</CardTitle>
+          <CardTitle className="text-xl font-medium text-medical-dark">Remaining Cases</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
-            <span className="text-3xl font-bold">{remainingCount}</span>
-            <span className="text-sm text-gray-400">still to complete</span>
+            <span className="text-3xl font-bold text-medical-dark">{remainingCount}</span>
+            <span className="text-sm text-medical-muted">still to complete</span>
           </div>
         </CardContent>
       </Card>
       
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-white border-medical-border shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-xl font-medium">Progress</CardTitle>
+          <CardTitle className="text-xl font-medium text-medical-dark">Progress</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span>{attemptedPercentage}% complete</span>
-              <span>{completedCount}/{totalCases}</span>
+              <span className="text-medical-dark">{attemptedPercentage}% complete</span>
+              <span className="text-medical-dark">{completedCount}/{totalCases}</span>
             </div>
-            <Progress value={attemptedPercentage} className="h-2" />
+            <Progress value={attemptedPercentage} className="h-2 bg-medical-lighter" />
           </div>
         </CardContent>
       </Card>

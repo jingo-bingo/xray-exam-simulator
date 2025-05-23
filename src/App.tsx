@@ -11,6 +11,8 @@ import Dashboard from "./pages/Dashboard";
 import Unauthorized from "./pages/Unauthorized";
 import Cases from "./pages/Cases";
 import CaseView from "./pages/CaseView";
+import SubmitCases from "./pages/SubmitCases";
+import SubmitNewCase from "./pages/SubmitNewCase";
 import { AuthProvider } from "./hooks/useAuth";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -41,6 +43,12 @@ const App = () => (
               {/* Both admins and trainees can access cases */}
               <Route path="/cases" element={<Cases />} />
               <Route path="/cases/:id" element={<CaseView />} />
+            </Route>
+            
+            {/* Contributor routes - accessible by contributors and admins */}
+            <Route element={<ProtectedRoute requiredRole="contributor" />}>
+              <Route path="/cases/submit" element={<SubmitCases />} />
+              <Route path="/cases/submit/new" element={<SubmitNewCase />} />
             </Route>
             
             {/* Admin routes - strictly admin only */}

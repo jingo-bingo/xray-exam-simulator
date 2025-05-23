@@ -150,6 +150,8 @@ export type Database = {
           is_free_trial: boolean
           published: boolean
           region: Database["public"]["Enums"]["region_type"]
+          review_status: Database["public"]["Enums"]["review_status"]
+          submitted_by: string | null
           title: string
           updated_at: string
         }
@@ -166,6 +168,8 @@ export type Database = {
           is_free_trial?: boolean
           published?: boolean
           region: Database["public"]["Enums"]["region_type"]
+          review_status?: Database["public"]["Enums"]["review_status"]
+          submitted_by?: string | null
           title: string
           updated_at?: string
         }
@@ -182,6 +186,8 @@ export type Database = {
           is_free_trial?: boolean
           published?: boolean
           region?: Database["public"]["Enums"]["region_type"]
+          review_status?: Database["public"]["Enums"]["review_status"]
+          submitted_by?: string | null
           title?: string
           updated_at?: string
         }
@@ -314,6 +320,7 @@ export type Database = {
         | "cardiovascular"
         | "neuro"
         | "other"
+      review_status: "draft" | "pending_review" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -448,6 +455,7 @@ export const Constants = {
         "neuro",
         "other",
       ],
+      review_status: ["draft", "pending_review", "approved", "rejected"],
     },
   },
 } as const

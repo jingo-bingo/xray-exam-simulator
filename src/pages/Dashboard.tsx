@@ -26,7 +26,9 @@ const Dashboard = () => {
 
       <main className="container mx-auto py-8 px-4">
         <div className="bg-white rounded-lg p-6 mb-8 shadow-sm border border-medical-border">
-          <h2 className="text-xl font-semibold mb-2 text-medical-dark">Welcome, {userRole === "admin" ? "Admin" : "Trainee"}!</h2>
+          <h2 className="text-xl font-semibold mb-2 text-medical-dark">
+            Welcome, {userRole === "admin" ? "Admin" : userRole === "contributor" ? "Contributor" : "Trainee"}!
+          </h2>
           <p className="text-medical-muted mb-4">
             You're logged in to the Rad2B platform, the advanced radiology examination simulator.
           </p>
@@ -52,6 +54,31 @@ const Dashboard = () => {
                 className="bg-medical-secondary hover:bg-medical-secondary/90 text-white"
               >
                 Browse Cases
+              </Button>
+            </div>
+          )}
+          
+          {/* Show contributor options */}
+          {userRole === "contributor" && (
+            <div className="mt-4 flex gap-4">
+              <Button 
+                onClick={() => {
+                  console.log("Dashboard: Contributor navigating to cases");
+                  navigate("/cases");
+                }}
+                className="bg-medical-primary hover:bg-medical-primary/90 text-white"
+              >
+                Browse Cases
+              </Button>
+              
+              <Button 
+                onClick={() => {
+                  console.log("Dashboard: Contributor navigating to submit cases");
+                  navigate("/cases/submit");
+                }}
+                className="bg-medical-secondary hover:bg-medical-secondary/90 text-white"
+              >
+                Submit Cases
               </Button>
             </div>
           )}

@@ -9,6 +9,7 @@ import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
+import Billing from "./pages/Billing";
 import Unauthorized from "./pages/Unauthorized";
 import Cases from "./pages/Cases";
 import CaseView from "./pages/CaseView";

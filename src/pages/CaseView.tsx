@@ -1,14 +1,16 @@
 
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useCaseData } from "@/hooks/useCaseData";
 import { CaseDetails } from "@/components/case/CaseDetails";
 import { BasicDicomImageSection } from "@/components/case/BasicDicomImageSection";
 import { CompletedCaseReview } from "@/components/case/CompletedCaseReview";
 import { useCaseAttempt } from "@/hooks/useCaseAttempt";
+import { CaseHeader } from "@/components/case/CaseHeader";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useNavigate } from "react-router-dom";
 
 const CaseView = () => {
   const { id } = useParams<{ id: string }>();
@@ -44,26 +46,12 @@ const CaseView = () => {
 
   return (
     <div className="min-h-screen bg-medical-lighter">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-medical-border py-6 px-6 sticky top-0 z-10">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center">
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => navigate("/cases")}
-              className="mr-4 bg-white hover:bg-gray-50 border-medical-border"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Cases
-            </Button>
-            {isLoadingCase ? (
-              <Skeleton className="h-8 w-48" />
-            ) : (
-              <h1 className="text-2xl font-bold text-medical-dark">{caseData?.title}</h1>
-            )}
-          </div>
-        </div>
-      </header>
+      {/* Use CaseHeader component with case data */}
+      <CaseHeader 
+        title={caseData?.title}
+        isLoading={isLoadingCase}
+        caseData={caseData}
+      />
 
       <main className="container mx-auto py-8 px-4">
         {isLoadingCase ? (

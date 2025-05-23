@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft } from "lucide-react";
@@ -8,9 +7,12 @@ import { useMemo, useEffect } from "react";
 interface CaseHeaderProps {
   title: string | undefined;
   isLoading: boolean;
+  caseData?: {
+    review_status: string;
+  } | null;
 }
 
-export const CaseHeader = ({ title, isLoading }: CaseHeaderProps) => {
+export const CaseHeader = ({ title, isLoading, caseData }: CaseHeaderProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -21,8 +23,14 @@ export const CaseHeader = ({ title, isLoading }: CaseHeaderProps) => {
     }
   }, [location.state]);
   
-  // Determine if we should navigate back to the contributed cases page
+  // Determine back navigation based on case status
   const backLink = useMemo(() => {
+    // If this is a submitted case (draft, pending_review, or rejected), go to submitted cases
+    if (caseData?.review_status && 
+        ['draft', 'pending_review', 'rejected'].includes(caseData.review_status)) {
+      return "/cases/submit";
+    }
+    
     // Check multiple indicators for submitted case context
     const isFromSubmitted = location.state?.from === 'submitted';
     const pathIncludesSubmit = location.pathname.includes('submit');
@@ -41,7 +49,7 @@ export const CaseHeader = ({ title, isLoading }: CaseHeaderProps) => {
     
     // Default to the general cases page
     return "/cases";
-  }, [location]);
+  }, [location, caseData?.review_status]);
   
   return (
     <header className="bg-white shadow-sm border-b border-medical-border py-4 px-6 sticky top-0 z-10">

@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/sonner";
 import { AppHeader } from "@/components/AppHeader";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 interface AdminLayoutProps {
   children?: ReactNode;
@@ -33,30 +33,18 @@ export const AdminLayout = ({ children }: AdminLayoutProps) => {
       return {
         title: "Cases Management",
         navigation: (
-          <div className="flex items-center gap-4">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => {
-                console.log("AdminLayout: Navigating back to admin dashboard");
-                navigate("/admin");
-              }}
-              className="border-medical-border text-medical-primary hover:bg-medical-lighter"
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Admin
-            </Button>
-            <Button 
-              onClick={() => {
-                console.log("AdminLayout: Navigating to create case page");
-                navigate("/admin/cases/new");
-              }} 
-              className="bg-medical-primary hover:bg-medical-primary/90"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create Case
-            </Button>
-          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => {
+              console.log("AdminLayout: Navigating back to admin dashboard");
+              navigate("/admin");
+            }}
+            className="border-medical-border text-medical-primary hover:bg-medical-lighter"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Admin
+          </Button>
         )
       };
     }

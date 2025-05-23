@@ -17,35 +17,35 @@ export const AnsweredQuestionDisplay: React.FC<AnsweredQuestionDisplayProps> = (
 }) => {
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-medium">{questionText}</h3>
+      <h3 className="text-lg font-medium text-medical-dark">{questionText}</h3>
       
       {/* Student's Answer */}
-      <div className="bg-gray-700 p-4 rounded-md">
-        <p className="mb-2 text-sm font-medium text-gray-300">Your Answer:</p>
-        <p className="text-white">{answer.responseText}</p>
+      <div className="bg-medical-lighter p-4 rounded-md border border-medical-border">
+        <p className="mb-2 text-sm font-medium text-medical-muted">Your Answer:</p>
+        <p className="text-medical-dark">{answer.responseText}</p>
       </div>
       
       {/* Model Answer */}
       {modelAnswer && (
-        <div className="bg-gray-700/50 p-4 rounded-md border border-gray-600">
-          <p className="mb-2 text-sm font-medium text-gray-300">Model Answer:</p>
-          <p className="text-white">{modelAnswer}</p>
+        <div className="bg-medical-primary/5 p-4 rounded-md border border-medical-primary/20">
+          <p className="mb-2 text-sm font-medium text-medical-primary">Model Answer:</p>
+          <p className="text-medical-dark">{modelAnswer}</p>
         </div>
       )}
       
       {/* Feedback & Explanation (now de-emphasized) */}
       <div className="space-y-3">
         {answer.feedback && (
-          <div className="bg-gray-800 p-3 rounded-md border border-gray-700">
-            <p className="text-sm font-medium text-gray-300 mb-1">Feedback:</p>
-            <p className="text-gray-200 text-sm">{answer.feedback}</p>
+          <div className="bg-white p-3 rounded-md border border-medical-border">
+            <p className="text-sm font-medium text-medical-muted mb-1">Feedback:</p>
+            <p className="text-medical-dark text-sm">{answer.feedback}</p>
           </div>
         )}
         
         {explanation && (
-          <div className="bg-gray-800 p-3 rounded-md border border-gray-700">
-            <p className="text-sm font-medium text-gray-300 mb-1">Additional Notes:</p>
-            <p className="text-gray-200 text-sm">{explanation}</p>
+          <div className="bg-white p-3 rounded-md border border-medical-border">
+            <p className="text-sm font-medium text-medical-muted mb-1">Additional Notes:</p>
+            <p className="text-medical-dark text-sm">{explanation}</p>
           </div>
         )}
       </div>
@@ -54,9 +54,9 @@ export const AnsweredQuestionDisplay: React.FC<AnsweredQuestionDisplayProps> = (
       {answer.isCorrect !== undefined && (
         <div className="text-sm flex items-center">
           <span className={`h-2 w-2 rounded-full mr-2 ${
-            answer.isCorrect ? "bg-green-500" : "bg-amber-500"
+            answer.isCorrect ? "bg-medical-success" : "bg-medical-warning"
           }`}></span>
-          <span className={answer.isCorrect ? "text-green-400" : "text-amber-400"}>
+          <span className={answer.isCorrect ? "text-medical-success" : "text-medical-warning"}>
             {answer.isCorrect ? 'Correct' : 'Review recommended'}
           </span>
         </div>

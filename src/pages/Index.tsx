@@ -9,7 +9,7 @@ import Footer from '@/components/Footer';
 
 const Index: React.FC = () => {
   return (
-    <div className="min-h-screen bg-radiology-dark text-radiology-light">
+    <div className="min-h-screen bg-medical-light text-medical-dark">
       <Navbar />
       <main>
         <Hero />

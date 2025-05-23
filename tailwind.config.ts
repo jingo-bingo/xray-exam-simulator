@@ -63,12 +63,18 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				},
-				radiology: {
-					dark: '#121212',
-					darker: '#0a0a0a',
-					accent: '#3a7bd5',
-					muted: '#333333',
-					light: '#e0e0e0',
+				medical: {
+					light: '#ffffff',
+					lighter: '#f8f9fa',
+					primary: '#0066cc',
+					secondary: '#28a745',
+					dark: '#212529',
+					muted: '#6c757d',
+					border: '#e9ecef',
+					success: '#28a745',
+					warning: '#ffc107',
+					danger: '#dc3545',
+					info: '#17a2b8',
 				}
 			},
 			borderRadius: {

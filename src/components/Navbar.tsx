@@ -10,13 +10,13 @@ const Navbar = () => {
   const { user, signOut } = useAuth();
 
   return (
-    <nav className="bg-gray-900 py-4">
+    <nav className="bg-white shadow-sm border-b border-medical-border py-4">
       <div className="container mx-auto px-4 flex items-center justify-between">
-        <Link to="/" className="text-xl font-bold text-white">RadExam</Link>
+        <Link to="/" className="text-xl font-bold text-medical-primary">Rad2B</Link>
         
         {/* Mobile menu button */}
         <button
-          className="md:hidden text-white focus:outline-none"
+          className="md:hidden text-medical-dark focus:outline-none"
           onClick={() => setIsOpen(!isOpen)}
         >
           {isOpen ? <X size={24} /> : <Menu size={24} />}
@@ -24,13 +24,13 @@ const Navbar = () => {
         
         {/* Desktop menu */}
         <div className="hidden md:flex items-center gap-6">
-          <Link to="/" className="text-white hover:text-gray-300 transition-colors">Home</Link>
-          <Link to="/features" className="text-white hover:text-gray-300 transition-colors">Features</Link>
-          <Link to="/about" className="text-white hover:text-gray-300 transition-colors">About</Link>
+          <Link to="/" className="text-medical-dark hover:text-medical-primary transition-colors">Home</Link>
+          <Link to="/features" className="text-medical-dark hover:text-medical-primary transition-colors">Features</Link>
+          <Link to="/about" className="text-medical-dark hover:text-medical-primary transition-colors">About</Link>
           
           {user ? (
             <>
-              <Link to="/dashboard" className="text-white hover:text-gray-300 transition-colors">Dashboard</Link>
+              <Link to="/dashboard" className="text-medical-dark hover:text-medical-primary transition-colors">Dashboard</Link>
               <Button variant="outline" size="sm" onClick={signOut}>Sign Out</Button>
             </>
           ) : (
@@ -43,15 +43,15 @@ const Navbar = () => {
       
       {/* Mobile menu */}
       {isOpen && (
-        <div className="md:hidden bg-gray-800 mt-2 py-4 px-4 absolute left-0 right-0 z-50">
+        <div className="md:hidden bg-white border-t border-medical-border mt-2 py-4 px-4 absolute left-0 right-0 z-50 shadow-lg">
           <div className="flex flex-col gap-4">
-            <Link to="/" className="text-white hover:text-gray-300 transition-colors">Home</Link>
-            <Link to="/features" className="text-white hover:text-gray-300 transition-colors">Features</Link>
-            <Link to="/about" className="text-white hover:text-gray-300 transition-colors">About</Link>
+            <Link to="/" className="text-medical-dark hover:text-medical-primary transition-colors">Home</Link>
+            <Link to="/features" className="text-medical-dark hover:text-medical-primary transition-colors">Features</Link>
+            <Link to="/about" className="text-medical-dark hover:text-medical-primary transition-colors">About</Link>
             
             {user ? (
               <>
-                <Link to="/dashboard" className="text-white hover:text-gray-300 transition-colors">Dashboard</Link>
+                <Link to="/dashboard" className="text-medical-dark hover:text-medical-primary transition-colors">Dashboard</Link>
                 <Button variant="outline" size="sm" onClick={signOut}>Sign Out</Button>
               </>
             ) : (

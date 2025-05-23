@@ -83,28 +83,28 @@ export const CompletedCaseReview = ({
 
   if (error) {
     return (
-      <div className="bg-red-900/30 border border-red-600 rounded-md p-4 text-red-200">
+      <div className="bg-medical-danger/10 border border-medical-danger/20 rounded-md p-4 text-medical-danger">
         <p>Error loading your answers: {error.message}</p>
       </div>
     );
   }
 
   if (!questions.length) {
-    return <p className="text-gray-400">No questions found for this case.</p>;
+    return <p className="text-medical-muted">No questions found for this case.</p>;
   }
 
   return (
-    <Card className="bg-gray-800 border-gray-700">
+    <Card className="bg-white border-medical-border shadow-sm">
       <CardHeader>
-        <CardTitle className="text-radiology-light flex items-center gap-2">
-          <CheckCircle2 className="h-5 w-5 text-green-500" />
+        <CardTitle className="text-medical-dark flex items-center gap-2">
+          <CheckCircle2 className="h-5 w-5 text-medical-success" />
           Case Review
         </CardTitle>
       </CardHeader>
       <CardContent>
         {/* Simplified completion message */}
         <div className="mb-6 py-2">
-          <p className="text-gray-400 max-w-md">
+          <p className="text-medical-muted max-w-md">
             You've completed this case study. Review your answers below.
           </p>
         </div>
@@ -112,7 +112,7 @@ export const CompletedCaseReview = ({
         <ScrollArea className="max-h-[70vh] pr-4">
           <div className="space-y-8">
             {questions.map((question) => (
-              <div key={question.id} className="border-b border-gray-700 pb-6 last:border-b-0">
+              <div key={question.id} className="border-b border-medical-border pb-6 last:border-b-0">
                 {answers[question.id] ? (
                   <AnsweredQuestionDisplay 
                     questionText={question.question_text}
@@ -121,9 +121,9 @@ export const CompletedCaseReview = ({
                     modelAnswer={question.correct_answer}
                   />
                 ) : (
-                  <div className="bg-gray-700/50 p-4 rounded-md">
-                    <h3 className="text-lg font-medium mb-2">{question.question_text}</h3>
-                    <p className="text-amber-400">You didn't provide an answer for this question.</p>
+                  <div className="bg-medical-warning/10 p-4 rounded-md border border-medical-warning/20">
+                    <h3 className="text-lg font-medium mb-2 text-medical-dark">{question.question_text}</h3>
+                    <p className="text-medical-warning">You didn't provide an answer for this question.</p>
                   </div>
                 )}
               </div>

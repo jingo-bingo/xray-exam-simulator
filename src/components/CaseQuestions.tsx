@@ -75,9 +75,9 @@ const CaseQuestions = ({
   
   if (isLoading) {
     return (
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-white border-medical-border shadow-sm">
         <CardHeader>
-          <CardTitle className="text-radiology-light">Questions</CardTitle>
+          <CardTitle className="text-medical-dark">Questions</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -95,12 +95,12 @@ const CaseQuestions = ({
   
   if (error) {
     return (
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-white border-medical-border shadow-sm">
         <CardHeader>
-          <CardTitle className="text-radiology-light">Questions</CardTitle>
+          <CardTitle className="text-medical-dark">Questions</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-red-400">Error loading questions: {(error as Error).message}</p>
+          <p className="text-medical-danger">Error loading questions: {(error as Error).message}</p>
         </CardContent>
       </Card>
     );
@@ -108,12 +108,12 @@ const CaseQuestions = ({
   
   if (!questions || questions.length === 0) {
     return (
-      <Card className="bg-gray-800 border-gray-700">
+      <Card className="bg-white border-medical-border shadow-sm">
         <CardHeader>
-          <CardTitle className="text-radiology-light">Questions</CardTitle>
+          <CardTitle className="text-medical-dark">Questions</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-gray-400">No questions available for this case.</p>
+          <p className="text-medical-muted">No questions available for this case.</p>
         </CardContent>
       </Card>
     );
@@ -123,7 +123,7 @@ const CaseQuestions = ({
   const isAnswered = !!answeredQuestions[currentQuestion.id];
   
   return (
-    <Card className="bg-gray-800 border-gray-700">
+    <Card className="bg-white border-medical-border shadow-sm">
       <CardHeader>
         <QuestionProgress 
           currentIndex={currentQuestionIndex} 

@@ -1,9 +1,9 @@
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Menu, X } from "lucide-react";
+import Logo from "@/components/Logo";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -12,7 +12,9 @@ const Navbar = () => {
   return (
     <nav className="bg-white shadow-sm border-b border-medical-border py-4">
       <div className="container mx-auto px-4 flex items-center justify-between">
-        <Link to="/" className="text-xl font-bold text-medical-primary">Rad2B</Link>
+        <Link to="/" className="flex items-center">
+          <Logo size="md" />
+        </Link>
         
         {/* Mobile menu button */}
         <button

@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,6 +7,7 @@ import { BookOpen, Play, Upload, Settings, CreditCard } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { User, LogOut } from "lucide-react";
+import Logo from "@/components/Logo";
 
 const Dashboard = () => {
   const { user, userRole, signOut } = useAuth();
@@ -84,7 +84,10 @@ const Dashboard = () => {
     <div className="min-h-screen bg-medical-light text-medical-dark">
       <header className="bg-white shadow-sm border-b border-medical-border py-4 px-6">
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-medical-primary">Rad2B Dashboard</h1>
+          <div className="flex items-center gap-2">
+            <Logo size="md" />
+            <span className="text-2xl font-bold text-medical-dark">Dashboard</span>
+          </div>
           <div className="flex items-center gap-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

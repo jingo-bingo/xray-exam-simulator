@@ -17,7 +17,12 @@ import { Edit, Plus, Trash, ArrowLeft } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 import { toast } from "@/components/ui/sonner";
 
-type Case = Database["public"]["Tables"]["cases"]["Row"];
+type Case = Database["public"]["Tables"]["cases"]["Row"] & {
+  creator?: {
+    first_name: string | null;
+    last_name: string | null;
+  };
+};
 
 const CaseManagement = () => {
   const navigate = useNavigate();
@@ -32,7 +37,12 @@ const CaseManagement = () => {
     queryFn: async () => {
       console.log("CaseManagement: Fetching cases with filter:", filter);
       
-      let query = supabase.from("cases").select("*");
+      let query = supabase
+        .from("cases")
+        .select(`
+          *,
+          creator:profiles!cases_created_by_fkey(first_name, last_name)
+        `);
       
       if (filter === "published") {
         query = query.eq("published", true);
@@ -89,6 +99,18 @@ const CaseManagement = () => {
   const handleEditCase = (id: string) => {
     console.log("CaseManagement: Navigating to edit case page", { id });
     navigate(`/admin/cases/edit/${id}`);
+  };
+
+  const getCreatorName = (creator: Case["creator"]) => {
+    if (!creator) return "System";
+    
+    const { first_name, last_name } = creator;
+    if (first_name && last_name) {
+      return `${first_name} ${last_name}`;
+    }
+    if (first_name) return first_name;
+    if (last_name) return last_name;
+    return "Unknown";
   };
   
   if (error) {
@@ -151,6 +173,7 @@ const CaseManagement = () => {
                 <TableHead>Region</TableHead>
                 <TableHead>Difficulty</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Created By</TableHead>
                 <TableHead>Created At</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -169,6 +192,7 @@ const CaseManagement = () => {
                         <Badge variant="outline">Draft</Badge>
                       )}
                     </TableCell>
+                    <TableCell>{getCreatorName(caseItem.creator)}</TableCell>
                     <TableCell>{new Date(caseItem.created_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
@@ -192,7 +216,7 @@ const CaseManagement = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-6">
+                  <TableCell colSpan={7} className="text-center py-6">
                     No cases found
                   </TableCell>
                 </TableRow>

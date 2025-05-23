@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -168,8 +169,8 @@ export const ScanManager = ({ caseId, isNewCase, mainDicomPath }: ScanManagerPro
     });
   }, []);
 
-  // Move scan up or down in order
-  const moveScan = useCallback((scanIndex: number, direction: 'up' | 'down') => {
+  // Move scan up in order
+  const moveScanUp = useCallback((scanIndex: number) => {
     setScans(prevScans => {
       const visibleScans = prevScans.filter(scan => !scan.isDeleted);
       const updatedScans = [...prevScans];
@@ -177,25 +178,49 @@ export const ScanManager = ({ caseId, isNewCase, mainDicomPath }: ScanManagerPro
       const currentScan = updatedScans[scanIndex];
       const currentOrder = currentScan.display_order;
       
-      let targetScan;
-      let targetIndex;
-      
-      if (direction === 'up') {
-        // Find the scan with the closest lower display_order
-        targetScan = visibleScans
-          .filter(scan => scan.display_order < currentOrder)
-          .sort((a, b) => b.display_order - a.display_order)[0];
-      } else {
-        // Find the scan with the closest higher display_order
-        targetScan = visibleScans
-          .filter(scan => scan.display_order > currentOrder)
-          .sort((a, b) => a.display_order - b.display_order)[0];
-      }
+      // Find the scan with the closest lower display_order
+      const targetScan = visibleScans
+        .filter(scan => scan.display_order < currentOrder)
+        .sort((a, b) => b.display_order - a.display_order)[0];
       
       if (!targetScan) return prevScans; // No target found
       
       // Find index of target scan
-      targetIndex = updatedScans.findIndex(scan => 
+      const targetIndex = updatedScans.findIndex(scan => 
+        scan.id ? scan.id === targetScan.id : scan.display_order === targetScan.display_order
+      );
+      
+      // Swap display orders
+      const targetOrder = targetScan.display_order;
+      updatedScans[scanIndex].display_order = targetOrder;
+      updatedScans[targetIndex].display_order = currentOrder;
+      
+      // Mark both scans as modified
+      updatedScans[scanIndex].isNew = true;
+      updatedScans[targetIndex].isNew = true;
+      
+      return updatedScans;
+    });
+  }, []);
+
+  // Move scan down in order
+  const moveScanDown = useCallback((scanIndex: number) => {
+    setScans(prevScans => {
+      const visibleScans = prevScans.filter(scan => !scan.isDeleted);
+      const updatedScans = [...prevScans];
+      
+      const currentScan = updatedScans[scanIndex];
+      const currentOrder = currentScan.display_order;
+      
+      // Find the scan with the closest higher display_order
+      const targetScan = visibleScans
+        .filter(scan => scan.display_order > currentOrder)
+        .sort((a, b) => a.display_order - b.display_order)[0];
+      
+      if (!targetScan) return prevScans; // No target found
+      
+      // Find index of target scan
+      const targetIndex = updatedScans.findIndex(scan => 
         scan.id ? scan.id === targetScan.id : scan.display_order === targetScan.display_order
       );
       
@@ -286,8 +311,8 @@ export const ScanManager = ({ caseId, isNewCase, mainDicomPath }: ScanManagerPro
                     isNewCase={isNewCase}
                     onLabelChange={handleLabelChange}
                     onDicomUpload={handleDicomUpload}
-                    onMoveUp={moveScan}
-                    onMoveDown={moveScan}
+                    onMoveUp={moveScanUp}
+                    onMoveDown={moveScanDown}
                     onDelete={deleteScan}
                   />
                 );

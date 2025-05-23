@@ -17,11 +17,13 @@ import { Edit, Plus, Trash, ArrowLeft } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
 import { toast } from "@/components/ui/sonner";
 
-type Case = Database["public"]["Tables"]["cases"]["Row"] & {
+type BaseCase = Database["public"]["Tables"]["cases"]["Row"];
+
+type Case = BaseCase & {
   creator?: {
     first_name: string | null;
     last_name: string | null;
-  };
+  } | null;
 };
 
 const CaseManagement = () => {

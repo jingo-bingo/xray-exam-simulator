@@ -1,8 +1,10 @@
 
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import { BookOpen, Play, Upload, Settings } from "lucide-react";
 
 const Dashboard = () => {
   const { user, userRole, signOut } = useAuth();
@@ -11,6 +13,53 @@ const Dashboard = () => {
   useEffect(() => {
     console.log("Dashboard: Component mounted with userRole:", userRole);
   }, [userRole]);
+
+  const panels = [
+    {
+      id: "start-exam",
+      title: "Start Exam",
+      description: "Begin your radiology examination with available cases",
+      icon: Play,
+      action: () => navigate("/cases"),
+      showFor: ["admin", "trainee", "contributor"],
+      bgColor: "bg-medical-primary hover:bg-medical-primary/90",
+      textColor: "text-white"
+    },
+    {
+      id: "browse-cases",
+      title: "Browse Cases",
+      description: "Explore and study available radiology cases",
+      icon: BookOpen,
+      action: () => navigate("/cases"),
+      showFor: ["admin", "trainee", "contributor"],
+      bgColor: "bg-medical-secondary hover:bg-medical-secondary/90",
+      textColor: "text-white"
+    },
+    {
+      id: "submit-cases",
+      title: "Submit Cases",
+      description: "Contribute new cases to the platform",
+      icon: Upload,
+      action: () => navigate("/cases/submit"),
+      showFor: ["admin", "contributor"],
+      bgColor: "bg-green-600 hover:bg-green-700",
+      textColor: "text-white"
+    },
+    {
+      id: "admin-panel",
+      title: "Admin Panel",
+      description: "Manage users, cases, and platform settings",
+      icon: Settings,
+      action: () => navigate("/admin"),
+      showFor: ["admin"],
+      bgColor: "bg-purple-600 hover:bg-purple-700",
+      textColor: "text-white"
+    }
+  ];
+
+  const visiblePanels = panels.filter(panel => 
+    panel.showFor.includes(userRole || "")
+  );
 
   return (
     <div className="min-h-screen bg-medical-light text-medical-dark">
@@ -29,97 +78,43 @@ const Dashboard = () => {
           <h2 className="text-xl font-semibold mb-2 text-medical-dark">
             Welcome, {userRole === "admin" ? "Admin" : userRole === "contributor" ? "Contributor" : "Trainee"}!
           </h2>
-          <p className="text-medical-muted mb-4">
+          <p className="text-medical-muted">
             You're logged in to the Rad2B platform, the advanced radiology examination simulator.
           </p>
-          
-          {/* Show admin panel button only for admins */}
-          {userRole === "admin" && (
-            <div className="mt-4 flex gap-4">
-              <Button 
-                onClick={() => {
-                  console.log("Dashboard: Admin navigating to admin panel");
-                  navigate("/admin");
-                }}
-                className="bg-medical-primary hover:bg-medical-primary/90 text-white"
-              >
-                Access Admin Panel
-              </Button>
-              
-              <Button 
-                onClick={() => {
-                  console.log("Dashboard: Admin navigating to cases as an admin");
-                  navigate("/cases");
-                }}
-                className="bg-medical-secondary hover:bg-medical-secondary/90 text-white"
-              >
-                Browse Cases
-              </Button>
-            </div>
-          )}
-          
-          {/* Show contributor options */}
-          {userRole === "contributor" && (
-            <div className="mt-4 flex gap-4">
-              <Button 
-                onClick={() => {
-                  console.log("Dashboard: Contributor navigating to cases");
-                  navigate("/cases");
-                }}
-                className="bg-medical-primary hover:bg-medical-primary/90 text-white"
-              >
-                Browse Cases
-              </Button>
-              
-              <Button 
-                onClick={() => {
-                  console.log("Dashboard: Contributor navigating to submit cases");
-                  navigate("/cases/submit");
-                }}
-                className="bg-medical-secondary hover:bg-medical-secondary/90 text-white"
-              >
-                Submit Cases
-              </Button>
-            </div>
-          )}
-          
-          {/* Show browse cases button for trainees */}
-          {userRole === "trainee" && (
-            <div className="mt-4">
-              <Button 
-                onClick={() => {
-                  console.log("Dashboard: Trainee navigating to cases");
-                  navigate("/cases");
-                }}
-                className="bg-medical-primary hover:bg-medical-primary/90 text-white"
-              >
-                Browse Cases
-              </Button>
-            </div>
-          )}
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-medical-border">
-            <h3 className="text-lg font-semibold mb-2 text-medical-dark">Quick Stats</h3>
-            <div className="text-medical-muted">
-              <p>Coming soon...</p>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-medical-border">
-            <h3 className="text-lg font-semibold mb-2 text-medical-dark">Recent Activity</h3>
-            <div className="text-medical-muted">
-              <p>Coming soon...</p>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg p-6 shadow-sm border border-medical-border">
-            <h3 className="text-lg font-semibold mb-2 text-medical-dark">Resources</h3>
-            <div className="text-medical-muted">
-              <p>Coming soon...</p>
-            </div>
-          </div>
+          {visiblePanels.map((panel) => {
+            const IconComponent = panel.icon;
+            return (
+              <Card 
+                key={panel.id}
+                className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 border-medical-border"
+                onClick={panel.action}
+              >
+                <CardHeader className="text-center pb-4">
+                  <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-medical-lighter flex items-center justify-center">
+                    <IconComponent className="w-8 h-8 text-medical-primary" />
+                  </div>
+                  <CardTitle className="text-medical-dark">{panel.title}</CardTitle>
+                  <CardDescription className="text-medical-muted">
+                    {panel.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <Button 
+                    className={`w-full ${panel.bgColor} ${panel.textColor}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      panel.action();
+                    }}
+                  >
+                    Get Started
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </main>
     </div>

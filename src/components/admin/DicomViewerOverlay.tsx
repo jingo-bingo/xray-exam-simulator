@@ -16,9 +16,9 @@ export const DicomViewerOverlay: React.FC<DicomViewerOverlayProps> = ({
 }) => {
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full text-white bg-opacity-70 bg-black absolute inset-0 z-10">
+      <div className="flex items-center justify-center h-full text-medical-muted bg-gray-50 absolute inset-0 z-10">
         <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-white mb-2"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-medical-primary mb-2"></div>
           <div>Loading image...</div>
         </div>
       </div>
@@ -27,10 +27,10 @@ export const DicomViewerOverlay: React.FC<DicomViewerOverlayProps> = ({
   
   if (error) {
     return (
-      <div className="flex items-center justify-center h-full text-red-400 bg-opacity-70 bg-black absolute inset-0 z-10">
+      <div className="flex items-center justify-center h-full text-red-600 bg-red-50 absolute inset-0 z-10">
         <div className="text-center p-4">
-          <div className="font-bold mb-2">Error</div>
-          <div>{error}</div>
+          <div className="font-medium mb-2">Error</div>
+          <div className="text-sm">{error}</div>
         </div>
       </div>
     );
@@ -38,7 +38,7 @@ export const DicomViewerOverlay: React.FC<DicomViewerOverlayProps> = ({
   
   if (!hasImage) {
     return (
-      <div className="flex items-center justify-center h-full text-white">
+      <div className="flex items-center justify-center h-full text-medical-muted bg-gray-50">
         {noImageMessage}
       </div>
     );

@@ -17,55 +17,28 @@ interface CaseDetailsProps {
 
 export const CaseDetails = ({ caseData }: CaseDetailsProps) => {
   if (!caseData) return null;
-  
-  const getDifficultyColor = (difficulty: string | undefined) => {
-    if (!difficulty) return "bg-gray-500";
-    
-    switch (difficulty) {
-      case "easy":
-        return "bg-green-500";
-      case "medium":
-        return "bg-yellow-500";
-      case "hard":
-        return "bg-red-500";
-      default:
-        return "bg-gray-500";
-    }
-  };
 
   return (
-    <Card className="bg-gray-800 border-gray-700">
+    <Card className="bg-white border-gray-200 shadow-sm">
       <CardHeader>
-        <div className="flex justify-between items-start">
-          <CardTitle className="text-radiology-light">{caseData.title}</CardTitle>
-          {caseData.is_free_trial && (
-            <Badge variant="outline" className="bg-blue-600 text-white border-blue-600">
-              Free Trial
-            </Badge>
+        <CardTitle className="text-gray-900">{caseData.title}</CardTitle>
+        <CardDescription className="text-gray-600">
+          {caseData.region && (
+            <span className="capitalize">{caseData.region}</span>
           )}
-        </div>
-        <CardDescription className="text-gray-400">
-          Case #{caseData.case_number} - 
-          {caseData.region?.charAt(0).toUpperCase() + caseData.region?.slice(1)} - 
-          {caseData.age_group?.charAt(0).toUpperCase() + caseData.age_group?.slice(1)}
+          {caseData.region && caseData.age_group && " • "}
+          {caseData.age_group && (
+            <span className="capitalize">{caseData.age_group}</span>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="mb-4">
-          <Badge className={`${getDifficultyColor(caseData.difficulty)} text-white`}>
-            {caseData.difficulty?.charAt(0).toUpperCase() + caseData.difficulty?.slice(1)}
-          </Badge>
-        </div>
-        
         <div className="space-y-4">
           <div>
-            <h3 className="text-sm font-medium text-gray-300 mb-1">Clinical History</h3>
-            <p className="text-white">{caseData.clinical_history || "No clinical history provided."}</p>
-          </div>
-          
-          <div>
-            <h3 className="text-sm font-medium text-gray-300 mb-1">Description</h3>
-            <p className="text-white">{caseData.description || "No description available."}</p>
+            <h3 className="text-sm font-medium text-gray-700 mb-2">Clinical History</h3>
+            <p className="text-gray-900 text-sm leading-relaxed">
+              {caseData.clinical_history || "No clinical history provided."}
+            </p>
           </div>
         </div>
       </CardContent>

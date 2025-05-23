@@ -21,7 +21,7 @@ export const CaseFilters = ({ onRegionChange, onDifficultyChange }: CaseFiltersP
   return (
     <div className="flex flex-col sm:flex-row gap-4">
       <Select onValueChange={onRegionChange}>
-        <SelectTrigger className="w-[180px] bg-gray-800 border-gray-700">
+        <SelectTrigger className="w-[180px] bg-white border-medical-border text-medical-dark">
           <SelectValue placeholder="Region" />
         </SelectTrigger>
         <SelectContent>
@@ -37,7 +37,7 @@ export const CaseFilters = ({ onRegionChange, onDifficultyChange }: CaseFiltersP
       </Select>
       
       <Select onValueChange={onDifficultyChange}>
-        <SelectTrigger className="w-[180px] bg-gray-800 border-gray-700">
+        <SelectTrigger className="w-[180px] bg-white border-medical-border text-medical-dark">
           <SelectValue placeholder="Difficulty" />
         </SelectTrigger>
         <SelectContent>

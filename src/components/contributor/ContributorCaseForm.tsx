@@ -136,7 +136,7 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
         const scanData = {
           case_id: savedCaseId,
           dicom_path: finalDicomPath,
-          label: scan.label || `View ${i + 1}`,
+          label: scan.label || "AP", // Default to AP instead of View X
           display_order: i + 1,
         };
 
@@ -190,7 +190,7 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
     if (scans.length === 0) {
       setScans([{
         dicom_path: "",
-        label: "Primary View",
+        label: "AP", // Default to AP instead of Primary View
         display_order: 1,
         isNew: true
       }]);

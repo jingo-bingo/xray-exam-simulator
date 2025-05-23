@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DicomUploader } from "@/components/admin/DicomUploader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Trash2, MoveUp, MoveDown } from "lucide-react";
@@ -22,6 +23,8 @@ interface MultiScanUploaderProps {
   isTemporaryUpload?: boolean;
 }
 
+const STANDARD_LABELS = ["Lateral", "AP"];
+
 export const MultiScanUploader = ({ 
   scans, 
   onScansChange, 
@@ -32,7 +35,7 @@ export const MultiScanUploader = ({
   const addNewScan = () => {
     const newScan: CaseScan = {
       dicom_path: "",
-      label: `View ${scans.length + 1}`,
+      label: "AP", // Default to AP instead of View X
       display_order: scans.length + 1,
       isNew: true
     };
@@ -76,6 +79,10 @@ export const MultiScanUploader = ({
     });
     
     onScansChange(updatedScans);
+  };
+
+  const isStandardLabel = (label: string) => {
+    return STANDARD_LABELS.includes(label);
   };
 
   return (
@@ -150,13 +157,30 @@ export const MultiScanUploader = ({
               <Label htmlFor={`scan-label-${index}`} className="text-sm">
                 View Label
               </Label>
-              <Input
-                id={`scan-label-${index}`}
-                value={scan.label}
-                onChange={(e) => updateScanLabel(index, e.target.value)}
-                placeholder="e.g., Frontal View, Lateral View, Axial"
-                className="mt-1"
-              />
+              {isStandardLabel(scan.label) ? (
+                <Select value={scan.label} onValueChange={(value) => updateScanLabel(index, value)}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select view type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="AP">AP</SelectItem>
+                    <SelectItem value="Lateral">Lateral</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="mt-1">
+                  <Input
+                    id={`scan-label-${index}`}
+                    value={scan.label}
+                    readOnly
+                    className="bg-gray-50 cursor-not-allowed"
+                    title="Legacy label - cannot be changed"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Legacy label. New scans use standardized labels.
+                  </p>
+                </div>
+              )}
             </div>
             
             <DicomUploader

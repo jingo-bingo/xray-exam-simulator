@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DicomUploader } from "./DicomUploader";
@@ -26,6 +27,8 @@ interface ScanManagerProps {
   mainDicomPath: string | null;
 }
 
+const STANDARD_LABELS = ["Lateral", "AP"];
+
 export const ScanManager = ({ caseId, isNewCase, mainDicomPath }: ScanManagerProps) => {
   const [scans, setScans] = useState<CaseScan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -40,7 +43,7 @@ export const ScanManager = ({ caseId, isNewCase, mainDicomPath }: ScanManagerPro
           const initialScan: CaseScan = {
             case_id: 'temp', // Will be replaced when case is created
             dicom_path: mainDicomPath,
-            label: 'Primary View',
+            label: 'AP', // Default to AP instead of Primary View
             display_order: 1,
             isNew: true
           };
@@ -70,7 +73,7 @@ export const ScanManager = ({ caseId, isNewCase, mainDicomPath }: ScanManagerPro
           const initialScan: CaseScan = {
             case_id: caseId,
             dicom_path: mainDicomPath,
-            label: 'Primary View',
+            label: 'AP', // Default to AP instead of Primary View
             display_order: 1,
             isNew: true
           };
@@ -88,7 +91,7 @@ export const ScanManager = ({ caseId, isNewCase, mainDicomPath }: ScanManagerPro
           const initialScan: CaseScan = {
             case_id: caseId || 'temp',
             dicom_path: mainDicomPath,
-            label: 'Primary View',
+            label: 'AP', // Default to AP instead of Primary View
             display_order: 1,
             isNew: true
           };
@@ -137,7 +140,7 @@ export const ScanManager = ({ caseId, isNewCase, mainDicomPath }: ScanManagerPro
     const newScan: CaseScan = {
       case_id: caseId || 'temp',
       dicom_path: null,
-      label: `View ${newOrder}`,
+      label: 'AP', // Default to AP instead of View X
       display_order: newOrder,
       isNew: true
     };
@@ -225,6 +228,10 @@ export const ScanManager = ({ caseId, isNewCase, mainDicomPath }: ScanManagerPro
       case_id: caseId || 'temp' // Will be replaced with actual case ID when saving
     }));
   }, [scans, caseId]);
+
+  const isStandardLabel = (label: string) => {
+    return STANDARD_LABELS.includes(label);
+  };
 
   if (isLoading) {
     return (
@@ -316,13 +323,30 @@ export const ScanManager = ({ caseId, isNewCase, mainDicomPath }: ScanManagerPro
                     <div className="flex flex-col space-y-4">
                       <div>
                         <Label htmlFor={`scan-label-${index}`}>Label</Label>
-                        <Input 
-                          id={`scan-label-${index}`}
-                          value={scan.label} 
-                          onChange={(e) => handleLabelChange(actualIndex, e.target.value)}
-                          placeholder="e.g., AP View, Lateral View"
-                          className="w-full"
-                        />
+                        {isStandardLabel(scan.label) ? (
+                          <Select value={scan.label} onValueChange={(value) => handleLabelChange(actualIndex, value)}>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select view type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="AP">AP</SelectItem>
+                              <SelectItem value="Lateral">Lateral</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <div>
+                            <Input 
+                              id={`scan-label-${index}`}
+                              value={scan.label} 
+                              readOnly
+                              className="w-full bg-gray-50 cursor-not-allowed"
+                              title="Legacy label - cannot be changed"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                              Legacy label. New scans use standardized labels.
+                            </p>
+                          </div>
+                        )}
                       </div>
                       <div>
                         <Label>DICOM File</Label>
@@ -340,7 +364,7 @@ export const ScanManager = ({ caseId, isNewCase, mainDicomPath }: ScanManagerPro
         )}
         
         <div className="text-xs text-gray-500 mt-4">
-          <p>* You can upload multiple DICOM files and label each one (e.g., AP View, Lateral View)</p>
+          <p>* You can upload multiple DICOM files and label each one (AP or Lateral)</p>
           <p>* The first scan in the list will be shown by default when users view the case</p>
         </div>
       </CardContent>

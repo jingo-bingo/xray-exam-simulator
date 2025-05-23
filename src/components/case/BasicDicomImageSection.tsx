@@ -186,9 +186,9 @@ const BasicDicomImageSectionComponent = ({ dicomPath, title, caseId, onMetadataL
 
   return (
     <>
-      <Card className="bg-white border-medical-border shadow-sm">
+      <Card className="bg-white border-gray-200 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-medical-dark flex items-center">
+          <CardTitle className="text-gray-900 flex items-center">
             <Image className="mr-2 h-5 w-5" />
             Medical Images
           </CardTitle>
@@ -206,11 +206,11 @@ const BasicDicomImageSectionComponent = ({ dicomPath, title, caseId, onMetadataL
           />
         </CardHeader>
         <CardContent>
-          <div className="relative bg-gray-50 max-w-full overflow-auto rounded-lg border border-medical-border">
+          <div className="relative bg-gray-50 max-w-full overflow-auto rounded-lg border border-gray-200">
             {isLoadingScans ? (
-              <div className="w-full aspect-square max-h-[600px] bg-gray-50 flex items-center justify-center text-medical-muted">
+              <div className="w-full aspect-square max-h-[600px] bg-gray-50 flex items-center justify-center text-gray-600">
                 <div className="flex flex-col items-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-medical-primary mb-2"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-2"></div>
                   <div>Loading scans...</div>
                 </div>
               </div>
@@ -224,10 +224,10 @@ const BasicDicomImageSectionComponent = ({ dicomPath, title, caseId, onMetadataL
                 instanceId={`scan-${currentScan.id}`}
               />
             ) : (
-              <div className="w-full aspect-square max-h-[600px] bg-gray-50 flex items-center justify-center text-medical-muted">
+              <div className="w-full aspect-square max-h-[600px] bg-gray-50 flex items-center justify-center text-gray-600">
                 {isGeneratingUrlRef.current ? (
                   <div className="flex flex-col items-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-medical-primary mb-2"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-2"></div>
                     <div>Preparing DICOM image...</div>
                   </div>
                 ) : (

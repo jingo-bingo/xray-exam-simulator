@@ -2,6 +2,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { DicomMetadata } from '@/components/admin/DicomMetadataDisplay';
 import { extractMetadata } from '@/utils/dicomMetadataExtractor';
+import { useSimpleCornerstoneInit } from '@/hooks/useSimpleCornerstoneInit';
+import { loadImageSafely, getImageId } from '@/utils/dicomImageLoader';
 import cornerstone from 'cornerstone-core';
 
 interface BasicDicomViewerProps {
@@ -26,6 +28,10 @@ export const BasicDicomViewer = ({
   const [error, setError] = useState<string | null>(null);
   const isMountedRef = useRef(true);
   const elementEnabledRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  
+  // Use the existing cornerstone initialization hook
+  const { isInitialized, error: initError } = useSimpleCornerstoneInit(instanceId);
   
   useEffect(() => {
     isMountedRef.current = true;
@@ -37,24 +43,38 @@ export const BasicDicomViewer = ({
   }, []);
 
   const cleanup = () => {
+    // Cancel any ongoing image loading
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    
+    // Disable cornerstone element
     if (viewerRef.current && elementEnabledRef.current) {
       try {
         cornerstone.disable(viewerRef.current);
         elementEnabledRef.current = false;
       } catch (e) {
-        console.warn("BasicDicomViewer: Error during cleanup:", e);
+        console.warn(`BasicDicomViewer[${instanceId}]: Error during cleanup:`, e);
       }
     }
   };
 
   useEffect(() => {
-    if (!imageUrl || !viewerRef.current) return;
+    if (!imageUrl || !viewerRef.current || !isInitialized) return;
 
     loadImage();
-  }, [imageUrl, instanceId]);
+  }, [imageUrl, instanceId, isInitialized]);
+
+  // Handle initialization errors
+  useEffect(() => {
+    if (initError && onError) {
+      onError(new Error(initError));
+    }
+  }, [initError, onError]);
 
   const loadImage = async () => {
-    if (!viewerRef.current || !isMountedRef.current) return;
+    if (!viewerRef.current || !isMountedRef.current || !isInitialized) return;
 
     setIsLoading(true);
     setError(null);
@@ -62,6 +82,15 @@ export const BasicDicomViewer = ({
     const element = viewerRef.current;
 
     try {
+      // Cancel any previous loading
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      
+      // Create new abort controller for this load
+      abortControllerRef.current = new AbortController();
+      const signal = abortControllerRef.current.signal;
+
       // Enable cornerstone on the element if not already enabled
       if (!elementEnabledRef.current) {
         element.style.width = '100%';
@@ -72,47 +101,32 @@ export const BasicDicomViewer = ({
         elementEnabledRef.current = true;
       }
 
-      // Determine image type and create imageId
-      const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp'];
-      const isImageFormat = imageExtensions.some(ext => imageUrl.toLowerCase().endsWith(ext));
-      
-      const imageId = isImageFormat ? `webImage:${imageUrl}` : `wadouri:${imageUrl}`;
+      // Get the proper imageId using the utility function
+      const imageId = getImageId(imageUrl);
 
       console.log(`BasicDicomViewer[${instanceId}]: Loading image with imageId:`, imageId);
 
-      // Load and display the image
-      const image = await cornerstone.loadImage(imageId);
+      // Use the safe image loading utility
+      const image = await loadImageSafely(imageId, signal);
       
-      if (!isMountedRef.current) return;
+      if (!isMountedRef.current || signal.aborted) return;
 
       // Display the image
       cornerstone.displayImage(element, image);
       
-      // Extract metadata for DICOM images
-      if (!isImageFormat && onMetadataLoaded) {
-        const metadata = extractMetadata(image);
-        onMetadataLoaded(metadata);
+      // Extract metadata for DICOM images (not for web images)
+      if (!imageId.startsWith('webImage:') && onMetadataLoaded) {
+        try {
+          const metadata = extractMetadata(image);
+          onMetadataLoaded(metadata);
+        } catch (metadataError) {
+          console.warn(`BasicDicomViewer[${instanceId}]: Could not extract metadata:`, metadataError);
+        }
       }
 
       setIsLoading(false);
     } catch (loadError) {
       console.error(`BasicDicomViewer[${instanceId}]: Load error:`, loadError);
-      
-      // Try as web image if DICOM load fails
-      if (imageUrl && !imageUrl.toLowerCase().match(/\.(jpg|jpeg|png|gif|bmp)$/)) {
-        try {
-          const webImageId = `webImage:${imageUrl}`;
-          const image = await cornerstone.loadImage(webImageId);
-          
-          if (!isMountedRef.current) return;
-          
-          cornerstone.displayImage(element, image);
-          setIsLoading(false);
-          return;
-        } catch (webImageError) {
-          console.error(`BasicDicomViewer[${instanceId}]: Web image fallback failed:`, webImageError);
-        }
-      }
       
       if (!isMountedRef.current) return;
       
@@ -128,20 +142,20 @@ export const BasicDicomViewer = ({
 
   return (
     <div className={`relative w-full h-full ${className}`}>
-      {isLoading && (
+      {(isLoading || !isInitialized) && (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10">
-          <div className="flex flex-col items-center text-medical-muted">
-            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-medical-primary mb-2"></div>
-            <div>Loading image...</div>
+          <div className="flex flex-col items-center text-gray-600">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-2"></div>
+            <div>{!isInitialized ? "Initializing viewer..." : "Loading image..."}</div>
           </div>
         </div>
       )}
       
-      {error && (
+      {(error || initError) && (
         <div className="absolute inset-0 flex items-center justify-center bg-red-50 z-10">
           <div className="text-center p-4 text-red-600">
             <div className="font-medium mb-2">Error Loading Image</div>
-            <div className="text-sm">{error}</div>
+            <div className="text-sm">{error || initError}</div>
           </div>
         </div>
       )}

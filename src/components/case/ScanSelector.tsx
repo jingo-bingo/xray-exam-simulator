@@ -29,7 +29,7 @@ export const ScanSelector = ({ scans, onSelectScan, currentScanId }: ScanSelecto
     
   return (
     <div className="flex items-center gap-2 mb-2">
-      <div className="flex items-center text-medical-muted text-sm">
+      <div className="flex items-center text-gray-600 text-sm">
         <Layers className="h-4 w-4 mr-1" />
         <span>View:</span>
       </div>
@@ -40,10 +40,10 @@ export const ScanSelector = ({ scans, onSelectScan, currentScanId }: ScanSelecto
           if (selected) onSelectScan(selected);
         }}
       >
-        <SelectTrigger className="bg-white border-medical-border text-medical-dark h-8 w-[180px] hover:bg-gray-50">
+        <SelectTrigger className="bg-white border-gray-200 text-gray-900 h-8 w-[180px] hover:bg-gray-50">
           <SelectValue placeholder="Select view" />
         </SelectTrigger>
-        <SelectContent className="bg-white border-medical-border text-medical-dark">
+        <SelectContent className="bg-white border-gray-200 text-gray-900">
           {sortedScans.map((scan) => (
             <SelectItem key={scan.id} value={scan.id} className="hover:bg-gray-50">
               {scan.label}
@@ -51,7 +51,7 @@ export const ScanSelector = ({ scans, onSelectScan, currentScanId }: ScanSelecto
           ))}
         </SelectContent>
       </Select>
-      <span className="text-medical-muted text-xs">
+      <span className="text-gray-600 text-xs">
         {scans.length} {scans.length === 1 ? 'scan' : 'scans'} available
       </span>
     </div>

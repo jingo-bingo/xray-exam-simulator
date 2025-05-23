@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 
 interface CaseHeaderProps {
   title: string | undefined;
@@ -14,14 +14,28 @@ export const CaseHeader = ({ title, isLoading }: CaseHeaderProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   
+  // Store navigation context when coming from submitted cases
+  useEffect(() => {
+    if (location.state?.from === 'submitted') {
+      localStorage.setItem('caseViewSource', 'submitted');
+    }
+  }, [location.state]);
+  
   // Determine if we should navigate back to the contributed cases page
   const backLink = useMemo(() => {
-    // Check if we came from the submitted cases page or if this is a contributed case
-    const isFromContributed = location.state?.from === 'submitted';
+    // Check multiple indicators for submitted case context
+    const isFromSubmitted = location.state?.from === 'submitted';
     const pathIncludesSubmit = location.pathname.includes('submit');
+    const storedSource = localStorage.getItem('caseViewSource');
+    const referrerIncludesSubmit = document.referrer.includes('/cases/submit');
     
-    // If either condition is true, navigate to the submitted cases page
-    if (isFromContributed || pathIncludesSubmit) {
+    // Clear stored source to avoid conflicts on next navigation
+    if (storedSource === 'submitted') {
+      localStorage.removeItem('caseViewSource');
+    }
+    
+    // If any indicator suggests this came from submitted cases, navigate there
+    if (isFromSubmitted || pathIncludesSubmit || storedSource === 'submitted' || referrerIncludesSubmit) {
       return "/cases/submit";
     }
     
@@ -40,7 +54,7 @@ export const CaseHeader = ({ title, isLoading }: CaseHeaderProps) => {
             className="mr-4 border-medical-border hover:bg-medical-lighter"
           >
             <ArrowLeft className="mr-2 h-4 w-4" /> 
-            {backLink === "/cases/submit" ? "Back to Contributed Cases" : "Back to Cases"}
+            {backLink === "/cases/submit" ? "Back to My Submitted Cases" : "Back to Cases"}
           </Button>
           {isLoading ? (
             <Skeleton className="h-8 w-48" />

@@ -74,6 +74,16 @@ const SubmitCases = () => {
     return status === "draft" || status === "rejected";
   };
 
+  const handleCaseNavigation = (caseId: string, canEditCase: boolean) => {
+    if (canEditCase) {
+      navigate(`/cases/submit/edit/${caseId}`);
+    } else {
+      // Set navigation context before navigating to case view
+      localStorage.setItem('caseViewSource', 'submitted');
+      navigate(`/cases/${caseId}`, { state: { from: 'submitted' } });
+    }
+  };
+
   if (isLoading) return <div className="text-center p-8">Loading your cases...</div>;
   if (error) return <div className="text-center p-8 text-red-500">Error loading cases: {(error as Error).message}</div>;
 
@@ -203,23 +213,17 @@ const SubmitCases = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-2 justify-end">
-                        {canEdit(caseItem.review_status) ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => navigate(`/cases/submit/edit/${caseItem.id}`)}
-                          >
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleCaseNavigation(caseItem.id, canEdit(caseItem.review_status))}
+                        >
+                          {canEdit(caseItem.review_status) ? (
                             <Edit className="h-4 w-4" />
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => navigate(`/cases/${caseItem.id}`, { state: { from: 'submitted' } })}
-                          >
+                          ) : (
                             <Eye className="h-4 w-4" />
-                          </Button>
-                        )}
+                          )}
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>

@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
@@ -14,8 +13,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Eye, Edit } from "lucide-react";
+import { Eye, Edit, ArrowLeft } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
+import { AppHeader } from "@/components/AppHeader";
 
 type ReviewStatus = Database["public"]["Enums"]["review_status"];
 
@@ -84,39 +84,27 @@ const SubmitCases = () => {
     }
   };
 
+  const navigation = (
+    <Button 
+      variant="outline" 
+      size="sm"
+      onClick={() => {
+        console.log("SubmitCases: Contributor returning to dashboard");
+        navigate("/dashboard");
+      }}
+      className="border-medical-border text-medical-primary hover:bg-medical-lighter"
+    >
+      <ArrowLeft className="mr-2 h-4 w-4" />
+      Return to Dashboard
+    </Button>
+  );
+
   if (isLoading) return <div className="text-center p-8">Loading your cases...</div>;
   if (error) return <div className="text-center p-8 text-red-500">Error loading cases: {(error as Error).message}</div>;
 
   return (
     <div className="min-h-screen bg-medical-light text-medical-dark">
-      <header className="bg-white shadow-sm border-b border-medical-border py-4 px-6">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold text-medical-primary">My Submitted Cases</h1>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={() => {
-                console.log("SubmitCases: Contributor returning to dashboard");
-                navigate("/dashboard");
-              }}
-              className="border-medical-border text-medical-primary hover:bg-medical-lighter"
-            >
-              Return to Dashboard
-            </Button>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-medical-dark">{user?.email} ({userRole})</span>
-            <Button 
-              variant="outline"
-              onClick={signOut}
-              className="border-medical-border hover:bg-medical-lighter"
-            >
-              Sign Out
-            </Button>
-          </div>
-        </div>
-      </header>
+      <AppHeader title="My Submitted Cases" navigation={navigation} />
 
       <main className="container mx-auto py-8 px-4">
         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">

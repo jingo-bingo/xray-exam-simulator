@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +17,7 @@ const Dashboard = () => {
     {
       id: "start-exam",
       title: "Start Exam",
-      description: "Begin your radiology examination with available cases",
+      description: "Begin your practice FRCR Part 2B exam",
       icon: Play,
       action: () => navigate("/cases"),
       showFor: ["admin", "trainee", "contributor"],

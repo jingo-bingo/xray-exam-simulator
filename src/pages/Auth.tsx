@@ -36,52 +36,56 @@ const Auth = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-medical-lighter px-4">
-      <Card className="w-full max-w-md bg-white border-medical-border shadow-lg">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl text-medical-primary">RadExam</CardTitle>
-          <CardDescription className="text-medical-muted">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 px-4">
+      <Card className="w-full max-w-md bg-white border-gray-200 shadow-xl">
+        <CardHeader className="text-center pb-8">
+          <CardTitle className="text-3xl font-bold text-blue-600">RadExam</CardTitle>
+          <CardDescription className="text-gray-600 mt-2">
             Sign in to access your radiology examination simulator
           </CardDescription>
         </CardHeader>
         <Tabs defaultValue="login" className="w-full">
-          <TabsList className="grid grid-cols-2 mb-4 bg-medical-border">
-            <TabsTrigger value="login" className="text-medical-dark data-[state=active]:bg-white">Login</TabsTrigger>
-            <TabsTrigger value="register" className="text-medical-dark data-[state=active]:bg-white">Register</TabsTrigger>
+          <TabsList className="grid grid-cols-2 mb-6 mx-6 bg-gray-100">
+            <TabsTrigger value="login" className="text-gray-700 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
+              Login
+            </TabsTrigger>
+            <TabsTrigger value="register" className="text-gray-700 data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm">
+              Register
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="login">
             <form onSubmit={handleLogin}>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 px-6">
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-medical-dark">Email</Label>
+                  <Label htmlFor="email" className="text-gray-700 font-medium">Email</Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="Email"
+                    placeholder="Enter your email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="bg-white border-medical-border focus:border-medical-primary"
+                    className="bg-gray-50 border-gray-300 focus:border-blue-500 focus:ring-blue-500 h-11"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-medical-dark">Password</Label>
+                  <Label htmlFor="password" className="text-gray-700 font-medium">Password</Label>
                   <Input
                     id="password"
                     type="password"
-                    placeholder="Password"
+                    placeholder="Enter your password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="bg-white border-medical-border focus:border-medical-primary"
+                    className="bg-gray-50 border-gray-300 focus:border-blue-500 focus:ring-blue-500 h-11"
                   />
                 </div>
               </CardContent>
-              <CardFooter>
+              <CardFooter className="px-6 pb-6">
                 <Button
                   type="submit"
-                  className="w-full bg-medical-primary hover:bg-medical-primary/90 text-white"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white h-11 font-medium shadow-md hover:shadow-lg transition-all duration-200"
                   disabled={isLoading}
                 >
                   {isLoading ? "Signing in..." : "Sign In"}
@@ -92,64 +96,64 @@ const Auth = () => {
           
           <TabsContent value="register">
             <form onSubmit={handleRegister}>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 px-6">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName" className="text-medical-dark">First Name</Label>
+                  <Label htmlFor="firstName" className="text-gray-700 font-medium">First Name</Label>
                   <Input
                     id="firstName"
                     type="text"
-                    placeholder="First Name"
+                    placeholder="Enter your first name"
                     required
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    className="bg-white border-medical-border focus:border-medical-primary"
+                    className="bg-gray-50 border-gray-300 focus:border-blue-500 focus:ring-blue-500 h-11"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName" className="text-medical-dark">Last Name</Label>
+                  <Label htmlFor="lastName" className="text-gray-700 font-medium">Last Name</Label>
                   <Input
                     id="lastName"
                     type="text"
-                    placeholder="Last Name"
+                    placeholder="Enter your last name"
                     required
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    className="bg-white border-medical-border focus:border-medical-primary"
+                    className="bg-gray-50 border-gray-300 focus:border-blue-500 focus:ring-blue-500 h-11"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="registerEmail" className="text-medical-dark">Email</Label>
+                  <Label htmlFor="registerEmail" className="text-gray-700 font-medium">Email</Label>
                   <Input
                     id="registerEmail"
                     type="email"
-                    placeholder="Email"
+                    placeholder="Enter your email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="bg-white border-medical-border focus:border-medical-primary"
+                    className="bg-gray-50 border-gray-300 focus:border-blue-500 focus:ring-blue-500 h-11"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="registerPassword" className="text-medical-dark">Password</Label>
+                  <Label htmlFor="registerPassword" className="text-gray-700 font-medium">Password</Label>
                   <Input
                     id="registerPassword"
                     type="password"
-                    placeholder="Password"
+                    placeholder="Create a password (min. 6 characters)"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     minLength={6}
-                    className="bg-white border-medical-border focus:border-medical-primary"
+                    className="bg-gray-50 border-gray-300 focus:border-blue-500 focus:ring-blue-500 h-11"
                   />
                 </div>
               </CardContent>
-              <CardFooter>
+              <CardFooter className="px-6 pb-6">
                 <Button
                   type="submit"
-                  className="w-full bg-medical-primary hover:bg-medical-primary/90 text-white"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white h-11 font-medium shadow-md hover:shadow-lg transition-all duration-200"
                   disabled={isLoading}
                 >
-                  {isLoading ? "Creating account..." : "Create account"}
+                  {isLoading ? "Creating account..." : "Create Account"}
                 </Button>
               </CardFooter>
             </form>

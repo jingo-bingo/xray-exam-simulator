@@ -19,6 +19,7 @@ import { Database } from "@/integrations/supabase/types";
 type RegionType = Database["public"]["Enums"]["region_type"];
 type AgeGroup = Database["public"]["Enums"]["age_group"];
 type DifficultyLevel = Database["public"]["Enums"]["difficulty_level"];
+type ReviewStatus = Database["public"]["Enums"]["review_status"];
 
 const caseFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -73,6 +74,9 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
     setIsSubmitting(true);
 
     try {
+      // Determine the review status based on save_as_draft
+      const reviewStatus: ReviewStatus = data.save_as_draft ? 'draft' : 'pending_review';
+
       const caseData = {
         title: data.title,
         description: data.description,
@@ -84,7 +88,7 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
         is_free_trial: data.is_free_trial,
         submitted_by: user.id,
         created_by: user.id,
-        review_status: data.save_as_draft ? 'draft' : 'pending_review',
+        review_status: reviewStatus,
         published: false, // Contributors cannot publish directly
       };
 

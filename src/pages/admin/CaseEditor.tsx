@@ -70,14 +70,12 @@ const CaseEditor = () => {
     // Get the current model_answer from the form
     const modelAnswer = form.getValues("model_answer");
     
-    // Update the case data with the model answer and submit
-    const updatedCaseData = {
-      ...caseData,
-      model_answer: modelAnswer
-    };
+    // Update the case data with the model answer before submitting
+    handleInputChange("model_answer", modelAnswer);
     
-    submitCase(updatedCaseData);
-  }, [caseData, form, submitCase]);
+    // Submit the case - the hook will use the updated caseData
+    submitCase();
+  }, [form, handleInputChange, submitCase]);
   
   const handleCancel = useCallback(() => {
     console.log("CaseEditor: Cancel clicked, navigating back to case management");

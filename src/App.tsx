@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import Profile from "./pages/Profile";
 import Unauthorized from "./pages/Unauthorized";
 import Cases from "./pages/Cases";
 import CaseView from "./pages/CaseView";
@@ -40,6 +41,7 @@ const App = () => (
             {/* Protected routes */}
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/profile" element={<Profile />} />
               {/* Both admins and trainees can access cases */}
               <Route path="/cases" element={<Cases />} />
               <Route path="/cases/:id" element={<CaseView />} />

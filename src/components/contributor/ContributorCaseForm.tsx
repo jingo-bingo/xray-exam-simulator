@@ -1,9 +1,15 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -11,9 +17,6 @@ import { useNavigate } from "react-router-dom";
 import { Database } from "@/integrations/supabase/types";
 import { MultiScanUploader, CaseScan } from "./MultiScanUploader";
 import { makeDicomFilePermanent } from "@/utils/dicomStorage";
-import { CaseBasicFields } from "./form/CaseBasicFields";
-import { CaseClinicalHistory } from "./form/CaseClinicalHistory";
-import { CaseFormActions } from "./form/CaseFormActions";
 
 type RegionType = Database["public"]["Enums"]["region_type"];
 type AgeGroup = Database["public"]["Enums"]["age_group"];
@@ -177,14 +180,12 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
     }
   };
 
+  // Start with one empty scan if no scans exist
   const handleScansChange = (newScans: CaseScan[]) => {
     setScans(newScans);
   };
 
-  const handleCancel = () => {
-    navigate("/cases/submit");
-  };
-
+  // Initialize with one empty scan if starting fresh
   useState(() => {
     if (scans.length === 0) {
       setScans([{
@@ -207,8 +208,21 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <CaseBasicFields control={form.control} />
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Case Title</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter case title" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
+            {/* Multi-Scan Upload Section */}
             <div className="mb-6">
               <MultiScanUploader 
                 scans={scans}
@@ -217,14 +231,109 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
               />
             </div>
 
-            <CaseClinicalHistory control={form.control} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="region"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Region</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select region" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="chest">Chest</SelectItem>
+                        <SelectItem value="abdomen">Abdomen</SelectItem>
+                        <SelectItem value="head">Head</SelectItem>
+                        <SelectItem value="musculoskeletal">Musculoskeletal</SelectItem>
+                        <SelectItem value="cardiovascular">Cardiovascular</SelectItem>
+                        <SelectItem value="neuro">Neuro</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <CaseFormActions 
+              <FormField
+                control={form.control}
+                name="age_group"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Age Group</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select age group" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="pediatric">Pediatric</SelectItem>
+                        <SelectItem value="adult">Adult</SelectItem>
+                        <SelectItem value="geriatric">Geriatric</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
               control={form.control}
-              isSubmitting={isSubmitting}
-              caseId={caseId}
-              onCancel={handleCancel}
+              name="clinical_history"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Clinical History</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Patient's clinical history and presentation"
+                      className="resize-none min-h-[100px]"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
+
+            <FormField
+              control={form.control}
+              name="save_as_draft"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormLabel>Save as Draft</FormLabel>
+                </FormItem>
+              )}
+            />
+
+            <div className="flex gap-4 pt-6">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate("/cases/submit")}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="bg-medical-primary hover:bg-medical-primary/90"
+              >
+                {isSubmitting ? "Submitting..." : (caseId ? "Update Case" : "Submit Case")}
+              </Button>
+            </div>
           </form>
         </Form>
       </CardContent>

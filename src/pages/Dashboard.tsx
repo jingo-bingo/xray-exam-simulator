@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
-import { BookOpen, Play, Upload, Settings } from "lucide-react";
+import { BookOpen, Play, Upload, Settings, CreditCard } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { User, LogOut } from "lucide-react";
@@ -52,6 +52,16 @@ const Dashboard = () => {
       action: () => navigate("/cases/submit"),
       showFor: ["admin", "contributor"],
       bgColor: "bg-green-600 hover:bg-green-700",
+      textColor: "text-white"
+    },
+    {
+      id: "billing",
+      title: "Billing",
+      description: "Manage your subscription and payment information",
+      icon: CreditCard,
+      action: () => navigate("/billing"),
+      showFor: ["admin", "trainee", "contributor"],
+      bgColor: "bg-blue-600 hover:bg-blue-700",
       textColor: "text-white"
     },
     {

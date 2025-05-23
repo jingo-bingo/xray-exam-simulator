@@ -53,7 +53,15 @@ export const UsersTable = ({ users, isLoading }: UsersTableProps) => {
                     : "N/A"}
                 </TableCell>
                 <TableCell>
-                  <Badge className={user.role === "admin" ? "bg-purple-600" : "bg-blue-600"}>
+                  <Badge 
+                    className={
+                      user.role === "admin" 
+                        ? "bg-purple-600" 
+                        : user.role === "contributor" 
+                          ? "bg-green-600" 
+                          : "bg-blue-600"
+                    }
+                  >
                     {user.role || "No Role"}
                   </Badge>
                 </TableCell>

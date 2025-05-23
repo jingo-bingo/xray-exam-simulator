@@ -298,7 +298,7 @@ export type Database = {
     }
     Enums: {
       age_group: "pediatric" | "adult" | "geriatric"
-      app_role: "admin" | "trainee"
+      app_role: "admin" | "trainee" | "contributor"
       attempt_status: "in_progress" | "completed" | "failed"
       difficulty_level: "easy" | "medium" | "hard"
       question_type:
@@ -430,7 +430,7 @@ export const Constants = {
   public: {
     Enums: {
       age_group: ["pediatric", "adult", "geriatric"],
-      app_role: ["admin", "trainee"],
+      app_role: ["admin", "trainee", "contributor"],
       attempt_status: ["in_progress", "completed", "failed"],
       difficulty_level: ["easy", "medium", "hard"],
       question_type: [

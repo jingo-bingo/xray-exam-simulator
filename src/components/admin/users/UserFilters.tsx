@@ -28,6 +28,12 @@ export const UserFilters = ({ activeFilter, onFilterChange }: UserFiltersProps) 
       >
         Trainees
       </Button>
+      <Button 
+        variant={activeFilter === "contributor" ? "default" : "outline"} 
+        onClick={() => onFilterChange("contributor")}
+      >
+        Contributors
+      </Button>
     </div>
   );
 };

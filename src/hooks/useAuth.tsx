@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/sonner";
 
-export type UserRole = "admin" | "trainee";
+export type UserRole = "admin" | "trainee" | "contributor";
 
 type AuthContextType = {
   user: User | null;

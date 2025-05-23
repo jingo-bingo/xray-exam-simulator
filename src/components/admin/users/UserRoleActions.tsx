@@ -83,6 +83,14 @@ export const UserRoleActions = ({ userId, currentRole }: UserRoleActionsProps) =
       <Button 
         size="sm" 
         variant="outline"
+        onClick={() => handleRoleChange("contributor")}
+        disabled={currentRole === "contributor"}
+      >
+        Make Contributor
+      </Button>
+      <Button 
+        size="sm" 
+        variant="outline"
         onClick={() => handleRoleChange("trainee")}
         disabled={currentRole === "trainee"}
       >

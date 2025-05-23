@@ -19,7 +19,9 @@ const ProtectedRoute = ({ requiredRole }: ProtectedRouteProps) => {
     requiredRole, 
     userRole,
     isAdmin: userRole === 'admin',
-    canAccess: !requiredRole || userRole === requiredRole || (userRole === 'admin' && requiredRole === 'trainee')
+    canAccess: !requiredRole || 
+               userRole === requiredRole || 
+               (userRole === 'admin' && ['trainee', 'contributor'].includes(requiredRole as string))
   });
 
   if (!user) {
@@ -27,11 +29,11 @@ const ProtectedRoute = ({ requiredRole }: ProtectedRouteProps) => {
     return <Navigate to="/auth" replace />;
   }
 
-  // Allow admins to access trainee routes, but not vice versa
+  // Allow admins to access trainee and contributor routes, but not vice versa
   if (requiredRole && userRole !== requiredRole) {
-    // Special case: Admin can access trainee routes
-    if (userRole === 'admin' && requiredRole === 'trainee') {
-      console.log("ProtectedRoute: Admin accessing trainee route, allowing access");
+    // Special cases: Admin can access trainee and contributor routes
+    if (userRole === 'admin' && ['trainee', 'contributor'].includes(requiredRole)) {
+      console.log(`ProtectedRoute: Admin accessing ${requiredRole} route, allowing access`);
       return <Outlet />;
     }
     

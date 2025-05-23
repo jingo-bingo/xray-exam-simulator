@@ -19,6 +19,17 @@ const Cases = () => {
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
             <h1 className="text-2xl font-bold text-medical-primary">Rad2B Cases</h1>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                console.log("Cases: Navigating back to dashboard");
+                navigate("/dashboard");
+              }}
+              className="border-medical-border text-medical-primary hover:bg-medical-lighter"
+            >
+              Back to Dashboard
+            </Button>
             {userRole === "admin" && (
               <Button 
                 variant="outline" 

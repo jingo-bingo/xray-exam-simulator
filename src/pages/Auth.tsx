@@ -36,25 +36,25 @@ const Auth = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-radiology-dark px-4">
-      <Card className="w-full max-w-md bg-radiology-dark border-radiology-accent">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-medical-lighter px-4">
+      <Card className="w-full max-w-md bg-white border-medical-border shadow-lg">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl text-radiology-light">RadExam</CardTitle>
-          <CardDescription className="text-gray-400">
+          <CardTitle className="text-2xl text-medical-primary">RadExam</CardTitle>
+          <CardDescription className="text-medical-muted">
             Sign in to access your radiology examination simulator
           </CardDescription>
         </CardHeader>
         <Tabs defaultValue="login" className="w-full">
-          <TabsList className="grid grid-cols-2 mb-4 bg-gray-800">
-            <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="register">Register</TabsTrigger>
+          <TabsList className="grid grid-cols-2 mb-4 bg-medical-border">
+            <TabsTrigger value="login" className="text-medical-dark data-[state=active]:bg-white">Login</TabsTrigger>
+            <TabsTrigger value="register" className="text-medical-dark data-[state=active]:bg-white">Register</TabsTrigger>
           </TabsList>
           
           <TabsContent value="login">
             <form onSubmit={handleLogin}>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" className="text-medical-dark">Email</Label>
                   <Input
                     id="email"
                     type="email"
@@ -62,11 +62,11 @@ const Auth = () => {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="bg-gray-800 border-gray-700"
+                    className="bg-white border-medical-border focus:border-medical-primary"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-medical-dark">Password</Label>
                   <Input
                     id="password"
                     type="password"
@@ -74,14 +74,14 @@ const Auth = () => {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="bg-gray-800 border-gray-700"
+                    className="bg-white border-medical-border focus:border-medical-primary"
                   />
                 </div>
               </CardContent>
               <CardFooter>
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full bg-medical-primary hover:bg-medical-primary/90 text-white"
                   disabled={isLoading}
                 >
                   {isLoading ? "Signing in..." : "Sign In"}
@@ -94,7 +94,7 @@ const Auth = () => {
             <form onSubmit={handleRegister}>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
+                  <Label htmlFor="firstName" className="text-medical-dark">First Name</Label>
                   <Input
                     id="firstName"
                     type="text"
@@ -102,11 +102,11 @@ const Auth = () => {
                     required
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    className="bg-gray-800 border-gray-700"
+                    className="bg-white border-medical-border focus:border-medical-primary"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
+                  <Label htmlFor="lastName" className="text-medical-dark">Last Name</Label>
                   <Input
                     id="lastName"
                     type="text"
@@ -114,11 +114,11 @@ const Auth = () => {
                     required
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    className="bg-gray-800 border-gray-700"
+                    className="bg-white border-medical-border focus:border-medical-primary"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="registerEmail">Email</Label>
+                  <Label htmlFor="registerEmail" className="text-medical-dark">Email</Label>
                   <Input
                     id="registerEmail"
                     type="email"
@@ -126,11 +126,11 @@ const Auth = () => {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="bg-gray-800 border-gray-700"
+                    className="bg-white border-medical-border focus:border-medical-primary"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="registerPassword">Password</Label>
+                  <Label htmlFor="registerPassword" className="text-medical-dark">Password</Label>
                   <Input
                     id="registerPassword"
                     type="password"
@@ -139,14 +139,14 @@ const Auth = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     minLength={6}
-                    className="bg-gray-800 border-gray-700"
+                    className="bg-white border-medical-border focus:border-medical-primary"
                   />
                 </div>
               </CardContent>
               <CardFooter>
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full bg-medical-primary hover:bg-medical-primary/90 text-white"
                   disabled={isLoading}
                 >
                   {isLoading ? "Creating account..." : "Create account"}

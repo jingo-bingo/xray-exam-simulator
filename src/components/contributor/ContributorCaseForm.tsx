@@ -15,13 +15,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Database } from "@/integrations/supabase/types";
-import { DicomUploader } from "@/components/admin/DicomUploader";
+import { MultiScanUploader, CaseScan } from "./MultiScanUploader";
+import { makeDicomFilePermanent } from "@/utils/dicomStorage";
 
 type RegionType = Database["public"]["Enums"]["region_type"];
 type AgeGroup = Database["public"]["Enums"]["age_group"];
 type ReviewStatus = Database["public"]["Enums"]["review_status"];
 
-// Simplified schema without case_number, difficulty, description, and is_free_trial
 const caseFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   region: z.enum(["chest", "abdomen", "head", "musculoskeletal", "cardiovascular", "neuro", "other"]),
@@ -42,7 +42,7 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [dicomPath, setDicomPath] = useState<string | null>(null);
+  const [scans, setScans] = useState<CaseScan[]>([]);
 
   const form = useForm<CaseFormData>({
     resolver: zodResolver(caseFormSchema),
@@ -55,10 +55,6 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
     },
   });
 
-  const handleDicomUploadComplete = (filePath: string) => {
-    setDicomPath(filePath);
-  };
-
   const onSubmit = async (data: CaseFormData) => {
     if (!user?.id) {
       toast({
@@ -69,11 +65,12 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
       return;
     }
 
-    // Validate that DICOM has been uploaded
-    if (!dicomPath) {
+    // Validate that at least one scan has been uploaded
+    const validScans = scans.filter(scan => scan.dicom_path);
+    if (validScans.length === 0) {
       toast({
         title: "Error",
-        description: "Please upload a DICOM image before submitting",
+        description: "Please upload at least one DICOM image before submitting",
         variant: "destructive",
       });
       return;
@@ -82,7 +79,6 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
     setIsSubmitting(true);
 
     try {
-      // Determine the review status based on save_as_draft
       const reviewStatus: ReviewStatus = data.save_as_draft ? 'draft' : 'pending_review';
 
       const caseData = {
@@ -93,14 +89,15 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
         submitted_by: user.id,
         created_by: user.id,
         review_status: reviewStatus,
-        published: false, // Contributors cannot publish directly
-        dicom_path: dicomPath,
-        // Default values for the fields removed from the form
-        description: "", // Empty description
-        case_number: `CONTRIB-${Date.now().toString().slice(-6)}`, // Auto-generated case number
-        difficulty: "medium" as const, // Default difficulty
-        is_free_trial: false, // Default is not free trial
+        published: false,
+        dicom_path: null, // No longer used for multi-scan cases
+        description: "",
+        case_number: `CONTRIB-${Date.now().toString().slice(-6)}`,
+        difficulty: "medium" as const,
+        is_free_trial: false,
       };
+
+      let savedCaseId: string;
 
       if (caseId) {
         // Update existing case
@@ -110,24 +107,61 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
           .eq("id", caseId);
 
         if (error) throw error;
-
-        toast({
-          title: "Case updated successfully",
-          description: data.save_as_draft ? "Your case has been saved as a draft" : "Your case has been submitted for review",
-        });
+        savedCaseId = caseId;
       } else {
         // Create new case
-        const { error } = await supabase
+        const { data: createdCase, error } = await supabase
           .from("cases")
-          .insert(caseData);
+          .insert(caseData)
+          .select()
+          .single();
 
         if (error) throw error;
-
-        toast({
-          title: "Case submitted successfully",
-          description: data.save_as_draft ? "Your case has been saved as a draft" : "Your case has been submitted for review",
-        });
+        savedCaseId = createdCase.id;
       }
+
+      // Process and save scans
+      for (let i = 0; i < validScans.length; i++) {
+        const scan = validScans[i];
+        let finalDicomPath = scan.dicom_path;
+
+        // Make temporary files permanent
+        if (scan.dicom_path.startsWith('temp_')) {
+          const permanentPath = await makeDicomFilePermanent(scan.dicom_path);
+          if (permanentPath) {
+            finalDicomPath = permanentPath;
+          }
+        }
+
+        const scanData = {
+          case_id: savedCaseId,
+          dicom_path: finalDicomPath,
+          label: scan.label || `View ${i + 1}`,
+          display_order: i + 1,
+        };
+
+        if (scan.id) {
+          // Update existing scan
+          const { error } = await supabase
+            .from("case_scans")
+            .update(scanData)
+            .eq("id", scan.id);
+
+          if (error) throw error;
+        } else {
+          // Insert new scan
+          const { error } = await supabase
+            .from("case_scans")
+            .insert(scanData);
+
+          if (error) throw error;
+        }
+      }
+
+      toast({
+        title: "Case submitted successfully",
+        description: data.save_as_draft ? "Your case has been saved as a draft" : "Your case has been submitted for review",
+      });
 
       if (onSuccess) {
         onSuccess();
@@ -145,6 +179,23 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
       setIsSubmitting(false);
     }
   };
+
+  // Start with one empty scan if no scans exist
+  const handleScansChange = (newScans: CaseScan[]) => {
+    setScans(newScans);
+  };
+
+  // Initialize with one empty scan if starting fresh
+  useState(() => {
+    if (scans.length === 0) {
+      setScans([{
+        dicom_path: "",
+        label: "Primary View",
+        display_order: 1,
+        isNew: true
+      }]);
+    }
+  });
 
   return (
     <Card className="w-full max-w-4xl mx-auto">
@@ -171,18 +222,13 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
               )}
             />
 
-            {/* DICOM Upload Section */}
+            {/* Multi-Scan Upload Section */}
             <div className="mb-6">
-              <DicomUploader 
-                currentPath={dicomPath} 
-                onUploadComplete={handleDicomUploadComplete} 
+              <MultiScanUploader 
+                scans={scans}
+                onScansChange={handleScansChange}
                 isTemporaryUpload={true}
               />
-              {!dicomPath && (
-                <p className="mt-2 text-sm text-red-500">
-                  A DICOM image is required to submit a case.
-                </p>
-              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

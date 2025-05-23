@@ -1,15 +1,11 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DicomUploader } from "./DicomUploader";
-import { Plus, Trash2, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { ScanCard } from "./scan/ScanCard";
 
 export interface CaseScan {
   id?: string;
@@ -26,8 +22,6 @@ interface ScanManagerProps {
   isNewCase: boolean;
   mainDicomPath: string | null;
 }
-
-const STANDARD_LABELS = ["Lateral", "AP"];
 
 export const ScanManager = ({ caseId, isNewCase, mainDicomPath }: ScanManagerProps) => {
   const [scans, setScans] = useState<CaseScan[]>([]);
@@ -229,10 +223,6 @@ export const ScanManager = ({ caseId, isNewCase, mainDicomPath }: ScanManagerPro
     }));
   }, [scans, caseId]);
 
-  const isStandardLabel = (label: string) => {
-    return STANDARD_LABELS.includes(label);
-  };
-
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -285,79 +275,21 @@ export const ScanManager = ({ caseId, isNewCase, mainDicomPath }: ScanManagerPro
                 );
                 
                 return (
-                  <div 
-                    key={scan.id || `new-scan-${index}`} 
-                    className="p-4 border border-gray-300 rounded-md"
-                  >
-                    <div className="flex justify-between items-center mb-3">
-                      <h3 className="font-medium">Scan {scan.display_order}</h3>
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="icon"
-                          onClick={() => moveScan(actualIndex, 'up')}
-                          disabled={scan.display_order === Math.min(...visibleScans.map(s => s.display_order))}
-                        >
-                          <ArrowUp className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="icon"
-                          onClick={() => moveScan(actualIndex, 'down')}
-                          disabled={scan.display_order === Math.max(...visibleScans.map(s => s.display_order))}
-                        >
-                          <ArrowDown className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="destructive" 
-                          size="icon"
-                          onClick={() => deleteScan(actualIndex)}
-                          disabled={visibleScans.length <= 1}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    {/* Changed from grid to vertical stack layout */}
-                    <div className="flex flex-col space-y-4">
-                      <div>
-                        <Label htmlFor={`scan-label-${index}`}>Label</Label>
-                        {isStandardLabel(scan.label) ? (
-                          <Select value={scan.label} onValueChange={(value) => handleLabelChange(actualIndex, value)}>
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select view type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="AP">AP</SelectItem>
-                              <SelectItem value="Lateral">Lateral</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <div>
-                            <Input 
-                              id={`scan-label-${index}`}
-                              value={scan.label} 
-                              readOnly
-                              className="w-full bg-gray-50 cursor-not-allowed"
-                              title="Legacy label - cannot be changed"
-                            />
-                            <p className="text-xs text-gray-500 mt-1">
-                              Legacy label. New scans use standardized labels.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <Label>DICOM File</Label>
-                        <DicomUploader 
-                          currentPath={scan.dicom_path} 
-                          onUploadComplete={(path) => handleDicomUpload(actualIndex, path)}
-                          isTemporaryUpload={isNewCase}
-                        />
-                      </div>
-                    </div>
-                  </div>
+                  <ScanCard
+                    key={scan.id || `new-scan-${index}`}
+                    scan={scan}
+                    index={index}
+                    actualIndex={actualIndex}
+                    minOrder={Math.min(...visibleScans.map(s => s.display_order))}
+                    maxOrder={Math.max(...visibleScans.map(s => s.display_order))}
+                    canDelete={visibleScans.length > 1}
+                    isNewCase={isNewCase}
+                    onLabelChange={handleLabelChange}
+                    onDicomUpload={handleDicomUpload}
+                    onMoveUp={moveScan}
+                    onMoveDown={moveScan}
+                    onDelete={deleteScan}
+                  />
                 );
               })}
           </div>

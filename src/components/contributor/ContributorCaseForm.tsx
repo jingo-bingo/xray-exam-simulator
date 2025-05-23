@@ -15,21 +15,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Database } from "@/integrations/supabase/types";
+import { DicomUploader } from "@/components/admin/DicomUploader";
 
 type RegionType = Database["public"]["Enums"]["region_type"];
 type AgeGroup = Database["public"]["Enums"]["age_group"];
-type DifficultyLevel = Database["public"]["Enums"]["difficulty_level"];
 type ReviewStatus = Database["public"]["Enums"]["review_status"];
 
+// Simplified schema without case_number, difficulty, description, and is_free_trial
 const caseFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
-  description: z.string().optional(),
   region: z.enum(["chest", "abdomen", "head", "musculoskeletal", "cardiovascular", "neuro", "other"]),
   age_group: z.enum(["pediatric", "adult", "geriatric"]),
-  difficulty: z.enum(["easy", "medium", "hard"]),
   clinical_history: z.string().optional(),
-  case_number: z.string().min(1, "Case number is required"),
-  is_free_trial: z.boolean().default(false),
   save_as_draft: z.boolean().default(false),
 });
 
@@ -45,27 +42,38 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [dicomPath, setDicomPath] = useState<string | null>(null);
 
   const form = useForm<CaseFormData>({
     resolver: zodResolver(caseFormSchema),
     defaultValues: {
       title: initialData?.title || "",
-      description: initialData?.description || "",
       region: initialData?.region as RegionType || "chest",
       age_group: initialData?.age_group as AgeGroup || "adult",
-      difficulty: initialData?.difficulty as DifficultyLevel || "medium",
       clinical_history: initialData?.clinical_history || "",
-      case_number: initialData?.case_number || "",
-      is_free_trial: initialData?.is_free_trial || false,
       save_as_draft: false,
     },
   });
+
+  const handleDicomUploadComplete = (filePath: string) => {
+    setDicomPath(filePath);
+  };
 
   const onSubmit = async (data: CaseFormData) => {
     if (!user?.id) {
       toast({
         title: "Error",
         description: "You must be logged in to submit a case",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate that DICOM has been uploaded
+    if (!dicomPath) {
+      toast({
+        title: "Error",
+        description: "Please upload a DICOM image before submitting",
         variant: "destructive",
       });
       return;
@@ -79,17 +87,19 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
 
       const caseData = {
         title: data.title,
-        description: data.description,
         region: data.region,
         age_group: data.age_group,
-        difficulty: data.difficulty,
         clinical_history: data.clinical_history,
-        case_number: data.case_number,
-        is_free_trial: data.is_free_trial,
         submitted_by: user.id,
         created_by: user.id,
         review_status: reviewStatus,
         published: false, // Contributors cannot publish directly
+        dicom_path: dicomPath,
+        // Default values for the fields removed from the form
+        description: "", // Empty description
+        case_number: `CONTRIB-${Date.now().toString().slice(-6)}`, // Auto-generated case number
+        difficulty: "medium" as const, // Default difficulty
+        is_free_trial: false, // Default is not free trial
       };
 
       if (caseId) {
@@ -147,55 +157,35 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
       <CardContent>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Case Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter case title" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="case_number"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Case Number</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., CASE-001" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
             <FormField
               control={form.control}
-              name="description"
+              name="title"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>Case Title</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Brief description of the case"
-                      className="resize-none"
-                      {...field}
-                    />
+                    <Input placeholder="Enter case title" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* DICOM Upload Section */}
+            <div className="mb-6">
+              <DicomUploader 
+                currentPath={dicomPath} 
+                onUploadComplete={handleDicomUploadComplete} 
+                isTemporaryUpload={true}
+              />
+              {!dicomPath && (
+                <p className="mt-2 text-sm text-red-500">
+                  A DICOM image is required to submit a case.
+                </p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <FormField
                 control={form.control}
                 name="region"
@@ -245,29 +235,6 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
                   </FormItem>
                 )}
               />
-
-              <FormField
-                control={form.control}
-                name="difficulty"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Difficulty</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select difficulty" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="easy">Easy</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="hard">Hard</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
             <FormField
@@ -288,39 +255,21 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
               )}
             />
 
-            <div className="flex items-center space-x-6">
-              <FormField
-                control={form.control}
-                name="is_free_trial"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel>Free Trial Case</FormLabel>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="save_as_draft"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <FormLabel>Save as Draft</FormLabel>
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="save_as_draft"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormLabel>Save as Draft</FormLabel>
+                </FormItem>
+              )}
+            />
 
             <div className="flex gap-4 pt-6">
               <Button

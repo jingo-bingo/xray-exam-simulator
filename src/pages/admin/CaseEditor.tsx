@@ -2,16 +2,13 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { CaseForm } from "@/components/admin/CaseForm";
-import { QuestionsSection } from "@/components/admin/QuestionsSection";
+import { StandardizedQuestionDisplay } from "@/components/admin/StandardizedQuestionDisplay";
 import { useCaseEditor } from "@/hooks/useCaseEditor";
 import { memo, useCallback, useEffect } from "react";
 import { ScanManager, type CaseScan } from "@/components/admin/ScanManager";
 import { supabase } from "@/integrations/supabase/client";
-
-// Memoize both main components to prevent re-renders
-const MemoizedQuestionsSection = memo(QuestionsSection);
-const MemoizedScanManager = memo(ScanManager);
-// CaseForm is already memoized in its own file
+import { useForm } from "react-hook-form";
+import { Form } from "@/components/ui/form";
 
 const CaseEditor = () => {
   const { id } = useParams();
@@ -21,18 +18,26 @@ const CaseEditor = () => {
   
   const {
     caseData,
-    questions,
     isLoadingCase,
     isNewCase,
     isPendingSave,
     handleInputChange,
     handleDicomUpload,
-    handleAddQuestion,
-    handleUpdateQuestion,
-    handleDeleteQuestion,
     setScansForSubmission,
     submitCase
   } = useCaseEditor(id, navigate);
+
+  // Create a form instance to manage the model_answer field
+  const form = useForm({
+    defaultValues: {
+      model_answer: caseData.model_answer || ""
+    }
+  });
+
+  // Update form when caseData changes
+  useEffect(() => {
+    form.setValue("model_answer", caseData.model_answer || "");
+  }, [caseData.model_answer, form]);
 
   // Fetch scans whenever caseId changes
   useEffect(() => {
@@ -61,13 +66,28 @@ const CaseEditor = () => {
   // Use useCallback to stabilize these functions
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    submitCase();
-  }, [submitCase]);
+    
+    // Get the current model_answer from the form
+    const modelAnswer = form.getValues("model_answer");
+    
+    // Update the case data with the model answer and submit
+    const updatedCaseData = {
+      ...caseData,
+      model_answer: modelAnswer
+    };
+    
+    submitCase(updatedCaseData);
+  }, [caseData, form, submitCase]);
   
   const handleCancel = useCallback(() => {
     console.log("CaseEditor: Cancel clicked, navigating back to case management");
     navigate("/admin/cases");
   }, [navigate]);
+
+  const handleModelAnswerChange = useCallback((value: string) => {
+    form.setValue("model_answer", value);
+    handleInputChange("model_answer", value);
+  }, [form, handleInputChange]);
   
   if (!isNewCase && isLoadingCase) {
     return <div>Loading case...</div>;
@@ -89,12 +109,23 @@ const CaseEditor = () => {
           onDicomUpload={handleDicomUpload}
         />
         
-        <MemoizedQuestionsSection 
-          questions={questions}
-          onUpdateQuestion={handleUpdateQuestion}
-          onDeleteQuestion={handleDeleteQuestion}
-          onAddQuestion={handleAddQuestion}
-        />
+        <Form {...form}>
+          <StandardizedQuestionDisplay 
+            control={{
+              ...form.control,
+              _formValues: form.watch(),
+              _fields: {
+                model_answer: {
+                  _f: {
+                    name: "model_answer",
+                    value: form.watch("model_answer"),
+                    onChange: (e: any) => handleModelAnswerChange(e.target.value)
+                  }
+                }
+              }
+            } as any}
+          />
+        </Form>
         
         <div className="flex justify-end gap-4 pt-4">
           <Button type="button" variant="outline" onClick={handleCancel}>

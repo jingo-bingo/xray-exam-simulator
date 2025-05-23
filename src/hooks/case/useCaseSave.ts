@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { Case } from "@/components/admin/CaseForm";
 import { fileExists, makeDicomFilePermanent } from "@/utils/dicomStorage";
-import { Question } from "@/components/admin/QuestionForm";
 import { useAuth } from "@/hooks/useAuth";
 
 /**
@@ -113,7 +112,8 @@ export const useCaseSave = (
               published: data.published,
               clinical_history: data.clinical_history,
               dicom_path: data.dicom_path,
-              case_number: data.case_number
+              case_number: data.case_number,
+              model_answer: data.model_answer
             })
             .eq("id", caseId)
             .select()

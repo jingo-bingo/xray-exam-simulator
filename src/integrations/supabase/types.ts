@@ -148,6 +148,7 @@ export type Database = {
           difficulty: Database["public"]["Enums"]["difficulty_level"]
           id: string
           is_free_trial: boolean
+          model_answer: string | null
           published: boolean
           region: Database["public"]["Enums"]["region_type"]
           review_status: Database["public"]["Enums"]["review_status"]
@@ -166,6 +167,7 @@ export type Database = {
           difficulty?: Database["public"]["Enums"]["difficulty_level"]
           id?: string
           is_free_trial?: boolean
+          model_answer?: string | null
           published?: boolean
           region: Database["public"]["Enums"]["region_type"]
           review_status?: Database["public"]["Enums"]["review_status"]
@@ -184,6 +186,7 @@ export type Database = {
           difficulty?: Database["public"]["Enums"]["difficulty_level"]
           id?: string
           is_free_trial?: boolean
+          model_answer?: string | null
           published?: boolean
           region?: Database["public"]["Enums"]["region_type"]
           review_status?: Database["public"]["Enums"]["review_status"]

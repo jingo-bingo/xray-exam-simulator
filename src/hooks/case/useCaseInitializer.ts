@@ -32,6 +32,7 @@ export const useCaseInitializer = ({
     published: false,
     clinical_history: "",
     dicom_path: null,
+    model_answer: "",
     case_number: `CASE-${Date.now().toString().slice(-6)}`
   });
   

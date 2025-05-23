@@ -15,6 +15,7 @@ import { MultiScanUploader, CaseScan } from "./MultiScanUploader";
 import { makeDicomFilePermanent } from "@/utils/dicomStorage";
 import { CaseBasicFields } from "./CaseBasicFields";
 import { CaseClinicalHistory } from "./CaseClinicalHistory";
+import { StandardizedQuestionSection } from "./StandardizedQuestionSection";
 import { CaseFormActions } from "./CaseFormActions";
 
 type RegionType = Database["public"]["Enums"]["region_type"];
@@ -26,6 +27,7 @@ const caseFormSchema = z.object({
   region: z.enum(["chest", "abdomen", "head", "musculoskeletal", "cardiovascular", "neuro", "other"]),
   age_group: z.enum(["pediatric", "adult", "geriatric"]),
   clinical_history: z.string().optional(),
+  model_answer: z.string().min(1, "Model answer is required"),
   save_as_draft: z.boolean().default(false),
 });
 
@@ -50,6 +52,7 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
       region: initialData?.region as RegionType || "chest",
       age_group: initialData?.age_group as AgeGroup || "adult",
       clinical_history: initialData?.clinical_history || "",
+      model_answer: initialData?.model_answer || "",
       save_as_draft: false,
     },
   });
@@ -85,6 +88,7 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
         region: data.region,
         age_group: data.age_group,
         clinical_history: data.clinical_history,
+        model_answer: data.model_answer,
         submitted_by: user.id,
         created_by: user.id,
         review_status: reviewStatus,
@@ -135,7 +139,7 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
         const scanData = {
           case_id: savedCaseId,
           dicom_path: finalDicomPath,
-          label: scan.label || "AP", // Default to AP instead of View X
+          label: scan.label || "AP",
           display_order: i + 1,
         };
 
@@ -189,7 +193,7 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
     if (scans.length === 0) {
       setScans([{
         dicom_path: "",
-        label: "AP", // Default to AP instead of Primary View
+        label: "AP",
         display_order: 1,
         isNew: true
       }]);
@@ -219,6 +223,8 @@ export const ContributorCaseForm = ({ initialData, caseId, onSuccess }: Contribu
             </div>
 
             <CaseClinicalHistory control={form.control as any} />
+
+            <StandardizedQuestionSection control={form.control as any} />
 
             <CaseFormActions 
               control={form.control as any}

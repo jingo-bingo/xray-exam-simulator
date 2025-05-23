@@ -31,6 +31,7 @@ export type Case = {
   clinical_history: string | null;
   case_number: string;
   dicom_path: string | null;
+  model_answer: string | null;
   id?: string;
 };
 

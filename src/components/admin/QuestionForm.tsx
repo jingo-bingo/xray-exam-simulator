@@ -38,7 +38,7 @@ export const QuestionForm = ({ question, index, onUpdate, onDelete }: QuestionFo
   };
 
   return (
-    <div className="border border-gray-700 p-4 rounded-md mb-4 relative bg-gray-800">
+    <div className="border border-medical-border p-4 rounded-md mb-4 relative bg-white shadow-sm">
       <div className="absolute top-2 right-2">
         <Button 
           variant="ghost" 
@@ -61,7 +61,7 @@ export const QuestionForm = ({ question, index, onUpdate, onDelete }: QuestionFo
             onChange={(e) => handleChange("question_text", e.target.value)}
             rows={3}
             placeholder="e.g., Provide a short report for this case"
-            className="bg-gray-700 border-gray-600"
+            className="bg-white border-medical-border"
           />
         </div>
         
@@ -73,7 +73,7 @@ export const QuestionForm = ({ question, index, onUpdate, onDelete }: QuestionFo
             onChange={(e) => handleChange("explanation", e.target.value)}
             rows={3}
             placeholder="Provide a model answer or explanation for reference"
-            className="bg-gray-700 border-gray-600"
+            className="bg-white border-medical-border"
           />
         </div>
         
@@ -85,7 +85,7 @@ export const QuestionForm = ({ question, index, onUpdate, onDelete }: QuestionFo
             value={localQuestion.display_order} 
             onChange={(e) => handleChange("display_order", parseInt(e.target.value) || 0)}
             min={1}
-            className="bg-gray-700 border-gray-600"
+            className="bg-white border-medical-border"
           />
         </div>
       </div>

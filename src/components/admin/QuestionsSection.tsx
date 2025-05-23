@@ -20,7 +20,7 @@ export const QuestionsSection = ({
   console.log("QuestionsSection: Rendering with questions", questions.length);
 
   return (
-    <div className="border-t border-gray-700 pt-6 mt-6">
+    <div className="border-t border-medical-border pt-6 mt-6">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-semibold">Questions</h2>
         <Button 
@@ -33,10 +33,10 @@ export const QuestionsSection = ({
         </Button>
       </div>
       
-      <div className="space-y-4 bg-gray-900">
+      <div className="space-y-4 bg-white">
         {questions.length === 0 ? (
-          <div className="text-center py-8 bg-gray-800 border border-gray-700 rounded-md">
-            <p className="text-gray-400">No questions added yet.</p>
+          <div className="text-center py-8 bg-medical-lighter border border-medical-border rounded-md">
+            <p className="text-medical-muted">No questions added yet.</p>
             <Button 
               type="button" 
               variant="outline" 

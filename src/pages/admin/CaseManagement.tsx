@@ -42,7 +42,7 @@ const CaseManagement = () => {
         .from("cases")
         .select(`
           *,
-          creator:profiles(first_name, last_name)
+          creator:profiles!cases_created_by_fkey(first_name, last_name)
         `);
       
       if (filter === "published") {

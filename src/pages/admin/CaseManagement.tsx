@@ -40,10 +40,7 @@ const CaseManagement = () => {
       
       let query = supabase
         .from("cases")
-        .select(`
-          *,
-          creator:profiles!created_by(first_name, last_name)
-        `);
+        .select("*");
       
       if (filter === "published") {
         query = query.eq("published", true);
@@ -51,15 +48,40 @@ const CaseManagement = () => {
         query = query.eq("published", false);
       }
       
-      const { data, error } = await query.order("created_at", { ascending: false });
+      const { data: casesData, error: casesError } = await query.order("created_at", { ascending: false });
       
-      if (error) {
-        console.error("CaseManagement: Error fetching cases", error);
-        throw error;
+      if (casesError) {
+        console.error("CaseManagement: Error fetching cases", casesError);
+        throw casesError;
       }
       
-      console.log("CaseManagement: Cases fetched successfully", { count: data?.length });
-      return data as Case[];
+      console.log("CaseManagement: Cases fetched successfully", { count: casesData?.length });
+      
+      // Fetch creator profiles separately for cases that have created_by
+      const casesWithCreatedBy = casesData?.filter(c => c.created_by) || [];
+      const creatorIds = [...new Set(casesWithCreatedBy.map(c => c.created_by))];
+      
+      let profilesData: any[] = [];
+      if (creatorIds.length > 0) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name")
+          .in("id", creatorIds);
+        
+        if (!profilesError && profiles) {
+          profilesData = profiles;
+        }
+      }
+      
+      // Map cases with their creator information
+      const casesWithCreators = casesData?.map(caseItem => ({
+        ...caseItem,
+        creator: caseItem.created_by 
+          ? profilesData.find(p => p.id === caseItem.created_by) || null
+          : null
+      })) || [];
+      
+      return casesWithCreators as Case[];
     }
   });
   

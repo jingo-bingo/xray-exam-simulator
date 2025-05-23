@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar';
 import Hero from '@/components/Hero';
 import Features from '@/components/Features';
 import Workflow from '@/components/Workflow';
+import TestimonialsSection from '@/components/TestimonialsSection';
 import CallToAction from '@/components/CallToAction';
 import Footer from '@/components/Footer';
 
@@ -15,6 +16,7 @@ const Index: React.FC = () => {
         <Hero />
         <Features />
         <Workflow />
+        <TestimonialsSection />
         <CallToAction />
       </main>
       <Footer />

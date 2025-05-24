@@ -22,9 +22,9 @@ export const CaseNavigation: React.FC<CaseNavigationProps> = ({
         OVERVIEW
       </div>
       
-      {/* Scrollable case numbers section */}
-      <div className="flex-1 bg-white">
-        <ScrollArea className="h-full">
+      {/* Scrollable case numbers section with proper height constraint */}
+      <div className="flex-1 bg-white min-h-0">
+        <ScrollArea className="max-h-[calc(100vh-200px)]">
           <div className="p-2">
             <div className="flex flex-col gap-1">
               {Array.from({ length: totalCases }, (_, i) => i + 1).map((caseNumber) => {

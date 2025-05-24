@@ -2,46 +2,57 @@
 import React from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Flag } from 'lucide-react';
 
 interface ExamAnswerSectionProps {
-  caseNumber: number;
   answer: string;
   onAnswerChange: (answer: string) => void;
-  onSubmit: () => void;
-  timeRemaining: number;
+  isFlagged: boolean;
+  onFlagToggle: () => void;
 }
 
 export const ExamAnswerSection: React.FC<ExamAnswerSectionProps> = ({
-  caseNumber,
   answer,
   onAnswerChange,
-  onSubmit,
-  timeRemaining
+  isFlagged,
+  onFlagToggle
 }) => {
   const wordCount = answer.trim().split(/\s+/).filter(word => word.length > 0).length;
   
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
+      {/* Answer Header */}
       <div className="p-4 border-b border-gray-200">
-        <h3 className="font-medium text-gray-900 mb-2">Case {caseNumber}</h3>
-        <div className="text-sm text-gray-600">
-          Time remaining: {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
-        </div>
+        <h3 className="text-lg font-medium text-gray-900">Answer</h3>
       </div>
       
-      {/* Question */}
-      <div className="p-4 border-b border-gray-200 bg-gray-50">
-        <div className="text-sm font-medium text-gray-900 mb-2">Question:</div>
-        <div className="text-sm text-gray-700 leading-relaxed">
-          Please provide a short report for this patient and include your recommended next step for onward management.
+      {/* Question and Flag Button */}
+      <div className="p-4 border-b border-gray-200">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1">
+            <div className="text-sm text-gray-700 leading-relaxed">
+              Please provide a short report for this patient and include your recommended next step for onward management.
+            </div>
+          </div>
+          <Button
+            variant={isFlagged ? "default" : "outline"}
+            size="sm"
+            onClick={onFlagToggle}
+            className={`flex items-center gap-1 ${
+              isFlagged 
+                ? 'bg-orange-500 hover:bg-orange-600 text-white' 
+                : 'text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            <Flag className="h-3 w-3" />
+            {isFlagged ? 'Flagged' : 'Flag'}
+          </Button>
         </div>
       </div>
       
       {/* Answer area */}
       <div className="flex-1 p-4 flex flex-col">
         <div className="flex justify-between items-center mb-2">
-          <label className="text-sm font-medium text-gray-900">Your Answer:</label>
           <span className="text-xs text-gray-500">{wordCount} words</span>
         </div>
         
@@ -49,18 +60,8 @@ export const ExamAnswerSection: React.FC<ExamAnswerSectionProps> = ({
           value={answer}
           onChange={(e) => onAnswerChange(e.target.value)}
           placeholder="Type your radiology report here..."
-          className="flex-1 resize-none border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+          className="flex-1 resize-none border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-sm"
         />
-        
-        {/* Submit button */}
-        <div className="mt-4 flex justify-end">
-          <Button
-            onClick={onSubmit}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6"
-          >
-            Submit & Continue
-          </Button>
-        </div>
       </div>
     </div>
   );

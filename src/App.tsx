@@ -16,6 +16,7 @@ import CaseView from "./pages/CaseView";
 import SubmitCases from "./pages/SubmitCases";
 import SubmitNewCase from "./pages/SubmitNewCase";
 import ExamHolding from "./pages/ExamHolding";
+import ExamSession from "./pages/ExamSession";
 import { AuthProvider } from "./hooks/useAuth";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/profile" element={<Profile />} />
               <Route path="/billing" element={<Billing />} />
               <Route path="/exam/holding" element={<ExamHolding />} />
+              <Route path="/exam/session" element={<ExamSession />} />
               {/* Both admins and trainees can access cases */}
               <Route path="/cases" element={<Cases />} />
               <Route path="/cases/:id" element={<CaseView />} />

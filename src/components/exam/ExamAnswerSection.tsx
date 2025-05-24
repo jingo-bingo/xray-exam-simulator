@@ -22,26 +22,26 @@ export const ExamAnswerSection: React.FC<ExamAnswerSectionProps> = ({
   return (
     <div className="h-full flex flex-col">
       {/* Answer Header */}
-      <div className="p-4 border-b border-gray-200">
-        <h3 className="text-lg font-medium text-gray-900">Answer</h3>
+      <div className="p-4 border-b border-gray-200 bg-gray-50">
+        <h3 className="text-sm font-medium text-gray-900 uppercase tracking-wide">Answer</h3>
       </div>
       
       {/* Question and Flag Button */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
-            <div className="text-sm text-gray-700 leading-relaxed">
+            <p className="text-sm text-gray-800 leading-relaxed">
               Please provide a short report for this patient and include your recommended next step for onward management.
-            </div>
+            </p>
           </div>
           <Button
             variant={isFlagged ? "default" : "outline"}
             size="sm"
             onClick={onFlagToggle}
-            className={`flex items-center gap-1 ${
+            className={`flex items-center gap-1 text-xs ${
               isFlagged 
-                ? 'bg-orange-500 hover:bg-orange-600 text-white' 
-                : 'text-gray-600 hover:bg-gray-50'
+                ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500' 
+                : 'text-gray-600 hover:bg-gray-50 border-gray-300'
             }`}
           >
             <Flag className="h-3 w-3" />
@@ -52,7 +52,7 @@ export const ExamAnswerSection: React.FC<ExamAnswerSectionProps> = ({
       
       {/* Answer area */}
       <div className="flex-1 p-4 flex flex-col">
-        <div className="flex justify-between items-center mb-2">
+        <div className="flex justify-between items-center mb-3">
           <span className="text-xs text-gray-500">{wordCount} words</span>
         </div>
         
@@ -60,7 +60,7 @@ export const ExamAnswerSection: React.FC<ExamAnswerSectionProps> = ({
           value={answer}
           onChange={(e) => onAnswerChange(e.target.value)}
           placeholder="Type your radiology report here..."
-          className="flex-1 resize-none border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-sm"
+          className="flex-1 resize-none border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-sm p-3"
         />
       </div>
     </div>

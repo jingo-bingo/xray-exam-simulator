@@ -4,12 +4,14 @@ import { ExamTopBar } from '@/components/exam/ExamTopBar';
 import { ExamTimer } from '@/components/exam/ExamTimer';
 import { ExamImageViewer } from '@/components/exam/ExamImageViewer';
 import { ExamAnswerSection } from '@/components/exam/ExamAnswerSection';
+import { CaseNavigation } from '@/components/exam/CaseNavigation';
 
 const ExamSession = () => {
   const [currentCase, setCurrentCase] = useState(1);
   const [examTimeRemaining, setExamTimeRemaining] = useState(1800); // 30 minutes total
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [flaggedCases, setFlaggedCases] = useState<Set<number>>(new Set());
+  const [completedCases, setCompletedCases] = useState<Set<number>>(new Set());
 
   // Single exam timer countdown logic
   useEffect(() => {
@@ -39,11 +41,20 @@ const ExamSession = () => {
     }
   };
 
+  const handleCaseSelect = (caseNumber: number) => {
+    setCurrentCase(caseNumber);
+  };
+
   const handleAnswerChange = (answer: string) => {
     setAnswers(prev => ({
       ...prev,
       [currentCase]: answer
     }));
+    
+    // Mark case as completed if there's an answer
+    if (answer.trim()) {
+      setCompletedCases(prev => new Set(prev).add(currentCase));
+    }
   };
 
   const handleFlagToggle = () => {
@@ -83,9 +94,17 @@ const ExamSession = () => {
         totalExamTime="30 minutes"
       />
       
-      {/* Main Content - No sidebar, just image viewer and answer section */}
+      {/* Main Content - Three column layout: sidebar, image viewer, answer section */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Image Viewer - takes up more space now */}
+        {/* Left Sidebar - Case Navigation */}
+        <CaseNavigation
+          currentCase={currentCase}
+          totalCases={25}
+          completedCases={completedCases}
+          onCaseSelect={handleCaseSelect}
+        />
+        
+        {/* Image Viewer - takes up remaining space */}
         <div className="flex-1 bg-black">
           <ExamImageViewer caseNumber={currentCase} />
         </div>

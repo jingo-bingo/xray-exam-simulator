@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { ExamTopBar } from '@/components/exam/ExamTopBar';
 import { ExamTimer } from '@/components/exam/ExamTimer';
@@ -18,6 +19,7 @@ const ExamSession = () => {
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [showNotesPanel, setShowNotesPanel] = useState(false);
   const [examNotes, setExamNotes] = useState('');
+  const [isTimeExpired, setIsTimeExpired] = useState(false);
 
   // Single exam timer countdown logic
   useEffect(() => {
@@ -25,7 +27,8 @@ const ExamSession = () => {
       setExamTimeRemaining(prev => {
         if (prev <= 1) {
           // Time's up - exam ends
-          // TODO: Handle exam completion
+          setIsTimeExpired(true);
+          setShowFinishModal(true);
           return 0;
         }
         return prev - 1;
@@ -86,6 +89,7 @@ const ExamSession = () => {
   };
 
   const handleFinishClick = () => {
+    setIsTimeExpired(false);
     setShowFinishModal(true);
   };
 
@@ -98,6 +102,13 @@ const ExamSession = () => {
     console.log('Exam submitted');
     setShowFinishModal(false);
     // Navigate away or show completion screen
+  };
+
+  const handleCloseModal = () => {
+    // Only allow closing if time hasn't expired
+    if (!isTimeExpired) {
+      setShowFinishModal(false);
+    }
   };
 
   const unansweredCount = 25 - completedCases.size;
@@ -176,9 +187,10 @@ const ExamSession = () => {
       {/* Finish Modal */}
       <ExamFinishModal
         isOpen={showFinishModal}
-        onClose={() => setShowFinishModal(false)}
+        onClose={handleCloseModal}
         onSubmitExam={handleSubmitExam}
         unansweredCount={unansweredCount}
+        isTimeExpired={isTimeExpired}
       />
     </div>
   );

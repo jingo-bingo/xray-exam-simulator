@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { ExamTopBar } from '@/components/exam/ExamTopBar';
 import { ExamTimer } from '@/components/exam/ExamTimer';
@@ -7,49 +8,41 @@ import { ExamAnswerSection } from '@/components/exam/ExamAnswerSection';
 
 const ExamSession = () => {
   const [currentCase, setCurrentCase] = useState(1);
-  const [timeRemaining, setTimeRemaining] = useState(360); // 6 minutes per case
-  const [totalExamTime, setTotalExamTime] = useState(10800); // 3 hours total
+  const [examTimeRemaining, setExamTimeRemaining] = useState(1800); // 30 minutes total
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [completedCases, setCompletedCases] = useState<Set<number>>(new Set());
 
-  // Timer countdown logic
+  // Single exam timer countdown logic
   useEffect(() => {
     const timer = setInterval(() => {
-      setTimeRemaining(prev => {
+      setExamTimeRemaining(prev => {
         if (prev <= 1) {
-          // Auto-advance to next case when time expires
-          handleNextCase();
-          return 360; // Reset timer for next case
+          // Time's up - exam ends
+          // TODO: Handle exam completion
+          return 0;
         }
         return prev - 1;
       });
-
-      setTotalExamTime(prev => Math.max(0, prev - 1));
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [currentCase]);
+  }, []);
 
   const handleCaseSelect = (caseNumber: number) => {
-    // Only allow navigation to current or previous cases
-    if (caseNumber <= currentCase) {
-      setCurrentCase(caseNumber);
-      setTimeRemaining(360); // Reset timer
-    }
+    // Allow navigation to any case
+    setCurrentCase(caseNumber);
   };
 
   const handleNextCase = () => {
-    if (currentCase < 30) {
+    if (currentCase < 25) {
       setCompletedCases(prev => new Set([...prev, currentCase]));
       setCurrentCase(prev => prev + 1);
-      setTimeRemaining(360);
     }
   };
 
   const handlePreviousCase = () => {
     if (currentCase > 1) {
       setCurrentCase(prev => prev - 1);
-      setTimeRemaining(360);
     }
   };
 
@@ -66,29 +59,23 @@ const ExamSession = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const formatExamTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    return `${hours}h ${mins}m`;
-  };
-
   return (
     <div className="h-screen bg-white flex flex-col">
       {/* Top Navigation Bar */}
       <ExamTopBar 
         currentCase={currentCase}
-        totalCases={30}
+        totalCases={25}
         onPrevious={handlePreviousCase}
         onNext={handleNextCase}
         canGoPrevious={currentCase > 1}
-        canGoNext={currentCase < 30}
-        examTimeRemaining={formatTime(timeRemaining)}
+        canGoNext={currentCase < 25}
+        examTimeRemaining={formatTime(examTimeRemaining)}
       />
       
       {/* Timer Bar */}
       <ExamTimer 
-        timeRemaining={formatTime(timeRemaining)}
-        totalExamTime={formatExamTime(totalExamTime)}
+        timeRemaining={formatTime(examTimeRemaining)}
+        totalExamTime="30 minutes"
       />
       
       {/* Main Content */}
@@ -96,7 +83,7 @@ const ExamSession = () => {
         {/* Left Sidebar - Case Navigation */}
         <CaseNavigation 
           currentCase={currentCase}
-          totalCases={30}
+          totalCases={25}
           completedCases={completedCases}
           onCaseSelect={handleCaseSelect}
         />
@@ -115,7 +102,7 @@ const ExamSession = () => {
               answer={answers[currentCase] || ''}
               onAnswerChange={handleAnswerChange}
               onSubmit={handleNextCase}
-              timeRemaining={timeRemaining}
+              timeRemaining={examTimeRemaining}
             />
           </div>
         </div>

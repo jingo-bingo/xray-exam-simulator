@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ExamTopBar } from '@/components/exam/ExamTopBar';
 import { ExamTimer } from '@/components/exam/ExamTimer';
@@ -94,6 +93,9 @@ const ExamSession = () => {
         totalExamTime="30 minutes"
       />
       
+      {/* White gap */}
+      <div className="h-4 bg-white"></div>
+      
       {/* Main Content - Three column layout: sidebar, image viewer, answer section */}
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar - Case Navigation */}
@@ -110,7 +112,7 @@ const ExamSession = () => {
         </div>
         
         {/* Answer Section - fixed width */}
-        <div className="w-96 bg-white border-l border-gray-300">
+        <div className="w-96 bg-white">
           <ExamAnswerSection 
             answer={answers[currentCase] || ''}
             onAnswerChange={handleAnswerChange}

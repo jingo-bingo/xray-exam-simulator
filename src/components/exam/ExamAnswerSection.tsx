@@ -21,13 +21,13 @@ export const ExamAnswerSection: React.FC<ExamAnswerSectionProps> = ({
   
   return (
     <div className="h-full flex flex-col">
-      {/* Answer Header */}
-      <div className="p-4 border-b border-gray-200 bg-gray-50">
-        <h3 className="text-sm font-medium text-gray-900 uppercase tracking-wide">Answer</h3>
+      {/* Answer Header with blue background matching top bar */}
+      <div className="p-4 bg-gray-800 text-white">
+        <h3 className="text-sm font-medium uppercase tracking-wide">Answer</h3>
       </div>
       
       {/* Question and Flag Button */}
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-4 border-b border-gray-200 bg-white">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
             <p className="text-sm text-gray-800 leading-relaxed">
@@ -38,20 +38,19 @@ export const ExamAnswerSection: React.FC<ExamAnswerSectionProps> = ({
             variant={isFlagged ? "default" : "outline"}
             size="sm"
             onClick={onFlagToggle}
-            className={`flex items-center gap-1 text-xs ${
+            className={`flex items-center text-xs p-2 ${
               isFlagged 
                 ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500' 
                 : 'text-gray-600 hover:bg-gray-50 border-gray-300'
             }`}
           >
             <Flag className="h-3 w-3" />
-            {isFlagged ? 'Flagged' : 'Flag'}
           </Button>
         </div>
       </div>
       
       {/* Answer area */}
-      <div className="flex-1 p-4 flex flex-col">
+      <div className="flex-1 p-4 flex flex-col bg-white">
         <div className="flex justify-between items-center mb-3">
           <span className="text-xs text-gray-500">{wordCount} words</span>
         </div>

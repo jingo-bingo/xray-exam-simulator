@@ -15,15 +15,15 @@ export const CaseNavigation: React.FC<CaseNavigationProps> = ({
   onCaseSelect
 }) => {
   return (
-    <div className="w-20 bg-gray-100 border-r border-gray-300 flex flex-col">
-      {/* Overview tab */}
-      <div className="p-2 bg-blue-600 text-white text-center text-xs font-medium">
+    <div className="w-20 bg-white flex flex-col">
+      {/* Overview header with blue background matching top bar */}
+      <div className="p-2 bg-gray-800 text-white text-center text-xs font-medium">
         OVERVIEW
       </div>
       
-      {/* Case numbers */}
-      <div className="flex-1 p-2">
-        <div className="grid grid-cols-2 gap-1">
+      {/* Case numbers in simple column layout */}
+      <div className="flex-1 p-2 bg-white">
+        <div className="flex flex-col gap-1">
           {Array.from({ length: totalCases }, (_, i) => i + 1).map((caseNumber) => {
             const isCompleted = completedCases.has(caseNumber);
             const isCurrent = caseNumber === currentCase;
@@ -33,13 +33,14 @@ export const CaseNavigation: React.FC<CaseNavigationProps> = ({
                 key={caseNumber}
                 onClick={() => onCaseSelect(caseNumber)}
                 className={`
-                  w-8 h-8 text-xs font-medium rounded border
+                  w-full h-8 text-xs font-medium text-center
                   ${isCurrent 
-                    ? 'bg-blue-600 text-white border-blue-600' 
+                    ? 'bg-green-500 text-white' 
                     : isCompleted
-                    ? 'bg-green-500 text-white border-green-500'
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                    ? 'text-green-600'
+                    : 'text-gray-700 hover:bg-gray-200'
                   }
+                  transition-colors duration-150
                 `}
               >
                 {caseNumber}

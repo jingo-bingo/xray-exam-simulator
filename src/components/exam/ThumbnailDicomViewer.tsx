@@ -61,7 +61,9 @@ export const ThumbnailDicomViewer: React.FC<ThumbnailDicomViewerProps> = ({
         style={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          minWidth: '100%',
+          minHeight: '100%'
         }}
       >
         {/* Loading overlay */}

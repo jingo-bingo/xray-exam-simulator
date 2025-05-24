@@ -30,6 +30,25 @@ export function useSimpleCornerstoneImage(
   const imageInstanceRef = useRef<any>(null);
   const elementEnabled = useRef(false);
   
+  // Function to resize the canvas to fit the container
+  const resizeCanvasToContainer = (element: HTMLElement) => {
+    try {
+      const rect = element.getBoundingClientRect();
+      const width = rect.width;
+      const height = rect.height;
+      
+      if (width > 0 && height > 0) {
+        console.log(`useSimpleCornerstoneImage[${instanceId}]: Resizing canvas to ${width}x${height}`);
+        cornerstone.resize(element, true);
+        
+        // Force a re-render
+        cornerstone.updateImage(element);
+      }
+    } catch (error) {
+      console.warn(`useSimpleCornerstoneImage[${instanceId}]: Error resizing canvas:`, error);
+    }
+  };
+  
   // Clean up function to safely disable cornerstone on the element
   const cleanupElement = () => {
     if (!viewerRef.current) return;
@@ -106,11 +125,18 @@ export function useSimpleCornerstoneImage(
       try {
         console.log(`useSimpleCornerstoneImage[${instanceId}]: Enabling cornerstone on element`);
         
-        // Basic element preparation
+        // Get container dimensions
+        const rect = element.getBoundingClientRect();
+        const containerWidth = rect.width || element.offsetWidth || 160;
+        const containerHeight = rect.height || element.offsetHeight || 160;
+        
+        // Basic element preparation with dynamic sizing
         element.style.width = '100%';
         element.style.height = '100%';
         element.style.position = 'relative';
         element.style.outline = 'none';
+        element.style.minWidth = `${containerWidth}px`;
+        element.style.minHeight = `${containerHeight}px`;
         
         // Try to safely enable the element
         try {
@@ -161,6 +187,12 @@ export function useSimpleCornerstoneImage(
       // Display the cached image
       cornerstone.displayImage(element, image);
       imageInstanceRef.current = image;
+      
+      // Resize canvas to fit container after displaying the image
+      setTimeout(() => {
+        resizeCanvasToContainer(element);
+      }, 100);
+      
       setIsLoading(false);
       setImageDisplayed(true);
       return;
@@ -192,6 +224,11 @@ export function useSimpleCornerstoneImage(
       cornerstone.displayImage(element, image);
       console.log(`useSimpleCornerstoneImage[${instanceId}]: Image displayed successfully`);
       
+      // Resize canvas to fit container after displaying the image
+      setTimeout(() => {
+        resizeCanvasToContainer(element);
+      }, 100);
+      
       setIsLoading(false);
       setImageDisplayed(true);
     } catch (error) {
@@ -207,6 +244,12 @@ export function useSimpleCornerstoneImage(
           loadedImages.set(webImageId, image);
           imageInstanceRef.current = image;
           cornerstone.displayImage(element, image);
+          
+          // Resize canvas to fit container after displaying the image
+          setTimeout(() => {
+            resizeCanvasToContainer(element);
+          }, 100);
+          
           setIsLoading(false);
           setImageDisplayed(true);
           return;

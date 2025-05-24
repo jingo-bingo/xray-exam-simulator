@@ -62,4 +62,19 @@
   .glass-panel {
     @apply bg-white/80 backdrop-blur-sm border border-medical-border rounded-lg shadow-sm;
   }
+
+  /* Cornerstone canvas scaling styles */
+  [data-instance-id] canvas {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: contain;
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  /* Ensure Cornerstone viewer containers scale properly */
+  .cornerstone-enabled {
+    width: 100% !important;
+    height: 100% !important;
+  }
 }

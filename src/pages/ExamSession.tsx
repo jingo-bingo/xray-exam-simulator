@@ -1,9 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { ExamTopBar } from '@/components/exam/ExamTopBar';
 import { ExamTimer } from '@/components/exam/ExamTimer';
 import { ExamImageViewer } from '@/components/exam/ExamImageViewer';
 import { ExamAnswerSection } from '@/components/exam/ExamAnswerSection';
 import { CaseNavigation } from '@/components/exam/CaseNavigation';
+import { CaseHeader } from '@/components/exam/CaseHeader';
 
 const ExamSession = () => {
   const [currentCase, setCurrentCase] = useState(1);
@@ -50,10 +52,16 @@ const ExamSession = () => {
       [currentCase]: answer
     }));
     
-    // Mark case as completed if there's an answer
-    if (answer.trim()) {
-      setCompletedCases(prev => new Set(prev).add(currentCase));
-    }
+    // Mark case as completed if there's an answer, remove if empty
+    setCompletedCases(prev => {
+      const newSet = new Set(prev);
+      if (answer.trim()) {
+        newSet.add(currentCase);
+      } else {
+        newSet.delete(currentCase);
+      }
+      return newSet;
+    });
   };
 
   const handleFlagToggle = () => {
@@ -106,9 +114,12 @@ const ExamSession = () => {
           onCaseSelect={handleCaseSelect}
         />
         
-        {/* Image Viewer - takes up remaining space */}
-        <div className="flex-1 bg-black">
-          <ExamImageViewer caseNumber={currentCase} />
+        {/* Center Column - Case Header and Image Viewer */}
+        <div className="flex-1 bg-black flex flex-col">
+          <CaseHeader caseNumber={currentCase} />
+          <div className="flex-1">
+            <ExamImageViewer caseNumber={currentCase} />
+          </div>
         </div>
         
         {/* Answer Section - fixed width */}

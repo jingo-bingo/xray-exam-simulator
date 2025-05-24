@@ -37,7 +37,7 @@ export const CaseNavigation: React.FC<CaseNavigationProps> = ({
                   ${isCurrent 
                     ? 'bg-green-500 text-white' 
                     : isCompleted
-                    ? 'text-green-600'
+                    ? 'text-green-800'
                     : 'text-gray-700 hover:bg-gray-200'
                   }
                   transition-colors duration-150

@@ -40,7 +40,7 @@ export const ExamAnswerSection: React.FC<ExamAnswerSectionProps> = ({
             onClick={onFlagToggle}
             className={`flex items-center text-xs p-2 ${
               isFlagged 
-                ? 'bg-orange-500 hover:bg-orange-600 text-white border-orange-500' 
+                ? 'bg-blue-500 hover:bg-blue-600 text-white border-blue-500' 
                 : 'text-gray-600 hover:bg-gray-50 border-gray-300'
             }`}
           >
@@ -49,18 +49,19 @@ export const ExamAnswerSection: React.FC<ExamAnswerSectionProps> = ({
         </div>
       </div>
       
-      {/* Answer area */}
-      <div className="flex-1 p-4 flex flex-col bg-white">
-        <div className="flex justify-between items-center mb-3">
-          <span className="text-xs text-gray-500">{wordCount} words</span>
-        </div>
-        
+      {/* Answer area with fixed height textarea */}
+      <div className="p-4 bg-white">
         <Textarea
           value={answer}
           onChange={(e) => onAnswerChange(e.target.value)}
           placeholder="Type your radiology report here..."
-          className="flex-1 resize-none border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-sm p-3"
+          className="h-64 resize-none border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-sm p-3 mb-3"
         />
+        
+        {/* Word count at bottom */}
+        <div className="flex justify-end">
+          <span className="text-xs text-gray-500">{wordCount} words</span>
+        </div>
       </div>
     </div>
   );

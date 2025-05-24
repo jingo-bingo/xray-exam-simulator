@@ -2,7 +2,8 @@
 import { useState, useEffect, useRef, RefObject } from 'react';
 import cornerstone from 'cornerstone-core';
 import { DicomMetadata } from '@/components/admin/DicomMetadataDisplay';
-import { extractMetadata } from '@/utils/dicomMetadataExtractor';
+import { imageLoader } from './cornerstone/imageLoader';
+import { canvasUtils } from './cornerstone/canvasUtils';
 
 interface UseSimpleCornerstoneImageResult {
   isLoading: boolean;
@@ -10,9 +11,6 @@ interface UseSimpleCornerstoneImageResult {
   imageDisplayed: boolean;
   loadImage: (url: string) => Promise<void>;
 }
-
-// Cache for loaded images to prevent re-fetching
-const loadedImages = new Map<string, any>();
 
 export function useSimpleCornerstoneImage(
   viewerRef: RefObject<HTMLDivElement>,
@@ -27,34 +25,13 @@ export function useSimpleCornerstoneImage(
   const isMounted = useRef(true);
   const loadingAttemptRef = useRef<AbortController | null>(null);
   const currentImageUrlRef = useRef<string | null>(null);
-  const imageInstanceRef = useRef<any>(null);
   const elementEnabled = useRef(false);
-  
-  // Function to resize the canvas to fit the container
-  const resizeCanvasToContainer = (element: HTMLElement) => {
-    try {
-      const rect = element.getBoundingClientRect();
-      const width = rect.width;
-      const height = rect.height;
-      
-      if (width > 0 && height > 0) {
-        console.log(`useSimpleCornerstoneImage[${instanceId}]: Resizing canvas to ${width}x${height}`);
-        cornerstone.resize(element, true);
-        
-        // Force a re-render
-        cornerstone.updateImage(element);
-      }
-    } catch (error) {
-      console.warn(`useSimpleCornerstoneImage[${instanceId}]: Error resizing canvas:`, error);
-    }
-  };
   
   // Clean up function to safely disable cornerstone on the element
   const cleanupElement = () => {
     if (!viewerRef.current) return;
     
     try {
-      // Only disable if cornerstone knows about this element
       if (elementEnabled.current) {
         try {
           cornerstone.getElementData(viewerRef.current);
@@ -78,7 +55,6 @@ export function useSimpleCornerstoneImage(
       console.log(`useSimpleCornerstoneImage[${instanceId}]: Cleaning up`);
       isMounted.current = false;
       
-      // Abort any pending load operations
       if (loadingAttemptRef.current) {
         loadingAttemptRef.current.abort();
         loadingAttemptRef.current = null;
@@ -88,18 +64,39 @@ export function useSimpleCornerstoneImage(
     };
   }, [instanceId]);
   
+  // Enable cornerstone on element
+  const enableElement = (element: HTMLDivElement): boolean => {
+    try {
+      console.log(`useSimpleCornerstoneImage[${instanceId}]: Enabling cornerstone on element`);
+      
+      const { width, height } = canvasUtils.getContainerDimensions(element);
+      canvasUtils.prepareElementStyles(element, width, height);
+      
+      // Try WebGL first, fallback to canvas
+      try {
+        cornerstone.enable(element, { renderer: 'webgl' });
+      } catch (enableError) {
+        console.warn(`useSimpleCornerstoneImage[${instanceId}]: WebGL failed, using canvas:`, enableError);
+        cornerstone.enable(element);
+      }
+      
+      elementEnabled.current = true;
+      console.log(`useSimpleCornerstoneImage[${instanceId}]: Cornerstone enabled`);
+      return true;
+    } catch (error) {
+      console.error(`useSimpleCornerstoneImage[${instanceId}]: Error enabling cornerstone:`, error);
+      return false;
+    }
+  };
+  
   // Function to load and display an image
   const loadImage = async (imageUrl: string): Promise<void> => {
     if (!viewerRef.current || !imageUrl || !isInitialized) {
-      console.log(`useSimpleCornerstoneImage[${instanceId}]: Cannot load image - prerequisites not met`, {
-        element: !!viewerRef.current,
-        url: !!imageUrl,
-        initialized: isInitialized
-      });
+      console.log(`useSimpleCornerstoneImage[${instanceId}]: Cannot load image - prerequisites not met`);
       return;
     }
     
-    // Skip if URL hasn't changed to prevent unnecessary reloads
+    // Skip if URL hasn't changed
     if (currentImageUrlRef.current === imageUrl && imageDisplayed) {
       console.log(`useSimpleCornerstoneImage[${instanceId}]: URL unchanged, skipping reload`);
       return;
@@ -108,11 +105,10 @@ export function useSimpleCornerstoneImage(
     console.log(`useSimpleCornerstoneImage[${instanceId}]: Loading image:`, imageUrl);
     currentImageUrlRef.current = imageUrl;
     
-    // Reset states when URL changes
     setIsLoading(true);
     setError(null);
     
-    // Create abort controller for this loading attempt
+    // Abort any pending operations
     if (loadingAttemptRef.current) {
       loadingAttemptRef.current.abort();
     }
@@ -120,147 +116,34 @@ export function useSimpleCornerstoneImage(
     
     const element = viewerRef.current;
     
-    // Enable the element for cornerstone if needed
+    // Enable element if needed
     if (!elementEnabled.current) {
-      try {
-        console.log(`useSimpleCornerstoneImage[${instanceId}]: Enabling cornerstone on element`);
-        
-        // Get container dimensions
-        const rect = element.getBoundingClientRect();
-        const containerWidth = rect.width || element.offsetWidth || 160;
-        const containerHeight = rect.height || element.offsetHeight || 160;
-        
-        // Basic element preparation with dynamic sizing
-        element.style.width = '100%';
-        element.style.height = '100%';
-        element.style.position = 'relative';
-        element.style.outline = 'none';
-        element.style.minWidth = `${containerWidth}px`;
-        element.style.minHeight = `${containerHeight}px`;
-        
-        // Try to safely enable the element
-        try {
-          cornerstone.enable(element, { renderer: 'webgl' });
-        } catch (enableError) {
-          console.warn(`useSimpleCornerstoneImage[${instanceId}]: Error with WebGL renderer, falling back to canvas:`, enableError);
-          
-          // Retry with canvas renderer
-          try {
-            cornerstone.enable(element);
-          } catch (canvasError) {
-            throw new Error(`Failed to enable cornerstone with either renderer: ${canvasError instanceof Error ? canvasError.message : 'Unknown error'}`);
-          }
-        }
-        
-        elementEnabled.current = true;
-        console.log(`useSimpleCornerstoneImage[${instanceId}]: Cornerstone enabled on element`);
-      } catch (error) {
-        console.error(`useSimpleCornerstoneImage[${instanceId}]: Error enabling cornerstone:`, error);
+      if (!enableElement(element)) {
         if (!isMounted.current) return;
-        
         setError("Failed to initialize viewer");
         setIsLoading(false);
         return;
       }
     }
-    
-    // Determine the image type and create appropriate imageId
-    let imageId;
-    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp'];
-    const isImageFormat = imageExtensions.some(ext => imageUrl.toLowerCase().endsWith(ext));
-    
-    if (isImageFormat) {
-      imageId = `webImage:${imageUrl}`;
-      console.log(`useSimpleCornerstoneImage[${instanceId}]: Loading as web image:`, imageId);
-    } else {
-      imageId = `wadouri:${imageUrl}`;
-      console.log(`useSimpleCornerstoneImage[${instanceId}]: Loading as DICOM:`, imageId);
-    }
 
-    // Check if we've already loaded this image
-    if (loadedImages.has(imageId)) {
-      console.log(`useSimpleCornerstoneImage[${instanceId}]: Using cached image`);
-      const image = loadedImages.get(imageId);
-      
-      if (!isMounted.current) return;
-      
-      // Display the cached image
-      cornerstone.displayImage(element, image);
-      imageInstanceRef.current = image;
-      
-      // Resize canvas to fit container after displaying the image
-      setTimeout(() => {
-        resizeCanvasToContainer(element);
-      }, 100);
-      
-      setIsLoading(false);
-      setImageDisplayed(true);
-      return;
-    }
-
-    // Load the image
+    // Load and display image
     try {
-      console.log(`useSimpleCornerstoneImage[${instanceId}]: Loading image with imageId:`, imageId);
-      const image = await cornerstone.loadImage(imageId);
+      await imageLoader.loadAndDisplayImage({
+        imageUrl,
+        element,
+        instanceId,
+        onMetadataLoaded,
+        isMounted
+      });
       
-      // Check if component is still mounted
       if (!isMounted.current) return;
-      
-      console.log(`useSimpleCornerstoneImage[${instanceId}]: Image loaded successfully`);
-      
-      // Cache the image
-      loadedImages.set(imageId, image);
-      imageInstanceRef.current = image;
-      
-      // Extract metadata for DICOM images
-      if (!isImageFormat && onMetadataLoaded) {
-        const metadata = extractMetadata(image);
-        console.log(`useSimpleCornerstoneImage[${instanceId}]: Metadata extracted`, metadata);
-        onMetadataLoaded(metadata);
-      }
-      
-      // Display the image
-      console.log(`useSimpleCornerstoneImage[${instanceId}]: Displaying image on element`);
-      cornerstone.displayImage(element, image);
-      console.log(`useSimpleCornerstoneImage[${instanceId}]: Image displayed successfully`);
-      
-      // Resize canvas to fit container after displaying the image
-      setTimeout(() => {
-        resizeCanvasToContainer(element);
-      }, 100);
       
       setIsLoading(false);
       setImageDisplayed(true);
     } catch (error) {
-      // Try as web image if DICOM load fails
-      if (imageId.startsWith('wadouri:') && !isImageFormat) {
-        try {
-          const webImageId = `webImage:${imageUrl}`;
-          console.log(`useSimpleCornerstoneImage[${instanceId}]: DICOM load failed, trying as web image:`, webImageId);
-          const image = await cornerstone.loadImage(webImageId);
-          
-          if (!isMounted.current) return;
-          
-          loadedImages.set(webImageId, image);
-          imageInstanceRef.current = image;
-          cornerstone.displayImage(element, image);
-          
-          // Resize canvas to fit container after displaying the image
-          setTimeout(() => {
-            resizeCanvasToContainer(element);
-          }, 100);
-          
-          setIsLoading(false);
-          setImageDisplayed(true);
-          return;
-        } catch (webImageError) {
-          console.error(`useSimpleCornerstoneImage[${instanceId}]: Web image load also failed:`, webImageError);
-        }
-      }
-      
       if (!isMounted.current) return;
       
-      console.error(`useSimpleCornerstoneImage[${instanceId}]: All image loading attempts failed:`, error);
+      console.error(`useSimpleCornerstoneImage[${instanceId}]: Image loading failed:`, error);
       setError(error instanceof Error ? error.message : "Failed to load image");
       setIsLoading(false);
     }

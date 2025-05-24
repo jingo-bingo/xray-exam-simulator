@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ThumbnailDicomViewer } from './ThumbnailDicomViewer';
 import { getSignedUrl } from '@/utils/dicomStorage';
@@ -89,7 +90,7 @@ export const ExamImageViewer: React.FC<ExamImageViewerProps> = ({
       {/* Clinical History Section */}
       {caseData.clinical_history && (
         <div className="p-4">
-          <p className="text-gray-900 text-base leading-relaxed">
+          <p className="text-gray-900 text-lg leading-relaxed">
             {caseData.clinical_history}
           </p>
         </div>
@@ -98,7 +99,7 @@ export const ExamImageViewer: React.FC<ExamImageViewerProps> = ({
       {/* DICOM Thumbnail Section */}
       <div className="flex-1 p-4">
         <div 
-          className="bg-gray-300 hover:bg-gray-400 transition-colors duration-200 cursor-pointer rounded-lg p-4 inline-block"
+          className="bg-gray-300 hover:bg-gray-400 transition-colors duration-200 cursor-pointer p-4 inline-block border-4 border-black"
           onClick={handleThumbnailClick}
         >
           {/* View Label */}
@@ -109,7 +110,7 @@ export const ExamImageViewer: React.FC<ExamImageViewerProps> = ({
           </div>
           
           {/* DICOM Thumbnail */}
-          <div className="w-40 h-40 bg-white border border-gray-400 rounded overflow-hidden">
+          <div className="w-48 h-48 bg-white border-4 border-black overflow-hidden">
             {imageUrl ? (
               <ThumbnailDicomViewer
                 imageUrl={imageUrl}

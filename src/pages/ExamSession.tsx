@@ -8,6 +8,7 @@ import { CaseNavigation } from '@/components/exam/CaseNavigation';
 import { CaseHeader } from '@/components/exam/CaseHeader';
 import { ExamFinishModal } from '@/components/exam/ExamFinishModal';
 import { ExamNotesPanel } from '@/components/exam/ExamNotesPanel';
+import { useExamCases } from '@/hooks/useExamCases';
 
 const ExamSession = () => {
   const [currentCase, setCurrentCase] = useState(1);
@@ -20,6 +21,12 @@ const ExamSession = () => {
   const [showNotesPanel, setShowNotesPanel] = useState(false);
   const [examNotes, setExamNotes] = useState('');
   const [isTimeExpired, setIsTimeExpired] = useState(false);
+
+  // Fetch exam cases
+  const { cases, isLoading: casesLoading, error: casesError } = useExamCases();
+
+  // Get current case data
+  const currentCaseData = cases[currentCase - 1]; // Convert 1-based to 0-based index
 
   // Single exam timer countdown logic
   useEffect(() => {
@@ -119,6 +126,19 @@ const ExamSession = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Show error state if cases failed to load
+  if (casesError) {
+    return (
+      <div className="h-screen bg-white flex items-center justify-center">
+        <div className="text-center p-8">
+          <div className="text-red-500 text-xl mb-4">⚠️</div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Failed to Load Exam</h2>
+          <p className="text-gray-600">{casesError}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen bg-white flex flex-col">
       {/* Top Navigation Bar */}
@@ -167,9 +187,17 @@ const ExamSession = () => {
         
         {/* Center Column - Case Header and Image Viewer */}
         <div className="flex-1 bg-black flex flex-col border-r-4 border-gray-300">
-          <CaseHeader caseNumber={currentCase} />
+          <CaseHeader 
+            caseNumber={currentCase} 
+            caseData={currentCaseData}
+            isLoading={casesLoading}
+          />
           <div className="flex-1">
-            <ExamImageViewer caseNumber={currentCase} />
+            <ExamImageViewer 
+              caseNumber={currentCase}
+              caseData={currentCaseData}
+              isLoading={casesLoading}
+            />
           </div>
         </div>
         

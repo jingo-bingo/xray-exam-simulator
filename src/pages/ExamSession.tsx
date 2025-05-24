@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ExamTopBar } from '@/components/exam/ExamTopBar';
 import { ExamTimer } from '@/components/exam/ExamTimer';
@@ -115,7 +114,7 @@ const ExamSession = () => {
         />
         
         {/* Center Column - Case Header and Image Viewer */}
-        <div className="flex-1 bg-black flex flex-col">
+        <div className="flex-1 bg-black flex flex-col border-r border-gray-300">
           <CaseHeader caseNumber={currentCase} />
           <div className="flex-1">
             <ExamImageViewer caseNumber={currentCase} />

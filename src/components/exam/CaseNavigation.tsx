@@ -15,9 +15,9 @@ export const CaseNavigation: React.FC<CaseNavigationProps> = ({
   onCaseSelect
 }) => {
   return (
-    <div className="w-20 bg-white flex flex-col">
+    <div className="w-20 bg-white flex flex-col border-r border-gray-300">
       {/* Overview header with blue background matching top bar */}
-      <div className="p-2 bg-gray-800 text-white text-center text-xs font-medium">
+      <div className="p-3 bg-gray-800 text-white text-center text-xs font-medium">
         OVERVIEW
       </div>
       

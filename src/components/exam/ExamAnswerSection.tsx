@@ -22,7 +22,7 @@ export const ExamAnswerSection: React.FC<ExamAnswerSectionProps> = ({
   return (
     <div className="h-full flex flex-col">
       {/* Answer Header with blue background matching top bar */}
-      <div className="p-4 bg-gray-800 text-white">
+      <div className="p-3 bg-gray-800 text-white">
         <h3 className="text-sm font-medium uppercase tracking-wide">Answer</h3>
       </div>
       

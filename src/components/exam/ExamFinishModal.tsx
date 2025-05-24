@@ -28,7 +28,7 @@ export const ExamFinishModal: React.FC<ExamFinishModalProps> = ({
 }) => {
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>
-      <AlertDialogContent className="max-w-md p-0 bg-white border-4 border-black">
+      <AlertDialogContent className="max-w-md p-0 bg-gray-200 border-4 border-black">
         {/* Header */}
         <AlertDialogHeader className="bg-gray-800 text-white p-4 m-0">
           <AlertDialogTitle className="text-lg font-semibold text-left">
@@ -39,7 +39,7 @@ export const ExamFinishModal: React.FC<ExamFinishModalProps> = ({
         
         {/* Content */}
         <div className="p-4 bg-gray-200">
-          <AlertDialogDescription className="text-sm mb-4">
+          <AlertDialogDescription className="text-sm mb-4 bg-gray-200">
             {/* Blue information box */}
             <div className="bg-blue-100 border-2 border-blue-800 rounded p-3 mb-3">
               <div className="space-y-2">

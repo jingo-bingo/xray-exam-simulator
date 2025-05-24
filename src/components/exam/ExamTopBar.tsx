@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Menu, Check, Palette, Clock, FileText, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Menu, Check, Palette, FileText } from 'lucide-react';
 
 interface ExamTopBarProps {
   currentCase: number;
@@ -23,45 +23,42 @@ export const ExamTopBar: React.FC<ExamTopBarProps> = ({
   examTimeRemaining
 }) => {
   return (
-    <div className="bg-gray-800 text-white h-12 flex items-center justify-between px-4 text-sm">
+    <div className="bg-gray-800 text-white h-16 flex items-center justify-between px-4 text-xs">
       {/* Left side - Menu items */}
       <div className="flex items-center space-x-6">
-        <button className="flex items-center space-x-1 hover:bg-gray-700 px-2 py-1 rounded">
-          <Menu className="h-4 w-4" />
+        <button className="flex flex-col items-center hover:bg-gray-700 px-2 py-1 rounded">
+          <Menu className="h-4 w-4 mb-1" />
           <span>OVERVIEW</span>
         </button>
         
-        <button className="flex items-center space-x-1 hover:bg-gray-700 px-2 py-1 rounded">
-          <Check className="h-4 w-4" />
+        <button className="flex flex-col items-center hover:bg-gray-700 px-2 py-1 rounded">
+          <Check className="h-4 w-4 mb-1" />
           <span>FINISH</span>
         </button>
         
-        <button className="flex items-center space-x-1 hover:bg-gray-700 px-2 py-1 rounded">
-          <Palette className="h-4 w-4" />
+        <button className="flex flex-col items-center hover:bg-gray-700 px-2 py-1 rounded">
+          <Palette className="h-4 w-4 mb-1" />
           <span>COLOUR</span>
         </button>
         
-        <button className="flex items-center space-x-1 hover:bg-gray-700 px-2 py-1 rounded">
-          <Clock className="h-4 w-4" />
+        <button className="flex flex-col items-center hover:bg-gray-700 px-2 py-1 rounded">
+          <span className="text-white font-medium mb-1">30:00</span>
           <span>TIME REMAINING</span>
         </button>
         
-        <button className="flex items-center space-x-1 hover:bg-gray-700 px-2 py-1 rounded">
-          <FileText className="h-4 w-4" />
+        <button className="flex flex-col items-center hover:bg-gray-700 px-2 py-1 rounded">
+          <FileText className="h-4 w-4 mb-1" />
           <span>NOTES</span>
         </button>
         
-        <button className="flex items-center space-x-1 hover:bg-gray-700 px-2 py-1 rounded">
-          <User className="h-4 w-4" />
+        <button className="flex flex-col items-center hover:bg-gray-700 px-2 py-1 rounded">
+          <span className="text-white font-medium mb-1">11001</span>
           <span>USER ID</span>
         </button>
       </div>
       
-      {/* Right side - Navigation and info */}
+      {/* Right side - Navigation only */}
       <div className="flex items-center space-x-4">
-        <span className="text-yellow-400 font-medium">{examTimeRemaining}</span>
-        <span>11001</span>
-        
         <Button
           variant="ghost"
           size="sm"

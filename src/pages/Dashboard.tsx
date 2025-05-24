@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +20,7 @@ const Dashboard = () => {
       title: "Start Exam",
       description: "Begin your practice FRCR Part 2B exam",
       icon: Play,
-      action: () => navigate("/cases"),
+      action: () => navigate("/exam/holding"),
       showFor: ["admin", "trainee", "contributor"],
       bgColor: "bg-medical-primary hover:bg-medical-primary/90",
       textColor: "text-white"

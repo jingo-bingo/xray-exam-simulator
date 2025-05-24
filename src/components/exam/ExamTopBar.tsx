@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Menu, DoorOpen, Palette, FileText } from 'lucide-react';
@@ -23,37 +22,37 @@ export const ExamTopBar: React.FC<ExamTopBarProps> = ({
   examTimeRemaining
 }) => {
   return (
-    <div className="bg-gray-800 text-white h-16 flex items-center justify-between px-4 font-exam-ui">
+    <div className="bg-gray-800 text-white h-16 flex items-center justify-between px-4 text-xs">
       {/* Left side - Menu items */}
       <div className="flex items-center space-x-6">
         <button className="flex flex-col items-center hover:bg-gray-700 px-2 py-1 rounded">
           <Menu className="h-4 w-4 mb-1" />
-          <span className="text-sm font-semibold tracking-tight leading-tight">OVERVIEW</span>
+          <span>OVERVIEW</span>
         </button>
         
         <button className="flex flex-col items-center hover:bg-gray-700 px-2 py-1 rounded">
           <DoorOpen className="h-4 w-4 mb-1" />
-          <span className="text-sm font-semibold tracking-tight leading-tight">FINISH</span>
+          <span>FINISH</span>
         </button>
         
         <button className="flex flex-col items-center hover:bg-gray-700 px-2 py-1 rounded">
           <Palette className="h-4 w-4 mb-1" />
-          <span className="text-sm font-semibold tracking-tight leading-tight">COLOUR</span>
+          <span>COLOUR</span>
         </button>
         
         <button className="flex flex-col items-center hover:bg-gray-700 px-2 py-1 rounded">
-          <span className="text-white font-bold text-sm mb-1 tracking-tight">30:00</span>
-          <span className="text-sm font-semibold tracking-tight leading-tight">TIME REMAINING</span>
+          <span className="text-white font-medium mb-1">30:00</span>
+          <span>TIME REMAINING</span>
         </button>
         
         <button className="flex flex-col items-center hover:bg-gray-700 px-2 py-1 rounded">
           <FileText className="h-4 w-4 mb-1" />
-          <span className="text-sm font-semibold tracking-tight leading-tight">NOTES</span>
+          <span>NOTES</span>
         </button>
         
         <button className="flex flex-col items-center hover:bg-gray-700 px-2 py-1 rounded">
-          <span className="text-white font-bold text-sm mb-1 tracking-tight">11001</span>
-          <span className="text-sm font-semibold tracking-tight leading-tight">USER ID</span>
+          <span className="text-white font-medium mb-1">11001</span>
+          <span>USER ID</span>
         </button>
       </div>
       
@@ -64,7 +63,7 @@ export const ExamTopBar: React.FC<ExamTopBarProps> = ({
           size="sm"
           onClick={onPrevious}
           disabled={!canGoPrevious}
-          className="text-white hover:bg-gray-700 disabled:opacity-50 h-8 px-2 font-exam-ui font-semibold text-sm tracking-tight"
+          className="text-white hover:bg-gray-700 disabled:opacity-50 h-8 px-2"
         >
           <ChevronLeft className="h-4 w-4 mr-1" />
           PREVIOUS
@@ -75,7 +74,7 @@ export const ExamTopBar: React.FC<ExamTopBarProps> = ({
           size="sm"
           onClick={onNext}
           disabled={!canGoNext}
-          className="text-white hover:bg-gray-700 disabled:opacity-50 h-8 px-2 font-exam-ui font-semibold text-sm tracking-tight"
+          className="text-white hover:bg-gray-700 disabled:opacity-50 h-8 px-2"
         >
           NEXT
           <ChevronRight className="h-4 w-4 ml-1" />

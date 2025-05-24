@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Menu, Check, Palette, FileText } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Menu, DoorClosed, Palette, FileText } from 'lucide-react';
 
 interface ExamTopBarProps {
   currentCase: number;
@@ -32,7 +31,7 @@ export const ExamTopBar: React.FC<ExamTopBarProps> = ({
         </button>
         
         <button className="flex flex-col items-center hover:bg-gray-700 px-2 py-1 rounded">
-          <Check className="h-4 w-4 mb-1" />
+          <DoorClosed className="h-4 w-4 mb-1" />
           <span>FINISH</span>
         </button>
         

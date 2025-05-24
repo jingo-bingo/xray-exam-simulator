@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ExamTopBar } from '@/components/exam/ExamTopBar';
 import { ExamTimer } from '@/components/exam/ExamTimer';
@@ -83,7 +82,7 @@ const ExamSession = () => {
         onNext={handleNextCase}
         canGoPrevious={currentCase > 1}
         canGoNext={currentCase < 30}
-        examTimeRemaining={formatExamTime(totalExamTime)}
+        examTimeRemaining={formatTime(timeRemaining)}
       />
       
       {/* Timer Bar */}

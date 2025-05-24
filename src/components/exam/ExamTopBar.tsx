@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Menu, DoorOpen, Palette, FileText } from 'lucide-react';
@@ -41,7 +42,7 @@ export const ExamTopBar: React.FC<ExamTopBarProps> = ({
         </button>
         
         <button className="flex flex-col items-center hover:bg-gray-700 px-2 py-1 rounded">
-          <span className="text-white font-medium mb-1">30:00</span>
+          <span className="text-white font-medium mb-1">{examTimeRemaining}</span>
           <span>TIME REMAINING</span>
         </button>
         

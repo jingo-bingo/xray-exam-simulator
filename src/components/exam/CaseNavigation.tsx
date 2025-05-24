@@ -16,8 +16,8 @@ export const CaseNavigation: React.FC<CaseNavigationProps> = ({
 }) => {
   return (
     <div className="w-24 bg-white flex flex-col border-r-4 border-gray-300">
-      {/* Overview header with blue background matching top bar */}
-      <div className="p-3 bg-gray-800 text-white text-center text-xs font-medium">
+      {/* Overview header with exact same styling as other headers */}
+      <div className="p-3 bg-gray-800 text-white text-center text-sm font-medium uppercase tracking-wide">
         OVERVIEW
       </div>
       
@@ -37,7 +37,7 @@ export const CaseNavigation: React.FC<CaseNavigationProps> = ({
                   ${isCurrent 
                     ? 'bg-blue-500 text-white' 
                     : isCompleted
-                    ? 'bg-green-500 text-white'
+                    ? 'bg-green-800 text-white'
                     : 'text-gray-700 hover:bg-gray-200'
                   }
                   transition-colors duration-150

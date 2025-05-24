@@ -7,7 +7,7 @@ interface CaseHeaderProps {
 
 export const CaseHeader: React.FC<CaseHeaderProps> = ({ caseNumber }) => {
   return (
-    <div className="bg-gray-800 text-white p-3 text-center">
+    <div className="bg-gray-800 text-white p-3 text-left">
       <h2 className="text-sm font-medium uppercase tracking-wide">
         Case {caseNumber}
       </h2>

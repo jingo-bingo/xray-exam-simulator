@@ -110,6 +110,7 @@ const ExamSession = () => {
           currentCase={currentCase}
           totalCases={25}
           completedCases={completedCases}
+          flaggedCases={flaggedCases}
           onCaseSelect={handleCaseSelect}
         />
         

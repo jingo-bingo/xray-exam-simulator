@@ -11,6 +11,9 @@ interface ExamTopBarProps {
   canGoPrevious: boolean;
   canGoNext: boolean;
   examTimeRemaining: string;
+  onOverviewToggle: () => void;
+  onFinishClick: () => void;
+  onNotesClick: () => void;
 }
 
 export const ExamTopBar: React.FC<ExamTopBarProps> = ({
@@ -20,18 +23,27 @@ export const ExamTopBar: React.FC<ExamTopBarProps> = ({
   onNext,
   canGoPrevious,
   canGoNext,
-  examTimeRemaining
+  examTimeRemaining,
+  onOverviewToggle,
+  onFinishClick,
+  onNotesClick
 }) => {
   return (
     <div className="bg-gray-800 text-white h-16 flex items-center justify-between px-4 text-xs">
       {/* Left side - Menu items */}
       <div className="flex items-center space-x-6">
-        <button className="flex flex-col items-center hover:bg-gray-700 px-2 py-1 rounded">
+        <button 
+          onClick={onOverviewToggle}
+          className="flex flex-col items-center hover:bg-gray-700 px-2 py-1 rounded"
+        >
           <Menu className="h-4 w-4 mb-1" />
           <span>OVERVIEW</span>
         </button>
         
-        <button className="flex flex-col items-center hover:bg-gray-700 px-2 py-1 rounded">
+        <button 
+          onClick={onFinishClick}
+          className="flex flex-col items-center hover:bg-gray-700 px-2 py-1 rounded"
+        >
           <DoorOpen className="h-4 w-4 mb-1" />
           <span>FINISH</span>
         </button>
@@ -46,7 +58,10 @@ export const ExamTopBar: React.FC<ExamTopBarProps> = ({
           <span>TIME REMAINING</span>
         </button>
         
-        <button className="flex flex-col items-center hover:bg-gray-700 px-2 py-1 rounded">
+        <button 
+          onClick={onNotesClick}
+          className="flex flex-col items-center hover:bg-gray-700 px-2 py-1 rounded"
+        >
           <FileText className="h-4 w-4 mb-1" />
           <span>NOTES</span>
         </button>

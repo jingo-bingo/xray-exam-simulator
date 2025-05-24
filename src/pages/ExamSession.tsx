@@ -5,6 +5,8 @@ import { ExamImageViewer } from '@/components/exam/ExamImageViewer';
 import { ExamAnswerSection } from '@/components/exam/ExamAnswerSection';
 import { CaseNavigation } from '@/components/exam/CaseNavigation';
 import { CaseHeader } from '@/components/exam/CaseHeader';
+import { ExamFinishModal } from '@/components/exam/ExamFinishModal';
+import { ExamNotesModal } from '@/components/exam/ExamNotesModal';
 
 const ExamSession = () => {
   const [currentCase, setCurrentCase] = useState(1);
@@ -12,6 +14,10 @@ const ExamSession = () => {
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const [flaggedCases, setFlaggedCases] = useState<Set<number>>(new Set());
   const [completedCases, setCompletedCases] = useState<Set<number>>(new Set());
+  const [showOverview, setShowOverview] = useState(true);
+  const [showFinishModal, setShowFinishModal] = useState(false);
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [examNotes, setExamNotes] = useState('');
 
   // Single exam timer countdown logic
   useEffect(() => {
@@ -75,6 +81,27 @@ const ExamSession = () => {
     });
   };
 
+  const handleOverviewToggle = () => {
+    setShowOverview(prev => !prev);
+  };
+
+  const handleFinishClick = () => {
+    setShowFinishModal(true);
+  };
+
+  const handleNotesClick = () => {
+    setShowNotesModal(true);
+  };
+
+  const handleSubmitExam = () => {
+    // TODO: Handle exam submission logic
+    console.log('Exam submitted');
+    setShowFinishModal(false);
+    // Navigate away or show completion screen
+  };
+
+  const unansweredCount = 25 - completedCases.size;
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -92,6 +119,9 @@ const ExamSession = () => {
         canGoPrevious={currentCase > 1}
         canGoNext={currentCase < 25}
         examTimeRemaining={formatTime(examTimeRemaining)}
+        onOverviewToggle={handleOverviewToggle}
+        onFinishClick={handleFinishClick}
+        onNotesClick={handleNotesClick}
       />
       
       {/* Timer Bar */}
@@ -105,14 +135,16 @@ const ExamSession = () => {
       
       {/* Main Content - Three column layout: sidebar, image viewer, answer section */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar - Case Navigation */}
-        <CaseNavigation
-          currentCase={currentCase}
-          totalCases={25}
-          completedCases={completedCases}
-          flaggedCases={flaggedCases}
-          onCaseSelect={handleCaseSelect}
-        />
+        {/* Left Sidebar - Case Navigation (conditionally rendered) */}
+        {showOverview && (
+          <CaseNavigation
+            currentCase={currentCase}
+            totalCases={25}
+            completedCases={completedCases}
+            flaggedCases={flaggedCases}
+            onCaseSelect={handleCaseSelect}
+          />
+        )}
         
         {/* Center Column - Case Header and Image Viewer */}
         <div className="flex-1 bg-black flex flex-col border-r-4 border-gray-300">
@@ -132,6 +164,21 @@ const ExamSession = () => {
           />
         </div>
       </div>
+
+      {/* Modals */}
+      <ExamFinishModal
+        isOpen={showFinishModal}
+        onClose={() => setShowFinishModal(false)}
+        onSubmitExam={handleSubmitExam}
+        unansweredCount={unansweredCount}
+      />
+
+      <ExamNotesModal
+        isOpen={showNotesModal}
+        onClose={() => setShowNotesModal(false)}
+        notes={examNotes}
+        onNotesChange={setExamNotes}
+      />
     </div>
   );
 };

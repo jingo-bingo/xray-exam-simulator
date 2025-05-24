@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { BasicDicomViewer } from '@/components/case/BasicDicomViewer';
+import { ThumbnailDicomViewer } from './ThumbnailDicomViewer';
 import { getSignedUrl } from '@/utils/dicomStorage';
 import { useState, useEffect } from 'react';
 
@@ -110,12 +110,12 @@ export const ExamImageViewer: React.FC<ExamImageViewerProps> = ({
           </div>
           
           {/* DICOM Thumbnail */}
-          <div className="w-48 h-48 bg-white border border-gray-400 rounded">
+          <div className="w-32 h-32 bg-white border border-gray-400 rounded overflow-hidden">
             {imageUrl ? (
-              <BasicDicomViewer
+              <ThumbnailDicomViewer
                 imageUrl={imageUrl}
                 alt={`Case ${caseNumber}`}
-                className="w-full h-full rounded"
+                className="w-full h-full"
                 instanceId={`exam-case-${caseNumber}`}
                 onError={(error) => {
                   console.error('DICOM viewer error:', error);

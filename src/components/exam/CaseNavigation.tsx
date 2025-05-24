@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface CaseNavigationProps {
   currentCase: number;
@@ -21,33 +22,37 @@ export const CaseNavigation: React.FC<CaseNavigationProps> = ({
         OVERVIEW
       </div>
       
-      {/* Case numbers in simple column layout */}
-      <div className="flex-1 p-2 bg-white">
-        <div className="flex flex-col gap-1">
-          {Array.from({ length: totalCases }, (_, i) => i + 1).map((caseNumber) => {
-            const isCompleted = completedCases.has(caseNumber);
-            const isCurrent = caseNumber === currentCase;
-            
-            return (
-              <button
-                key={caseNumber}
-                onClick={() => onCaseSelect(caseNumber)}
-                className={`
-                  w-full h-8 text-xs font-medium text-center
-                  ${isCurrent 
-                    ? 'bg-blue-500 text-white' 
-                    : isCompleted
-                    ? 'bg-green-800 text-white'
-                    : 'text-gray-700 hover:bg-gray-200'
-                  }
-                  transition-colors duration-150
-                `}
-              >
-                {caseNumber}
-              </button>
-            );
-          })}
-        </div>
+      {/* Scrollable case numbers section */}
+      <div className="flex-1 bg-white">
+        <ScrollArea className="h-full">
+          <div className="p-2">
+            <div className="flex flex-col gap-1">
+              {Array.from({ length: totalCases }, (_, i) => i + 1).map((caseNumber) => {
+                const isCompleted = completedCases.has(caseNumber);
+                const isCurrent = caseNumber === currentCase;
+                
+                return (
+                  <button
+                    key={caseNumber}
+                    onClick={() => onCaseSelect(caseNumber)}
+                    className={`
+                      w-full h-8 text-xs font-medium text-center
+                      ${isCurrent 
+                        ? 'bg-blue-500 text-white' 
+                        : isCompleted
+                        ? 'bg-green-800 text-white'
+                        : 'text-gray-700 hover:bg-gray-200'
+                      }
+                      transition-colors duration-150
+                    `}
+                  >
+                    {caseNumber}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </ScrollArea>
       </div>
     </div>
   );

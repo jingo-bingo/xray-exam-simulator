@@ -54,7 +54,7 @@ export const ExamNotesPanel: React.FC<ExamNotesPanelProps> = ({
           value={notes}
           onChange={(e) => onNotesChange(e.target.value)}
           placeholder="Enter your notes here..."
-          className="min-h-[200px] bg-white text-black border-white resize-none focus-visible:ring-1 focus-visible:ring-gray-400"
+          className="min-h-[100px] bg-gray-300 text-black border-white resize-none focus-visible:ring-1 focus-visible:ring-gray-400"
         />
       </div>
     </div>

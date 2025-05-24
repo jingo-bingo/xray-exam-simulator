@@ -6,7 +6,7 @@ import { ExamAnswerSection } from '@/components/exam/ExamAnswerSection';
 import { CaseNavigation } from '@/components/exam/CaseNavigation';
 import { CaseHeader } from '@/components/exam/CaseHeader';
 import { ExamFinishModal } from '@/components/exam/ExamFinishModal';
-import { ExamNotesModal } from '@/components/exam/ExamNotesModal';
+import { ExamNotesPanel } from '@/components/exam/ExamNotesPanel';
 
 const ExamSession = () => {
   const [currentCase, setCurrentCase] = useState(1);
@@ -16,7 +16,7 @@ const ExamSession = () => {
   const [completedCases, setCompletedCases] = useState<Set<number>>(new Set());
   const [showOverview, setShowOverview] = useState(true);
   const [showFinishModal, setShowFinishModal] = useState(false);
-  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [showNotesPanel, setShowNotesPanel] = useState(false);
   const [examNotes, setExamNotes] = useState('');
 
   // Single exam timer countdown logic
@@ -90,7 +90,7 @@ const ExamSession = () => {
   };
 
   const handleNotesClick = () => {
-    setShowNotesModal(true);
+    setShowNotesPanel(prev => !prev);
   };
 
   const handleSubmitExam = () => {
@@ -130,6 +130,14 @@ const ExamSession = () => {
         totalExamTime="30 minutes"
       />
       
+      {/* Notes Panel - conditionally rendered */}
+      {showNotesPanel && (
+        <ExamNotesPanel
+          notes={examNotes}
+          onNotesChange={setExamNotes}
+        />
+      )}
+      
       {/* White gap */}
       <div className="h-4 bg-white"></div>
       
@@ -165,19 +173,12 @@ const ExamSession = () => {
         </div>
       </div>
 
-      {/* Modals */}
+      {/* Finish Modal */}
       <ExamFinishModal
         isOpen={showFinishModal}
         onClose={() => setShowFinishModal(false)}
         onSubmitExam={handleSubmitExam}
         unansweredCount={unansweredCount}
-      />
-
-      <ExamNotesModal
-        isOpen={showNotesModal}
-        onClose={() => setShowNotesModal(false)}
-        notes={examNotes}
-        onNotesChange={setExamNotes}
       />
     </div>
   );
